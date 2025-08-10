@@ -4,18 +4,18 @@
   "description": "Sistema de Gestión Académica del Centro de Idiomas",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#1e40af",
+  "background_color": "#031c30",
+  "theme_color": "#031c30",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icon-192x192.png",
+      "src": "/graduacion.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable any"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/graduacion.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable any"

@@ -39,16 +39,7 @@ export default function LoginForm() {
     }
   }
 
-  const fillTestCredentials = (role: "coordinator" | "teacher" | "student") => {
-    const credentials = {
-      coordinator: { email: "coordinador@usa.edu.co", password: "123456" },
-      teacher: { email: "profesor@usa.edu.co", password: "123456" },
-      student: { email: "estudiante@usa.edu.co", password: "123456" },
-    }
-    setEmail(credentials[role].email)
-    setPassword(credentials[role].password)
-  }
-
+ 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
       {/* Header */}
@@ -60,7 +51,7 @@ export default function LoginForm() {
                 <GraduationCap className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Centro de Idiomas USA</h1>
+                <h1 className="text-xl font-bold text-gray-900">Centro de Idiomas</h1>
                 <p className="text-sm text-gray-600">Universidad Sergio Arboleda</p>
               </div>
             </div>
@@ -189,40 +180,6 @@ export default function LoginForm() {
                     )}
                   </Button>
                 </form>
-
-                {/* Test Credentials */}
-                <div className="pt-4 border-t border-gray-200">
-                  <p className="text-xs text-gray-500 text-center mb-3">Credenciales de prueba:</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fillTestCredentials("coordinator")}
-                      className="text-xs"
-                    >
-                      Coordinador
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fillTestCredentials("teacher")}
-                      className="text-xs"
-                    >
-                      Profesor
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fillTestCredentials("student")}
-                      className="text-xs"
-                    >
-                      Estudiante
-                    </Button>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </div>
