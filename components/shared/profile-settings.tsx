@@ -15,7 +15,9 @@ import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { User, Bell, Shield, Palette, Loader2, Save } from "lucide-react"
 import ImageUpload from "@/components/shared/image-upload"
-import { updateUser, getUserImage } from "@/lib/auth"
+import { updateUser as updateUserApi } from "@/lib/auth"
+import { getUserImage } from "@/lib/images"
+import { useAuth } from "@/lib/auth-context"
 import type { User as UserType } from "@/lib/supabase"
 
 interface ProfileSettingsProps {
@@ -27,12 +29,13 @@ export default function ProfileSettings({ user, onUserUpdate }: ProfileSettingsP
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string>("")
+  const { updateUser: updateAuthUser } = useAuth()
 
   const [profileForm, setProfileForm] = useState({
     name: user.name,
     email: user.email,
     phone: user.phone || "",
-    document_number: user.document_number || "",
+    document_number: (user as any).document_number || "",
     bio: "",
     specialization: "",
     experience_years: "",
@@ -70,10 +73,10 @@ export default function ProfileSettings({ user, onUserUpdate }: ProfileSettingsP
     setMessage(null)
 
     try {
-      const updatedUser = await updateUser(user.id, {
+      const updatedUser = await updateUserApi(user.id, {
         name: profileForm.name,
         phone: profileForm.phone,
-        document_number: profileForm.document_number,
+        document_number: profileForm.document_number || "" as unknown as string,
       })
 
       if (updatedUser) {
@@ -81,6 +84,8 @@ export default function ProfileSettings({ user, onUserUpdate }: ProfileSettingsP
         onUserUpdate(updatedUser)
         // Update localStorage
         localStorage.setItem("user", JSON.stringify(updatedUser))
+        // Sincronizar con el contexto de auth
+        updateAuthUser({ name: updatedUser.name, phone: updatedUser.phone } as Partial<UserType>)
       } else {
         setMessage({ type: "error", text: "Error al actualizar perfil" })
       }
@@ -91,8 +96,25 @@ export default function ProfileSettings({ user, onUserUpdate }: ProfileSettingsP
     }
   }
 
-  const handleAvatarUpdate = (imageUrl: string | null) => {
-    setAvatarUrl(imageUrl || "")
+  const handleAvatarUpdate = async (imageUrl: string | null) => {
+    try {
+      setLoading(true)
+      const updated = await updateUserApi(user.id, { avatar: imageUrl ?? "" })
+      if (updated) {
+        setAvatarUrl(imageUrl || "")
+        onUserUpdate(updated)
+        localStorage.setItem("user", JSON.stringify(updated))
+        // Sincronizar avatar en el contexto de auth para reflejarse en el topbar
+        updateAuthUser({ avatar: updated.avatar })
+        setMessage({ type: "success", text: imageUrl ? "Foto de perfil actualizada" : "Foto de perfil eliminada" })
+      } else {
+        setMessage({ type: "error", text: "No se pudo actualizar la foto de perfil" })
+      }
+    } catch {
+      setMessage({ type: "error", text: "Error al actualizar la foto de perfil" })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const getRoleSpecificFields = () => {

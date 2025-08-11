@@ -1,30 +1,29 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import ProfileSettings from "@/components/shared/profile-settings"
 import type { User } from "@/lib/supabase"
 
+import { useAuth } from "@/lib/auth-context"
+
 export default function ProfilePage() {
-  const [user, setUser] = useState<User | null>(null)
   const router = useRouter()
+  const { user, loading } = useAuth()
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("user")
-    if (savedUser) {
-      setUser(JSON.parse(savedUser))
-    } else {
+    if (!loading && !user) {
       router.push("/")
     }
-  }, [router])
+  }, [loading, user, router])
 
-  const handleUserUpdate = (updatedUser: User) => {
-    setUser(updatedUser)
+  if (loading || !user) {
+    return <div className="flex items-center justify-center min-h-screen">Cargando...</div>
   }
 
-  if (!user) {
-    return <div className="flex items-center justify-center min-h-screen">Cargando...</div>
+  const handleUserUpdate = (updatedUser: User) => {
+    // Opcional: ProfileSettings ya actualiza el contexto y localStorage
   }
 
   return (

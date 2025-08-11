@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Upload, Camera, Loader2, X } from "lucide-react"
+import { uploadImage, deleteUserImage } from "@/lib/images"
 
 interface ImageUploadProps {
   userId: string
@@ -51,38 +52,35 @@ export default function ImageUpload({
     setMessage(null)
 
     try {
-      // For now, we'll use a placeholder URL since Supabase Storage might not be configured
-      // In a real implementation, you would upload to Supabase Storage
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const result = e.target?.result as string
-        setImageUrl(result)
+      const uploadedUrl = await uploadImage(file, userId, imageType)
+      if (uploadedUrl) {
+        setImageUrl(uploadedUrl)
         setMessage({ type: "success", text: "Imagen subida exitosamente" })
-        onImageUpdate?.(result)
-        setUploading(false)
+        onImageUpdate?.(uploadedUrl)
+      } else {
+        setMessage({ type: "error", text: "Error al subir la imagen" })
       }
-      reader.readAsDataURL(file)
-
-      // TODO: Implement actual Supabase Storage upload
-      // const uploadedUrl = await uploadImage(file, userId, imageType)
-      // if (uploadedUrl) {
-      //   setImageUrl(uploadedUrl)
-      //   setMessage({ type: "success", text: "Imagen subida exitosamente" })
-      //   onImageUpdate?.(uploadedUrl)
-      // } else {
-      //   setMessage({ type: "error", text: "Error al subir la imagen" })
-      // }
-    } catch (error) {
+    } catch {
       setMessage({ type: "error", text: "Error inesperado al subir la imagen" })
+    } finally {
       setUploading(false)
     }
   }
 
   const handleRemoveImage = async () => {
     if (confirm("¿Estás seguro de eliminar esta imagen?")) {
-      setImageUrl("")
-      setMessage({ type: "success", text: "Imagen eliminada exitosamente" })
-      onImageUpdate?.(null)
+      try {
+        const ok = await deleteUserImage(userId, imageType)
+        if (ok) {
+          setImageUrl("")
+          setMessage({ type: "success", text: "Imagen eliminada exitosamente" })
+          onImageUpdate?.(null)
+        } else {
+          setMessage({ type: "error", text: "No se pudo eliminar la imagen" })
+        }
+      } catch {
+        setMessage({ type: "error", text: "Error inesperado al eliminar la imagen" })
+      }
     }
   }
 
@@ -169,7 +167,7 @@ export default function ImageUpload({
 
         <Alert>
           <AlertDescription>
-            <strong>Nota:</strong> Las imágenes se almacenan temporalmente. Para producción, configura Supabase Storage.
+            <strong>Nota:</strong> Las imágenes se almacenan en Supabase Storage y se registran en user_images.
           </AlertDescription>
         </Alert>
       </CardContent>

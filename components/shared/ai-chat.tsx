@@ -1,4 +1,6 @@
+// imports del componente AIChat
 "use client"
+import { useState } from "react"
 import { useChat } from "@ai-sdk/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,19 +32,34 @@ const suggestedQuestions = {
 
 export default function AIChat() {
   const { user } = useAuth()
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+  const [input, setInput] = useState("")
+  const { messages, sendMessage, status } = useChat({
     api: "/api/chat",
-    initialMessages: [
+    messages: [
       {
         id: "welcome",
         role: "assistant",
-        content: `¡Hola${user?.name ? ` ${user.name}` : ""}! Soy tu asistente virtual del Centro de Idiomas. ¿En qué puedo ayudarte hoy?`,
+        parts: [
+          {
+            type: "text",
+            text: `¡Hola${user?.name ? ` ${user.name}` : ""}! Soy tu asistente virtual del Centro de Idiomas. ¿En qué puedo ayudarte hoy?`,
+          },
+        ],
       },
     ],
   })
 
+  const getMessageText = (message: any) => {
+    if (Array.isArray(message?.parts)) {
+      return message.parts
+        .map((p: any) => (p?.type === "text" ? p.text : ""))
+        .join("")
+    }
+    return typeof message?.content === "string" ? message.content : ""
+  }
+
   const handleSuggestedQuestion = (question: string) => {
-    handleInputChange({ target: { value: question } } as any)
+    setInput(question)
   }
 
   const userRole = user?.role || "student"
@@ -63,7 +80,7 @@ export default function AIChat() {
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                  className={`flex gap-3 ${message.role === 'user' ? "justify-end" : "justify-start"}`}
                 >
                   <div
                     className={`flex gap-3 max-w-[80%] ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}
@@ -84,12 +101,12 @@ export default function AIChat() {
                         message.role === "user" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900"
                       }`}
                     >
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      <p className="text-sm whitespace-pre-wrap">{getMessageText(message)}</p>
                     </div>
                   </div>
                 </div>
               ))}
-              {isLoading && (
+              {(status === "submitted" || status === "streaming") && (
                 <div className="flex gap-3 justify-start">
                   <div className="flex gap-3 max-w-[80%]">
                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
@@ -128,15 +145,24 @@ export default function AIChat() {
           )}
 
           {/* Input Form */}
-          <form onSubmit={handleSubmit} className="flex gap-2">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (input.trim()) {
+                sendMessage({ text: input })
+                setInput("")
+              }
+            }}
+            className="flex gap-2"
+          >
             <Input
               value={input}
-              onChange={handleInputChange}
+              onChange={(e) => setInput(e.target.value)}
               placeholder="Escribe tu pregunta aquí..."
-              disabled={isLoading}
+              disabled={status !== "ready"}
               className="flex-1"
             />
-            <Button type="submit" disabled={isLoading || !input.trim()}>
+            <Button type="submit" disabled={status !== "ready" || !input.trim()}>
               <Send className="h-4 w-4" />
             </Button>
           </form>
