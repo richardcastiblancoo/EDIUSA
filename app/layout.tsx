@@ -1,25 +1,29 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { AuthProvider } from "@/lib/auth-context"
-import { Toaster } from "@/components/ui/toaster"
-import PWAInstaller from "@/components/pwa-installer"
-
-const inter = Inter({ subsets: ["latin"] })
+import type React from "react";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { AuthProvider } from "@/lib/auth-context";
+import { Toaster } from "@/components/ui/toaster";
+import PWAInstaller from "@/components/pwa-installer";
+import type { Metadata, Viewport } from "next";
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Universidad Sergio Arboleda Centro de Idiomas",
-  description: "Sistema de gestión académica para el Centro de Idiomas de la Universidad Sergio Arboleda",
-  manifest: "/manifest.json",
-  themeColor: "#031c30",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
-}
+  title: "Centro de Idiomas Universidad Sergio Arboleda",
+  description:
+  "Sistema de gestión académica para el Centro de Idiomas de la Universidad Sergio Arboleda. Plataforma integral para la gestión académica y administrativa del Centro de Idiomas de la Universidad Sergio Arboleda. Gestión de estudiantes y profesores Administración de cursos y exámenes Seguimiento académico integral",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="es">
@@ -29,7 +33,10 @@ export default function RootLayout({
         <meta name="theme-color" content="#2563eb" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Centro de Idiomas USA" />
+        <meta
+          name="apple-mobile-web-app-title"
+          content="Centro de Idiomas USA"
+        />
         <link rel="apple-touch-icon" href="/icon-192x192.png" />
       </head>
       <body className={inter.className}>
@@ -40,5 +47,5 @@ export default function RootLayout({
         </AuthProvider>
       </body>
     </html>
-  )
+  );
 }
