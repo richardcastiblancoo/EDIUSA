@@ -1,13 +1,24 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import type React from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -15,42 +26,83 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Edit, Trash2, Users, GraduationCap, BookOpen, Loader2 } from "lucide-react"
-import { getAllUsers, createUser, updateUser, deleteUser } from "@/lib/auth"
-import type { User } from "@/lib/supabase"
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Users,
+  GraduationCap,
+  BookOpen,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
+import { getAllUsers, createUser, updateUser, deleteUser } from "@/lib/auth";
+import type { User } from "@/lib/supabase"; // Asegúrate de que esta interfaz incluye document_number
+
+// Define el tipo para los roles
+type UserRole = "coordinator" | "teacher" | "student";
+
+// Extiende la interfaz User si es necesario para incluir document_number
+// Por ejemplo:
+// interface UserWithDoc extends User {
+//   document_number?: string;
+// }
 
 export default function UserManagement() {
-  const [users, setUsers] = useState<User[]>([])
-  const [loading, setLoading] = useState(true)
-  const [creating, setCreating] = useState(false)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState<User | null>(null)
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
-
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    password: "",
-    role: "student" as "coordinator" | "teacher" | "student",
+    password: "", // No se precargará el password para edición
+    role: "student" as UserRole,
     phone: "",
     document_number: "",
-  })
+  });
+
+  // Usa useCallback para memorizar la función de carga
+  const loadUsers = useCallback(async () => {
+    setLoading(true);
+    const userData = await getAllUsers();
+    setUsers(userData);
+    setLoading(false);
+    setMessage(null); // Resetea el mensaje de alerta
+  }, []);
 
   useEffect(() => {
-    loadUsers()
-  }, [])
-
-  const loadUsers = async () => {
-    setLoading(true)
-    const userData = await getAllUsers()
-    setUsers(userData)
-    setLoading(false)
-  }
+    loadUsers();
+  }, [loadUsers]);
 
   const resetForm = () => {
     setFormData({
@@ -60,88 +112,128 @@ export default function UserManagement() {
       role: "student",
       phone: "",
       document_number: "",
-    })
-    setEditingUser(null)
-  }
+    });
+    setEditingUser(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setCreating(true)
+    e.preventDefault();
+    setCreating(true);
 
     try {
+      let success = false;
+      let newOrUpdatedUser;
+
       if (editingUser) {
-        // Update existing user
-        const updated = await updateUser(editingUser.id, formData)
-        if (updated) {
-          setMessage({ type: "success", text: "Usuario actualizado exitosamente" })
-          loadUsers()
-        } else {
-          setMessage({ type: "error", text: "Error al actualizar usuario" })
+        // Al actualizar, enviamos solo los campos que no están vacíos
+        const dataToSend = { ...formData };
+        if (!dataToSend.password) {
+          delete dataToSend.password;
         }
+
+        newOrUpdatedUser = await updateUser(editingUser.id, dataToSend);
+        success = !!newOrUpdatedUser;
       } else {
-        // Create new user
-        const newUser = await createUser(formData)
-        if (newUser) {
-          setMessage({ type: "success", text: "Usuario creado exitosamente" })
-          loadUsers()
-        } else {
-          setMessage({ type: "error", text: "Error al crear usuario. Verifique que el email no esté en uso." })
-        }
+        // Al crear, la contraseña es obligatoria
+        newOrUpdatedUser = await createUser(formData);
+        success = !!newOrUpdatedUser;
       }
 
-      setDialogOpen(false)
-      resetForm()
+      if (success) {
+        setMessage({
+          type: "success",
+          text: `Usuario ${
+            editingUser ? "actualizado" : "creado"
+          } exitosamente`,
+        });
+        setDialogOpen(false); // Cierra el diálogo en caso de éxito
+        resetForm(); // Resetea el formulario al cerrar
+        loadUsers(); // Recarga los usuarios
+      } else {
+        setMessage({
+          type: "error",
+          text: `Error al ${
+            editingUser ? "actualizar" : "crear"
+          } usuario. Verifique los datos.`,
+        });
+      }
     } catch (error) {
-      setMessage({ type: "error", text: "Error inesperado" })
+      console.error("Error en handleSubmit:", error);
+      setMessage({ type: "error", text: "Error inesperado" });
     } finally {
-      setCreating(false)
+      setCreating(false);
     }
-  }
+  };
 
   const handleEdit = (user: User) => {
-    setEditingUser(user)
+    setEditingUser(user);
     setFormData({
       name: user.name,
       email: user.email,
-      password: user.password,
-      role: user.role,
+      password: "", // No precargues la contraseña por seguridad
+      role: user.role as UserRole,
       phone: user.phone || "",
-      document_number: user.document_number || "",
-    })
-    setDialogOpen(true)
-  }
+      document_number: (user as any).document_number || "", // Considera actualizar la interfaz User
+    });
+    setDialogOpen(true);
+  };
 
   const handleDelete = async (user: User) => {
-    if (confirm(`¿Estás seguro de eliminar a ${user.name}?`)) {
-      const success = await deleteUser(user.id)
-      if (success) {
-        setMessage({ type: "success", text: "Usuario eliminado exitosamente" })
-        loadUsers()
-      } else {
-        setMessage({ type: "error", text: "Error al eliminar usuario" })
+    setUserToDelete(user);
+  };
+
+  const confirmDelete = async () => {
+    if (userToDelete) {
+      setCreating(true); // Usa el mismo estado de loading para la acción
+      try {
+        const success = await deleteUser(userToDelete.id);
+        if (success) {
+          setMessage({
+            type: "success",
+            text: "Usuario eliminado exitosamente",
+          });
+          loadUsers();
+        } else {
+          setMessage({ type: "error", text: "Error al eliminar usuario" });
+        }
+      } catch (error) {
+        setMessage({ type: "error", text: "Error inesperado al eliminar" });
+      } finally {
+        setCreating(false);
+        setUserToDelete(null); // Limpia el usuario a eliminar
       }
     }
-  }
+  };
+
+  // Memoiza las listas de usuarios por rol para mejorar el rendimiento
+  const usersByRole = useMemo(() => {
+    return {
+      coordinators: users.filter((user) => user.role === "coordinator"),
+      teachers: users.filter((user) => user.role === "teacher"),
+      students: users.filter((user) => user.role === "student"),
+      all: users,
+    };
+  }, [users]);
 
   const getRoleBadge = (role: string) => {
     const variants = {
       coordinator: "default",
       teacher: "secondary",
       student: "outline",
-    } as const
+    } as const;
 
     const labels = {
       coordinator: "Coordinador",
       teacher: "Profesor",
       student: "Estudiante",
-    }
+    };
 
-    return <Badge variant={variants[role as keyof typeof variants]}>{labels[role as keyof typeof labels]}</Badge>
-  }
-
-  const filterUsersByRole = (role: string) => {
-    return users.filter((user) => user.role === role)
-  }
+    return (
+      <Badge variant={variants[role as keyof typeof variants]}>
+        {labels[role as keyof typeof labels]}
+      </Badge>
+    );
+  };
 
   const UserTable = ({ users: filteredUsers }: { users: User[] }) => (
     <Table>
@@ -157,41 +249,58 @@ export default function UserManagement() {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {filteredUsers.map((user) => (
-          <TableRow key={user.id}>
-            <TableCell className="font-medium">{user.name}</TableCell>
-            <TableCell>{user.email}</TableCell>
-            <TableCell>{user.phone || "N/A"}</TableCell>
-            <TableCell>{user.document_number || "N/A"}</TableCell>
-            <TableCell>{getRoleBadge(user.role)}</TableCell>
-            <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
-            <TableCell>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => handleEdit(user)}>
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDelete(user)}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+        {filteredUsers.length === 0 ? (
+          <TableRow>
+            <TableCell
+              colSpan={7}
+              className="text-center text-muted-foreground"
+            >
+              No hay usuarios en esta categoría.
             </TableCell>
           </TableRow>
-        ))}
+        ) : (
+          filteredUsers.map((user) => (
+            <TableRow key={user.id}>
+              <TableCell className="font-medium">{user.name}</TableCell>
+              <TableCell>{user.email}</TableCell>
+              <TableCell>{user.phone || "N/A"}</TableCell>
+              <TableCell>{(user as any).document_number || "N/A"}</TableCell>
+              <TableCell>{getRoleBadge(user.role)}</TableCell>
+              <TableCell>
+                {new Date(user.created_at).toLocaleDateString()}
+              </TableCell>
+              <TableCell>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEdit(user)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDelete(user)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))
+        )}
       </TableBody>
     </Table>
-  )
+  );
 
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
-    )
+    );
   }
 
   return (
@@ -199,21 +308,35 @@ export default function UserManagement() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">Gestión de Usuarios</h2>
-          <p className="text-muted-foreground">Administra profesores y estudiantes</p>
+          <p className="text-muted-foreground">
+            Administra coordinadores, profesores y estudiantes
+          </p>
         </div>
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) {
+              resetForm(); // Resetea el formulario cuando se cierra el diálogo
+            }
+          }}
+        >
           <DialogTrigger asChild>
-            <Button onClick={resetForm}>
+            <Button>
               <Plus className="mr-2 h-4 w-4" />
               Agregar Usuario
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>{editingUser ? "Editar Usuario" : "Agregar Nuevo Usuario"}</DialogTitle>
+              <DialogTitle>
+                {editingUser ? "Editar Usuario" : "Agregar Nuevo Usuario"}
+              </DialogTitle>
               <DialogDescription>
-                {editingUser ? "Modifica los datos del usuario" : "Completa los datos para crear un nuevo usuario"}
+                {editingUser
+                  ? "Modifica los datos del usuario"
+                  : "Completa los datos para crear un nuevo usuario"}
               </DialogDescription>
             </DialogHeader>
 
@@ -224,7 +347,9 @@ export default function UserManagement() {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -233,10 +358,12 @@ export default function UserManagement() {
                   <Label htmlFor="role">Rol</Label>
                   <Select
                     value={formData.role}
-                    onValueChange={(value: any) => setFormData({ ...formData, role: value })}
+                    onValueChange={(value: UserRole) =>
+                      setFormData({ ...formData, role: value })
+                    }
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Selecciona un rol" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="student">Estudiante</SelectItem>
@@ -253,7 +380,9 @@ export default function UserManagement() {
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                   required
                 />
               </div>
@@ -264,8 +393,13 @@ export default function UserManagement() {
                   id="password"
                   type="password"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  required={!editingUser} // Contraseña requerida solo al crear
+                  placeholder={
+                    editingUser ? "Dejar vacío para no cambiar" : "********"
+                  }
                 />
               </div>
 
@@ -275,7 +409,9 @@ export default function UserManagement() {
                   <Input
                     id="phone"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone: e.target.value })
+                    }
                     placeholder="+57 300 123 4567"
                   />
                 </div>
@@ -285,18 +421,29 @@ export default function UserManagement() {
                   <Input
                     id="document"
                     value={formData.document_number}
-                    onChange={(e) => setFormData({ ...formData, document_number: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        document_number: e.target.value,
+                      })
+                    }
                     placeholder="12345678"
                   />
                 </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDialogOpen(false)}
+                >
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={creating}>
-                  {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {creating && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
                   {editingUser ? "Actualizar" : "Crear Usuario"}
                 </Button>
               </div>
@@ -307,6 +454,8 @@ export default function UserManagement() {
 
       {message && (
         <Alert variant={message.type === "error" ? "destructive" : "default"}>
+          {message.type === "error" && <AlertCircle className="h-4 w-4" />}
+          {message.type === "error" && <AlertTitle>Error</AlertTitle>}
           <AlertDescription>{message.text}</AlertDescription>
         </Alert>
       )}
@@ -315,31 +464,43 @@ export default function UserManagement() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Coordinadores</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Coordinadores
+            </CardTitle>
             <Users className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{filterUsersByRole("coordinator").length}</div>
+            <div className="text-2xl font-bold">
+              {usersByRole.coordinators.length}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Profesores</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Profesores
+            </CardTitle>
             <BookOpen className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{filterUsersByRole("teacher").length}</div>
+            <div className="text-2xl font-bold">
+              {usersByRole.teachers.length}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Estudiantes</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Estudiantes
+            </CardTitle>
             <GraduationCap className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{filterUsersByRole("student").length}</div>
+            <div className="text-2xl font-bold">
+              {usersByRole.students.length}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -348,19 +509,27 @@ export default function UserManagement() {
       <Tabs defaultValue="all" className="space-y-4">
         <TabsList>
           <TabsTrigger value="all">Todos ({users.length})</TabsTrigger>
-          <TabsTrigger value="coordinators">Coordinadores ({filterUsersByRole("coordinator").length})</TabsTrigger>
-          <TabsTrigger value="teachers">Profesores ({filterUsersByRole("teacher").length})</TabsTrigger>
-          <TabsTrigger value="students">Estudiantes ({filterUsersByRole("student").length})</TabsTrigger>
+          <TabsTrigger value="coordinators">
+            Coordinadores ({usersByRole.coordinators.length})
+          </TabsTrigger>
+          <TabsTrigger value="teachers">
+            Profesores ({usersByRole.teachers.length})
+          </TabsTrigger>
+          <TabsTrigger value="students">
+            Estudiantes ({usersByRole.students.length})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="all">
           <Card>
             <CardHeader>
               <CardTitle>Todos los Usuarios</CardTitle>
-              <CardDescription>Lista completa de usuarios del sistema</CardDescription>
+              <CardDescription>
+                Lista completa de usuarios del sistema
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <UserTable users={users} />
+              <UserTable users={usersByRole.all} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -372,7 +541,7 @@ export default function UserManagement() {
               <CardDescription>Usuarios con rol de coordinador</CardDescription>
             </CardHeader>
             <CardContent>
-              <UserTable users={filterUsersByRole("coordinator")} />
+              <UserTable users={usersByRole.coordinators} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -384,7 +553,7 @@ export default function UserManagement() {
               <CardDescription>Usuarios con rol de profesor</CardDescription>
             </CardHeader>
             <CardContent>
-              <UserTable users={filterUsersByRole("teacher")} />
+              <UserTable users={usersByRole.teachers} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -396,11 +565,35 @@ export default function UserManagement() {
               <CardDescription>Usuarios con rol de estudiante</CardDescription>
             </CardHeader>
             <CardContent>
-              <UserTable users={filterUsersByRole("student")} />
+              <UserTable users={usersByRole.students} />
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* AlertDialog para confirmación de eliminación */}
+      <AlertDialog
+        open={!!userToDelete} // Usa el estado del usuario a eliminar
+        onOpenChange={(open) => !open && setUserToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Esto eliminará permanentemente
+              al usuario <span className="font-bold">{userToDelete?.name}</span>
+              .
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={creating}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={creating}>
+              {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
-  )
+  );
 }

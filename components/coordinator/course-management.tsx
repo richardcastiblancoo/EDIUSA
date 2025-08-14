@@ -29,7 +29,23 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Edit, Trash2, Search, BookOpen, Users, Clock, Calendar } from "lucide-react"
-import { type Course, createCourse, updateCourse, deleteCourse, getCourses } from "@/lib/courses"
+// Define Course type inline since module is not found
+type Course = {
+  id: string
+  name: string
+  description?: string
+  language: string
+  level: string
+  duration_weeks?: number
+  hours_per_week?: number
+  max_students?: number
+  price?: number
+  teacher_id?: string
+  schedule?: string
+  start_date?: string
+  end_date?: string
+}
+import { createCourse, updateCourse, deleteCourse, getCourses } from "@/lib/courses"
 import { toast } from "@/hooks/use-toast"
 
 export default function CourseManagement() {
@@ -87,7 +103,7 @@ export default function CourseManagement() {
       filtered = filtered.filter(
         (course) =>
           course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          course.description.toLowerCase().includes(searchTerm.toLowerCase()),
+          course.description?.toLowerCase().includes(searchTerm.toLowerCase()) || false,
       )
     }
 
@@ -131,7 +147,13 @@ export default function CourseManagement() {
 
     setIsLoading(true)
     try {
-      await createCourse(formData)
+      await createCourse({
+        ...formData,
+        code: formData.name.substring(0, 10), // Generate a code from course name
+        capacity: formData.max_students,
+        enrolled_count: 0,
+        room: "TBD" // Default room assignment
+      })
       await loadCourses()
       setIsCreateDialogOpen(false)
       resetForm()
@@ -487,6 +509,7 @@ export default function CourseManagement() {
           </Card>
         ))}
       </div>
+
 
       {filteredCourses.length === 0 && (
         <Card>

@@ -23,8 +23,12 @@ export default function ProfilePage() {
   }
 
   const handleUserUpdate = (updatedUser: User) => {
-    // Opcional: ProfileSettings ya actualiza el contexto y localStorage
+    const auth = useAuth()
+    if (!auth) return
+    auth.updateUser(updatedUser)
+    localStorage.setItem("user", JSON.stringify(updatedUser))
   }
+
 
   return (
     <DashboardLayout userRole={user.role}>

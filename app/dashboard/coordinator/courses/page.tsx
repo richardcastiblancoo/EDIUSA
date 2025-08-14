@@ -20,7 +20,7 @@ export default function CoordinatorCoursesPage() {
 
   return (
     <DashboardLayout userRole="coordinator">
-      <CourseManagement coordinatorId={user.id} />
+      <CourseManagement />
     </DashboardLayout>
   )
 }
