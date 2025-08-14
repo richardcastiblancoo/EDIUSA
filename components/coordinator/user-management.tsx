@@ -462,7 +462,7 @@ export default function UserManagement() {
 
       {/* Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card className="transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Coordinadores
@@ -476,7 +476,7 @@ export default function UserManagement() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Profesores
@@ -490,7 +490,7 @@ export default function UserManagement() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Estudiantes

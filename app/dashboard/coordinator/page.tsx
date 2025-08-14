@@ -8,24 +8,93 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Users, BookOpen, Calendar, TrendingUp, UserCheck, ClipboardList, BarChart3 } from "lucide-react"
 import Link from "next/link"
+import { supabase } from "@/lib/supabase";
+// First install framer-motion package using:
+// npm install framer-motion
+// or
+// yarn add framer-motion
+import { motion } from "framer-motion";
 
 export default function CoordinatorDashboard() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [stats, setStats] = useState({
-    totalStudents: 156,
-    totalTeachers: 12,
-    totalCourses: 24,
-    activeExams: 8,
-    enrollmentGrowth: 15.3,
-    completionRate: 87.5,
+    totalStudents: 0,
+    totalTeachers: 0,
+    totalCourses: 0,
+    activeExams: 0,
+    enrollmentGrowth: 0,
+    completionRate: 0,
   })
 
   useEffect(() => {
     if (!loading && (!user || user.role !== "coordinator")) {
       router.push("/")
     }
-  }, [user, loading, router])
+
+    const fetchStats = async () => {
+      let totalStudents = 0;
+      let totalTeachers = 0;
+      let totalCourses = 0;
+      let activeExams = 0;
+
+      // Fetch total students
+      const { count: studentsCount, error: studentsError } = await supabase
+        .from('users')
+        .select('*', { count: 'exact' })
+        .eq('role', 'student');
+      if (studentsError) {
+        console.error('Error fetching students count:', studentsError);
+      } else {
+        totalStudents = studentsCount || 0;
+      }
+
+      // Fetch total teachers
+      const { count: teachersCount, error: teachersError } = await supabase
+        .from('users')
+        .select('*', { count: 'exact' })
+        .eq('role', 'teacher');
+      if (teachersError) {
+        console.error('Error fetching teachers count:', teachersError);
+      } else {
+        totalTeachers = teachersCount || 0;
+      }
+
+      // Fetch total courses
+      const { count: coursesCount, error: coursesError } = await supabase
+        .from('courses')
+        .select('*', { count: 'exact' });
+      if (coursesError) {
+        console.error('Error fetching courses count:', coursesError);
+      } else {
+        totalCourses = coursesCount || 0;
+      }
+
+      // Fetch active exams (assuming 'published' status means active)
+      const { count: examsCount, error: examsError } = await supabase
+        .from('exams')
+        .select('*', { count: 'exact' })
+        .eq('status', 'published');
+      if (examsError) {
+        console.error('Error fetching active exams count:', examsError);
+      } else {
+        activeExams = examsCount || 0;
+      }
+
+      setStats({
+        totalStudents,
+        totalTeachers,
+        totalCourses,
+        activeExams,
+        enrollmentGrowth: 0, // Placeholder, requires more complex logic
+        completionRate: 0, // Placeholder, requires more complex logic
+      });
+    };
+
+    if (user && user.role === "coordinator") {
+      fetchStats();
+    }
+  }, [user, loading, router]);
 
   if (loading) {
     return (
@@ -81,60 +150,95 @@ export default function CoordinatorDashboard() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Estudiantes</CardTitle>
-              <UserCheck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalStudents}</div>
-              <p className="text-xs text-muted-foreground">+{stats.enrollmentGrowth}% desde el mes pasado</p>
-            </CardContent>
-          </Card>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            whileHover={{ scale: 1.05 }} // Add this line for hover effect
+          >
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Estudiantes</CardTitle>
+                <UserCheck className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalStudents}</div>
+                <p className="text-xs text-muted-foreground">+{stats.enrollmentGrowth}% desde el mes pasado</p>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Profesores Activos</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalTeachers}</div>
-              <p className="text-xs text-muted-foreground">Todos los profesores están activos</p>
-            </CardContent>
-          </Card>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            whileHover={{ scale: 1.05 }} // Add this line for hover effect
+          >
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Profesores Activos</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalTeachers}</div>
+                <p className="text-xs text-muted-foreground">Todos los profesores están activos</p>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Cursos Disponibles</CardTitle>
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalCourses}</div>
-              <p className="text-xs text-muted-foreground">En 5 idiomas diferentes</p>
-            </CardContent>
-          </Card>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            whileHover={{ scale: 1.05 }} // Add this line for hover effect
+          >
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Cursos Disponibles</CardTitle>
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalCourses}</div>
+                <p className="text-xs text-muted-foreground">En 5 idiomas diferentes</p>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Exámenes Activos</CardTitle>
-              <ClipboardList className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.activeExams}</div>
-              <p className="text-xs text-muted-foreground">Programados para esta semana</p>
-            </CardContent>
-          </Card>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            whileHover={{ scale: 1.05 }} // Add this line for hover effect
+          >
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Exámenes Activos</CardTitle>
+                <ClipboardList className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.activeExams}</div>
+                <p className="text-xs text-muted-foreground">Programados para esta semana</p>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Tasa de Finalización</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.completionRate}%</div>
-              <p className="text-xs text-muted-foreground">+2.1% desde el semestre pasado</p>
-            </CardContent>
-          </Card>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+            whileHover={{ scale: 1.05 }} // Add this line for hover effect
+          >
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Tasa de Finalización</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.completionRate}%</div>
+                <p className="text-xs text-muted-foreground">+2.1% desde el semestre pasado</p>
+              </CardContent>
+            </Card>
+          </motion.div>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
