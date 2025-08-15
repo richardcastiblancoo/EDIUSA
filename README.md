@@ -26,18 +26,18 @@ Para configurar el proyecto localmente, sigue estos pasos:
 
 1.  **Clona el repositorio:**
     ```bash
-    git clone [URL_DEL_REPOSITORIO]
-    cd [nombre-del-proyecto]
+    git clone [https://github.com/richardcastiblancoo/Centro-de-Idiomas-Universidad-Sergio-Arboleda.git]
+    cd [Centro-de-Idiomas-Universidad-Sergio-Arboleda]
     ```
 
 2.  **Instala las dependencias:**
-    Utilizas `pnpm`, por lo tanto, ejecuta el siguiente comando:
+    Utilizas `npm`, por lo tanto, ejecuta el siguiente comando:
     ```bash
-    pnpm install
+    npm install
     ```
     Si aún no tienes `framer-motion` instalado, puedes agregarlo con:
     ```bash
-    pnpm add framer-motion
+    npm add framer-motion
     ```
 
 3.  **Configura las variables de entorno:**
@@ -75,7 +75,7 @@ Este es un resumen de la estructura del proyecto, basado en los archivos que me 
 
 En el directorio del proyecto, puedes ejecutar:
 
--   `pnpm dev`: Inicia la aplicación en modo de desarrollo.
--   `pnpm build`: Crea la aplicación optimizada para producción.
--   `pnpm start`: Inicia el servidor de producción.
--   `pnpm lint`: Ejecuta el linter de Next.js para revisar el código.
+-   `npm dev`: Inicia la aplicación en modo de desarrollo.
+-   `npm build`: Crea la aplicación optimizada para producción.
+-   `npm start`: Inicia el servidor de producción.
+-   `npm lint`: Ejecuta el linter de Next.js para revisar el código.
