@@ -9,13 +9,13 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/graduacion.png",
+      "src": "/ciusa.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable any"
     },
     {
-      "src": "/graduacion.png",
+      "src": "/ciusa.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable any"

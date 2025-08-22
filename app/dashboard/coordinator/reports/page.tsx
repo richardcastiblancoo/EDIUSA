@@ -14,10 +14,6 @@ export default function CoordinatorReportsPage() {
     }
   }, [])
 
-  if (!user) {
-    return <div className="flex items-center justify-center min-h-screen">Cargando...</div>
-  }
-
   return (
     <DashboardLayout userRole="coordinator">
       <ReportsDashboard coordinatorId={user.id} />
