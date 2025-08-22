@@ -36,7 +36,7 @@ export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   // Estado para la casilla de "Recordarme".
-  const [rememberMe, setRememberMe] = useState(false); 
+  const [rememberMe, setRememberMe] = useState(false);
 
   const { signIn } = useAuth();
   const router = useRouter();
@@ -97,12 +97,7 @@ export default function LoginForm() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
-<<<<<<< HEAD
-              <img src="ciusa.png" width={100} alt="" />
-
-=======
               <img src="ciusa.png" width={100} alt="Logo CIUSA" />
->>>>>>> supabase
               <div>
                 <h1 className="text-xl font-bold text-gray-900">
                   Centro de Idiomas
@@ -253,10 +248,7 @@ export default function LoginForm() {
                         Recordarme
                       </label>
                     </div>
-<<<<<<< HEAD
-                   
-=======
->>>>>>> supabase
+
                   </div>
 
                   {/* Botón de envío del formulario */}
