@@ -58,184 +58,34 @@ import {
   BookOpen,
   Loader2,
   AlertCircle,
+  Eye,
+  EyeOff,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { getAllUsers, createUser, updateUser, deleteUser } from "@/lib/auth";
-import type { User } from "@/lib/supabase"; // Asegúrate de que esta interfaz incluye document_number
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 // Define el tipo para los roles
 type UserRole = "coordinator" | "teacher" | "student";
 
-// Extiende la interfaz User si es necesario para incluir document_number
-// Por ejemplo:
-// interface UserWithDoc extends User {
-//   document_number?: string;
-// }
+// Extiende la interfaz User para incluir un campo de última actividad
+interface UserWithStatus extends User {
+  document_number?: string;
+}
 
-export default function UserManagement() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "", // No se precargará el password para edición
-    role: "student" as UserRole,
-    phone: "",
-    document_number: "",
-  });
+const PAGE_SIZE = 10;
 
-  // Usa useCallback para memorizar la función de carga
-  const loadUsers = useCallback(async () => {
-    setLoading(true);
-    const userData = await getAllUsers();
-    setUsers(userData);
-    setLoading(false);
-    setMessage(null); // Resetea el mensaje de alerta
-  }, []);
-
-  useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
-
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      email: "",
-      password: "",
-      role: "student",
-      phone: "",
-      document_number: "",
-    });
-    setEditingUser(null);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreating(true);
-
-    try {
-      let success = false;
-      let newOrUpdatedUser;
-
-      if (editingUser) {
-        // Al actualizar, enviamos solo los campos que no están vacíos
-        const dataToSend = { ...formData };
-        if (!dataToSend.password) {
-          delete dataToSend.password;
-        }
-
-        newOrUpdatedUser = await updateUser(editingUser.id, dataToSend);
-        success = !!newOrUpdatedUser;
-      } else {
-        // Al crear, la contraseña es obligatoria
-        newOrUpdatedUser = await createUser(formData);
-        success = !!newOrUpdatedUser;
-      }
-
-      if (success) {
-        setMessage({
-          type: "success",
-          text: `Usuario ${
-            editingUser ? "actualizado" : "creado"
-          } exitosamente`,
-        });
-        setDialogOpen(false); // Cierra el diálogo en caso de éxito
-        resetForm(); // Resetea el formulario al cerrar
-        loadUsers(); // Recarga los usuarios
-      } else {
-        setMessage({
-          type: "error",
-          text: `Error al ${
-            editingUser ? "actualizar" : "crear"
-          } usuario. Verifique los datos.`,
-        });
-      }
-    } catch (error) {
-      console.error("Error en handleSubmit:", error);
-      setMessage({ type: "error", text: "Error inesperado" });
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const handleEdit = (user: User) => {
-    setEditingUser(user);
-    setFormData({
-      name: user.name,
-      email: user.email,
-      password: "", // No precargues la contraseña por seguridad
-      role: user.role as UserRole,
-      phone: user.phone || "",
-      document_number: (user as any).document_number || "", // Considera actualizar la interfaz User
-    });
-    setDialogOpen(true);
-  };
-
-  const handleDelete = async (user: User) => {
-    setUserToDelete(user);
-  };
-
-  const confirmDelete = async () => {
-    if (userToDelete) {
-      setCreating(true); // Usa el mismo estado de loading para la acción
-      try {
-        const success = await deleteUser(userToDelete.id);
-        if (success) {
-          setMessage({
-            type: "success",
-            text: "Usuario eliminado exitosamente",
-          });
-          loadUsers();
-        } else {
-          setMessage({ type: "error", text: "Error al eliminar usuario" });
-        }
-      } catch (error) {
-        setMessage({ type: "error", text: "Error inesperado al eliminar" });
-      } finally {
-        setCreating(false);
-        setUserToDelete(null); // Limpia el usuario a eliminar
-      }
-    }
-  };
-
-  // Memoiza las listas de usuarios por rol para mejorar el rendimiento
-  const usersByRole = useMemo(() => {
-    return {
-      coordinators: users.filter((user) => user.role === "coordinator"),
-      teachers: users.filter((user) => user.role === "teacher"),
-      students: users.filter((user) => user.role === "student"),
-      all: users,
-    };
-  }, [users]);
-
-  const getRoleBadge = (role: string) => {
-    const variants = {
-      coordinator: "default",
-      teacher: "secondary",
-      student: "outline",
-    } as const;
-
-    const labels = {
-      coordinator: "Coordinador",
-      teacher: "Profesor",
-      student: "Estudiante",
-    };
-
-    return (
-      <Badge variant={variants[role as keyof typeof variants]}>
-        {labels[role as keyof typeof labels]}
-      </Badge>
-    );
-  };
-
-  const UserTable = ({ users: filteredUsers }: { users: User[] }) => (
+// Componente de tabla de usuarios, optimizado para ser un componente separado
+const UserTable = ({ users, getRoleAvatar, getRoleBadge, handleEdit, handleDelete, handleView }: {
+    users: UserWithStatus[],
+    getRoleAvatar: (role: string) => React.ReactNode,
+    getRoleBadge: (role: string) => React.ReactNode,
+    handleEdit: (user: UserWithStatus) => void,
+    handleDelete: (user: UserWithStatus) => void,
+    handleView: (user: UserWithStatus) => void,
+  }) => {
+  return (
     <Table>
       <TableHeader>
         <TableRow>
@@ -244,33 +94,39 @@ export default function UserManagement() {
           <TableHead>Teléfono</TableHead>
           <TableHead>Documento</TableHead>
           <TableHead>Rol</TableHead>
-          <TableHead>Fecha Creación</TableHead>
           <TableHead>Acciones</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {filteredUsers.length === 0 ? (
+        {users.length === 0 ? (
           <TableRow>
             <TableCell
-              colSpan={7}
+              colSpan={6}
               className="text-center text-muted-foreground"
             >
-              No hay usuarios en esta categoría.
+              No hay usuarios que coincidan con la búsqueda.
             </TableCell>
           </TableRow>
         ) : (
-          filteredUsers.map((user) => (
+          users.map((user) => (
             <TableRow key={user.id}>
-              <TableCell className="font-medium">{user.name}</TableCell>
+              <TableCell className="font-medium flex items-center gap-2">
+                {getRoleAvatar(user.role)}
+                {user.name}
+              </TableCell>
               <TableCell>{user.email}</TableCell>
               <TableCell>{user.phone || "N/A"}</TableCell>
-              <TableCell>{(user as any).document_number || "N/A"}</TableCell>
+              <TableCell>{user.document_number || "N/A"}</TableCell>
               <TableCell>{getRoleBadge(user.role)}</TableCell>
               <TableCell>
-                {new Date(user.created_at).toLocaleDateString()}
-              </TableCell>
-              <TableCell>
                 <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleView(user)}
+                  >
+                    <Eye className="h-4 w-4 text-blue-500" />
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -293,7 +149,226 @@ export default function UserManagement() {
         )}
       </TableBody>
     </Table>
-  );
+);
+};
+
+
+export default function UserManagement() {
+  const [users, setUsers] = useState<UserWithStatus[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserWithStatus | null>(null);
+  const [viewingUser, setViewingUser] = useState<UserWithStatus | null>(null);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [userToDelete, setUserToDelete] = useState<UserWithStatus | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "student" as UserRole,
+    phone: "",
+    document_number: "",
+  });
+
+  const loadUsers = useCallback(async () => {
+    setLoading(true);
+    const userData = await getAllUsers();
+    setUsers(userData);
+    setLoading(false);
+    setMessage(null);
+  }, []);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      email: "",
+      password: "",
+      role: "student",
+      phone: "",
+      document_number: "",
+    });
+    setEditingUser(null);
+    setShowPassword(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+
+    try {
+      let success = false;
+      let newOrUpdatedUser;
+
+      if (editingUser) {
+        const dataToSend = { ...formData };
+        if (!dataToSend.password) {
+          delete dataToSend.password;
+        }
+
+        newOrUpdatedUser = await updateUser(editingUser.id, dataToSend);
+        success = !!newOrUpdatedUser;
+      } else {
+        newOrUpdatedUser = await createUser(formData);
+        success = !!newOrUpdatedUser;
+      }
+
+      if (success) {
+        setMessage({
+          type: "success",
+          text: `Usuario ${
+            editingUser ? "actualizado" : "creado"
+          } exitosamente`,
+        });
+        setDialogOpen(false);
+        resetForm();
+        loadUsers();
+      } else {
+        setMessage({
+          type: "error",
+          text: `Error al ${
+            editingUser ? "actualizar" : "crear"
+          } usuario. Verifique los datos.`,
+        });
+      }
+    } catch (error) {
+      console.error("Error en handleSubmit:", error);
+      setMessage({ type: "error", text: "Error inesperado" });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleEdit = useCallback((user: UserWithStatus) => {
+    setEditingUser(user);
+    setFormData({
+      name: user.name,
+      email: user.email,
+      password: "",
+      role: user.role as UserRole,
+      phone: user.phone || "",
+      document_number: user.document_number || "",
+    });
+    setDialogOpen(true);
+  }, []);
+
+  const handleDelete = useCallback((user: UserWithStatus) => {
+    setUserToDelete(user);
+  }, []);
+
+  const handleView = useCallback((user: UserWithStatus) => {
+    setViewingUser(user);
+  }, []);
+
+  const confirmDelete = async () => {
+    if (userToDelete) {
+      setCreating(true);
+      try {
+        const success = await deleteUser(userToDelete.id);
+        if (success) {
+          setMessage({
+            type: "success",
+            text: "Usuario eliminado exitosamente",
+          });
+          loadUsers();
+        } else {
+          setMessage({ type: "error", text: "Error al eliminar usuario" });
+        }
+      } catch (error) {
+        setMessage({ type: "error", text: "Error inesperado al eliminar" });
+      } finally {
+        setCreating(false);
+        setUserToDelete(null);
+      }
+    }
+  };
+
+  const getRoleBadge = useCallback((role: string) => {
+    const variants = {
+      coordinator: "default",
+      teacher: "secondary",
+      student: "outline",
+    } as const;
+
+    const labels = {
+      coordinator: "Coordinador",
+      teacher: "Profesor",
+      student: "Estudiante",
+    };
+
+    return (
+      <Badge variant={variants[(role as keyof typeof variants) || "student"]}>
+        {labels[(role as keyof typeof labels) || "student"]}
+      </Badge>
+    );
+  }, []);
+
+  const getRoleAvatar = useCallback((role: string) => {
+    const avatarMap = {
+      coordinator: "bg-blue-600",
+      teacher: "bg-green-600",
+      student: "bg-purple-600",
+    };
+    const avatarIconMap = {
+      coordinator: <Users className="h-5 w-5 text-white" />,
+      teacher: <BookOpen className="h-5 w-5 text-white" />,
+      student: <GraduationCap className="h-5 w-5 text-white" />,
+    };
+
+    return (
+      <Avatar className={`h-8 w-8 ${avatarMap[(role as keyof typeof avatarMap) || "student"]}`}>
+        <AvatarFallback>
+          {avatarIconMap[(role as keyof typeof avatarIconMap) || "student"]}
+        </AvatarFallback>
+      </Avatar>
+    );
+  }, []);
+
+  const filteredUsers = useMemo(() => {
+    const lowerCaseQuery = searchQuery.toLowerCase();
+    const filtered = users.filter((user) =>
+      user.name.toLowerCase().includes(lowerCaseQuery) ||
+      (user.document_number && user.document_number.includes(lowerCaseQuery))
+    );
+    if (currentPage > 1 && Math.ceil(filtered.length / PAGE_SIZE) < currentPage) {
+      setCurrentPage(1);
+    }
+    return filtered;
+  }, [users, searchQuery]);
+
+  const usersByRole = useMemo(() => {
+    return {
+      coordinators: filteredUsers.filter((user) => user.role === "coordinator"),
+      teachers: filteredUsers.filter((user) => user.role === "teacher"),
+      students: filteredUsers.filter((user) => user.role === "student"),
+      all: filteredUsers,
+    };
+  }, [filteredUsers]);
+
+  const totalPages = (role: keyof typeof usersByRole) => {
+    return Math.ceil(usersByRole[role].length / PAGE_SIZE);
+  };
+
+  const paginatedUsers = (role: keyof typeof usersByRole) => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    return usersByRole[role].slice(start, end);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   if (loading) {
     return (
@@ -312,144 +387,166 @@ export default function UserManagement() {
             Administra coordinadores, profesores y estudiantes
           </p>
         </div>
+        <div className="flex items-center space-x-2">
+          <Input
+            type="text"
+            placeholder="Buscar por nombre o documento..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <Dialog
+            open={dialogOpen}
+            onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) {
+                resetForm();
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Agregar Usuario
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingUser ? "Editar Usuario" : "Agregar Nuevo Usuario"}
+                </DialogTitle>
+                <DialogDescription>
+                  {editingUser
+                    ? "Modifica los datos del usuario"
+                    : "Completa los datos para crear un nuevo usuario"}
+                </DialogDescription>
+              </DialogHeader>
 
-        <Dialog
-          open={dialogOpen}
-          onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) {
-              resetForm(); // Resetea el formulario cuando se cierra el diálogo
-            }
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Agregar Usuario
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>
-                {editingUser ? "Editar Usuario" : "Agregar Nuevo Usuario"}
-              </DialogTitle>
-              <DialogDescription>
-                {editingUser
-                  ? "Modifica los datos del usuario"
-                  : "Completa los datos para crear un nuevo usuario"}
-              </DialogDescription>
-            </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nombre Completo</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="role">Rol</Label>
+                    <Select
+                      value={formData.role}
+                      onValueChange={(value: UserRole) =>
+                        setFormData({ ...formData, role: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona un rol" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="student">Estudiante</SelectItem>
+                        <SelectItem value="teacher">Profesor</SelectItem>
+                        <SelectItem value="coordinator">Coordinador</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="name">Nombre Completo</Label>
+                  <Label htmlFor="email">Correo Electrónico</Label>
                   <Input
-                    id="name"
-                    value={formData.name}
+                    id="email"
+                    type="email"
+                    value={formData.email}
                     onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
+                      setFormData({ ...formData, email: e.target.value })
                     }
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="role">Rol</Label>
-                  <Select
-                    value={formData.role}
-                    onValueChange={(value: UserRole) =>
-                      setFormData({ ...formData, role: value })
-                    }
+                  <Label htmlFor="password">Contraseña</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={formData.password}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
+                      required={!editingUser}
+                      placeholder={
+                        editingUser ? "Dejar vacío para no cambiar" : "********"
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-1"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Teléfono</Label>
+                    <Input
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
+                      placeholder="+57 300 123 4567"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="document">Documento</Label>
+                    <Input
+                      id="document"
+                      value={formData.document_number}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          document_number: e.target.value,
+                        })
+                      }
+                      placeholder="12345678"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDialogOpen(false)}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona un rol" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="student">Estudiante</SelectItem>
-                      <SelectItem value="teacher">Profesor</SelectItem>
-                      <SelectItem value="coordinator">Coordinador</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={creating}>
+                    {creating && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    {editingUser ? "Actualizar" : "Crear Usuario"}
+                  </Button>
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Correo Electrónico</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  required={!editingUser} // Contraseña requerida solo al crear
-                  placeholder={
-                    editingUser ? "Dejar vacío para no cambiar" : "********"
-                  }
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Teléfono</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phone: e.target.value })
-                    }
-                    placeholder="+57 300 123 4567"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="document">Documento</Label>
-                  <Input
-                    id="document"
-                    value={formData.document_number}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        document_number: e.target.value,
-                      })
-                    }
-                    placeholder="12345678"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={creating}>
-                  {creating && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  {editingUser ? "Actualizar" : "Crear Usuario"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {message && (
@@ -508,7 +605,7 @@ export default function UserManagement() {
       {/* Users Tables */}
       <Tabs defaultValue="all" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="all">Todos ({users.length})</TabsTrigger>
+          <TabsTrigger value="all">Todos ({filteredUsers.length})</TabsTrigger>
           <TabsTrigger value="coordinators">
             Coordinadores ({usersByRole.coordinators.length})
           </TabsTrigger>
@@ -520,7 +617,7 @@ export default function UserManagement() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all">
+        <TabsContent value="all" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Todos los Usuarios</CardTitle>
@@ -529,51 +626,259 @@ export default function UserManagement() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <UserTable users={usersByRole.all} />
+              <UserTable
+                users={paginatedUsers("all")}
+                getRoleAvatar={getRoleAvatar}
+                getRoleBadge={getRoleBadge}
+                handleEdit={handleEdit}
+                handleDelete={handleDelete}
+                handleView={handleView}
+              />
             </CardContent>
           </Card>
+          {totalPages("all") > 1 && (
+            <div className="flex justify-end items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Anterior
+              </Button>
+              {Array.from({ length: totalPages("all") }, (_, i) => i + 1).map(
+                (page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handlePageChange(page)}
+                  >
+                    {page}
+                  </Button>
+                )
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages("all")}
+              >
+                Siguiente
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </TabsContent>
 
-        <TabsContent value="coordinators">
+        <TabsContent value="coordinators" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Coordinadores</CardTitle>
               <CardDescription>Usuarios con rol de coordinador</CardDescription>
             </CardHeader>
             <CardContent>
-              <UserTable users={usersByRole.coordinators} />
+              <UserTable
+                users={paginatedUsers("coordinators")}
+                getRoleAvatar={getRoleAvatar}
+                getRoleBadge={getRoleBadge}
+                handleEdit={handleEdit}
+                handleDelete={handleDelete}
+                handleView={handleView}
+              />
             </CardContent>
           </Card>
+          {totalPages("coordinators") > 1 && (
+            <div className="flex justify-end items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Anterior
+              </Button>
+              {Array.from({ length: totalPages("coordinators") }, (_, i) => i + 1).map(
+                (page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handlePageChange(page)}
+                  >
+                    {page}
+                  </Button>
+                )
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages("coordinators")}
+              >
+                Siguiente
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </TabsContent>
 
-        <TabsContent value="teachers">
+        <TabsContent value="teachers" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Profesores</CardTitle>
               <CardDescription>Usuarios con rol de profesor</CardDescription>
             </CardHeader>
             <CardContent>
-              <UserTable users={usersByRole.teachers} />
+              <UserTable
+                users={paginatedUsers("teachers")}
+                getRoleAvatar={getRoleAvatar}
+                getRoleBadge={getRoleBadge}
+                handleEdit={handleEdit}
+                handleDelete={handleDelete}
+                handleView={handleView}
+              />
             </CardContent>
           </Card>
+          {totalPages("teachers") > 1 && (
+            <div className="flex justify-end items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Anterior
+              </Button>
+              {Array.from({ length: totalPages("teachers") }, (_, i) => i + 1).map(
+                (page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handlePageChange(page)}
+                  >
+                    {page}
+                  </Button>
+                )
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages("teachers")}
+              >
+                Siguiente
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </TabsContent>
 
-        <TabsContent value="students">
+        <TabsContent value="students" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Estudiantes</CardTitle>
               <CardDescription>Usuarios con rol de estudiante</CardDescription>
             </CardHeader>
             <CardContent>
-              <UserTable users={usersByRole.students} />
+              <UserTable
+                users={paginatedUsers("students")}
+                getRoleAvatar={getRoleAvatar}
+                getRoleBadge={getRoleBadge}
+                handleEdit={handleEdit}
+                handleDelete={handleDelete}
+                handleView={handleView}
+              />
             </CardContent>
           </Card>
+          {totalPages("students") > 1 && (
+            <div className="flex justify-end items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Anterior
+              </Button>
+              {Array.from({ length: totalPages("students") }, (_, i) => i + 1).map(
+                (page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handlePageChange(page)}
+                  >
+                    {page}
+                  </Button>
+                )
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages("students")}
+              >
+                Siguiente
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
+      {/* Dialog para ver detalles del usuario */}
+      <Dialog
+        open={!!viewingUser}
+        onOpenChange={(open) => !open && setViewingUser(null)}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Detalles del Usuario</DialogTitle>
+            <DialogDescription>
+              Información completa del usuario seleccionado.
+            </DialogDescription>
+          </DialogHeader>
+          {viewingUser && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-4">
+                {getRoleAvatar(viewingUser.role)}
+                <div className="grid gap-1">
+                  <h3 className="text-lg font-bold">
+                    {viewingUser.name}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {viewingUser.email}
+                  </p>
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <p>
+                  <span className="font-medium">Rol:</span>{" "}
+                  {getRoleBadge(viewingUser.role)}
+                </p>
+                <p>
+                  <span className="font-medium">Teléfono:</span>{" "}
+                  {viewingUser.phone || "N/A"}
+                </p>
+                <p>
+                  <span className="font-medium">Documento:</span>{" "}
+                  {viewingUser.document_number || "N/A"}
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* AlertDialog para confirmación de eliminación */}
       <AlertDialog
-        open={!!userToDelete} // Usa el estado del usuario a eliminar
+        open={!!userToDelete}
         onOpenChange={(open) => !open && setUserToDelete(null)}
       >
         <AlertDialogContent>

@@ -36,14 +36,7 @@ export default function ProfileSettings({ user, onUserUpdate }: ProfileSettingsP
     email: user.email,
     phone: user.phone || "",
     document_number: (user as any).document_number || "",
-    bio: "",
-    specialization: "",
-    experience_years: "",
-    languages: "",
-    academic_level: "",
-    student_id: "",
-    emergency_contact: "",
-    address: "",
+    // Campos eliminados
   })
 
   const [settingsForm, setSettingsForm] = useState({
@@ -119,66 +112,6 @@ export default function ProfileSettings({ user, onUserUpdate }: ProfileSettingsP
 
   const getRoleSpecificFields = () => {
     switch (user.role) {
-      case "coordinator":
-        return (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="specialization">Área de Especialización</Label>
-              <Input
-                id="specialization"
-                value={profileForm.specialization}
-                onChange={(e) => setProfileForm({ ...profileForm, specialization: e.target.value })}
-                placeholder="Administración Educativa, Lingüística, etc."
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="experience_years">Años de Experiencia</Label>
-              <Input
-                id="experience_years"
-                type="number"
-                value={profileForm.experience_years}
-                onChange={(e) => setProfileForm({ ...profileForm, experience_years: e.target.value })}
-                placeholder="10"
-              />
-            </div>
-          </>
-        )
-
-      case "teacher":
-        return (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="specialization">Idiomas que Enseña</Label>
-              <Input
-                id="specialization"
-                value={profileForm.languages}
-                onChange={(e) => setProfileForm({ ...profileForm, languages: e.target.value })}
-                placeholder="Inglés, Francés, Alemán"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="experience_years">Años de Experiencia Docente</Label>
-              <Input
-                id="experience_years"
-                type="number"
-                value={profileForm.experience_years}
-                onChange={(e) => setProfileForm({ ...profileForm, experience_years: e.target.value })}
-                placeholder="5"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="bio">Biografía Profesional</Label>
-              <Textarea
-                id="bio"
-                value={profileForm.bio}
-                onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
-                placeholder="Describe tu experiencia y metodología de enseñanza..."
-                rows={3}
-              />
-            </div>
-          </>
-        )
-
       case "student":
         return (
           <>
@@ -383,25 +316,7 @@ export default function ProfileSettings({ user, onUserUpdate }: ProfileSettingsP
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="address">Dirección</Label>
-                  <Input
-                    id="address"
-                    value={profileForm.address}
-                    onChange={(e) => setProfileForm({ ...profileForm, address: e.target.value })}
-                    placeholder="Calle 123 #45-67, Bogotá"
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="space-y-4">
-                  <h4 className="font-medium">
-                    Información{" "}
-                    {user.role === "coordinator" ? "Administrativa" : user.role === "teacher" ? "Docente" : "Académica"}
-                  </h4>
-                  {getRoleSpecificFields()}
-                </div>
+               
 
                 <div className="flex justify-end">
                   <Button type="submit" disabled={loading}>

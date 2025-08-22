@@ -21,11 +21,38 @@ import {
   Line,
 } from "recharts"
 import { Download, FileText, TrendingUp, Users, BookOpen, GraduationCap, Loader2 } from "lucide-react"
-import { generateEnrollmentReport, saveReport } from "@/lib/reports"
-import type { ReportData } from "@/lib/reports"
+// Define ReportData interface directly in the component file since types module is missing
+interface ReportData {
+  enrollmentStats: {
+    totalStudents: number;
+    activeEnrollments: number;
+    completedCourses: number;
+    dropoutRate: number;
+  };
+  courseStats: {
+    activeCourses: number;
+    totalCourses: number;
+    capacityUtilization: number;
+    averageEnrollment: number;
+  };
+  teacherStats: {
+    activeTeachers: number;
+    totalTeachers: number;
+    averageCoursesPerTeacher: number;
+  };
+  languageDistribution: Array<{
+    language: string;
+    courses: number;
+    students: number;
+  }>;
+  enrollmentTrends: Array<{
+    month: string;
+    enrollments: number;
+  }>;
+}
 
 interface ReportsDashboardProps {
-  coordinatorId: string
+  coordinatorId: string // Esta prop ya no se usa, puedes eliminarla si quieres.
 }
 
 export default function ReportsDashboard({ coordinatorId }: ReportsDashboardProps) {
@@ -34,43 +61,48 @@ export default function ReportsDashboard({ coordinatorId }: ReportsDashboardProp
   const [generating, setGenerating] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
-  useEffect(() => {
-    loadReportData()
-  }, [])
-
-  const loadReportData = async () => {
+  const fetchReportData = async () => {
     setLoading(true)
-    const data = await generateEnrollmentReport()
-    setReportData(data)
-    setLoading(false)
+    setMessage(null)
+    try {
+      const response = await fetch('/api/dashboard-reports', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      
+      if (!response.ok) {
+        throw new Error("Error al cargar los datos del reporte del dashboard.")
+      }
+
+      const data: ReportData = await response.json()
+      setReportData(data)
+    } catch (error: any) {
+      console.error(error)
+      setMessage({ type: "error", text: error.message || "Error al cargar los datos del reporte." })
+      setReportData(null);
+    } finally {
+      setLoading(false)
+    }
   }
+
+  useEffect(() => {
+    fetchReportData()
+  }, [])
 
   const handleGenerateReport = async () => {
     setGenerating(true)
     setMessage(null)
-
-    try {
-      const data = await generateEnrollmentReport()
-      if (data) {
-        setReportData(data)
-
-        // Save report to database
-        await saveReport({
-          title: `Reporte de Inscripciones - ${new Date().toLocaleDateString()}`,
-          report_type: "enrollment",
-          generated_by: coordinatorId,
-          data: data,
-        })
-
-        setMessage({ type: "success", text: "Reporte generado exitosamente" })
-      } else {
-        setMessage({ type: "error", text: "Error al generar reporte" })
-      }
-    } catch (error) {
-      setMessage({ type: "error", text: "Error inesperado" })
-    } finally {
-      setGenerating(false)
-    }
+    // El botón "Generar Reporte" ahora simplemente refresca los datos.
+    await fetchReportData()
+    setMessage({ type: "success", text: "Reporte actualizado exitosamente." });
+    setGenerating(false)
+  }
+  
+  // Si deseas implementar la funcionalidad de "Exportar a PDF",
+  // necesitarías una biblioteca como html-to-image o jsPDF.
+  const handleExportPdf = () => {
+    setMessage({ type: "success", text: "Funcionalidad de exportar a PDF en desarrollo." });
+    // Aquí iría la lógica para generar el PDF
   }
 
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"]
@@ -78,7 +110,7 @@ export default function ReportsDashboard({ coordinatorId }: ReportsDashboardProp
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
@@ -86,8 +118,8 @@ export default function ReportsDashboard({ coordinatorId }: ReportsDashboardProp
   if (!reportData) {
     return (
       <div className="text-center p-8">
-        <p className="text-muted-foreground">No se pudieron cargar los datos del reporte</p>
-        <Button onClick={loadReportData} className="mt-4">
+        <p className="text-muted-foreground mb-4">No se pudieron cargar los datos del reporte.</p>
+        <Button onClick={fetchReportData}>
           Reintentar
         </Button>
       </div>
@@ -112,11 +144,11 @@ export default function ReportsDashboard({ coordinatorId }: ReportsDashboardProp
             ) : (
               <>
                 <FileText className="mr-2 h-4 w-4" />
-                Generar Reporte
+                Actualizar Reporte
               </>
             )}
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExportPdf}>
             <Download className="mr-2 h-4 w-4" />
             Exportar PDF
           </Button>
