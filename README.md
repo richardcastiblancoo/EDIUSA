@@ -53,7 +53,7 @@ Para configurar el proyecto localmente, sigue estos pasos:
 
 4.  **Ejecuta el servidor de desarrollo:**
     ```bash
-    pnpm dev
+    npm run dev
     ```
 
     Abre [http://localhost:3000](http://localhost:3000) en tu navegador para ver la aplicación.

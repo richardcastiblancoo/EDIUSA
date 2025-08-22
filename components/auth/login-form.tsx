@@ -1,7 +1,8 @@
 "use client";
 
+// Importa los módulos y componentes necesarios.
 import type React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,24 +29,54 @@ import {
 import { useAuth } from "@/lib/auth-context";
 
 export default function LoginForm() {
+  // Estados para manejar los datos del formulario y la UI.
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  // Estado para la casilla de "Recordarme".
+  const [rememberMe, setRememberMe] = useState(false); 
+
   const { signIn } = useAuth();
   const router = useRouter();
-  const [rememberMe, setRememberMe] = useState(false); // Nuevo estado para "recordarme"
 
+  /**
+   * Hook de efecto para cargar el correo electrónico si fue guardado previamente.
+   * Se ejecuta solo una vez al montar el componente.
+   */
+  useEffect(() => {
+    // Intenta obtener el correo guardado en el almacenamiento local del navegador.
+    const storedEmail = localStorage.getItem('rememberedEmail');
+    if (storedEmail) {
+      // Si existe un correo guardado, actualiza el estado 'email' y marca la casilla.
+      setEmail(storedEmail);
+      setRememberMe(true);
+    }
+  }, []);
+
+  /**
+   * Manejador del envío del formulario.
+   * Realiza la autenticación y gestiona el estado de "Recordarme".
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
 
+    // Guarda o elimina el correo electrónico en el almacenamiento local según la elección del usuario.
+    if (rememberMe) {
+      // Si la casilla está marcada, guarda el correo.
+      localStorage.setItem('rememberedEmail', email);
+    } else {
+      // Si no, elimina cualquier correo guardado anteriormente.
+      localStorage.removeItem('rememberedEmail');
+    }
+
     try {
       const result = await signIn(email, password);
       if (result.success) {
-        // Redirect will be handled by the useEffect in the parent component
+        // La redirección es manejada por el contexto de autenticación o el componente padre.
       } else {
         setError(
           result.error ||
@@ -61,13 +92,17 @@ export default function LoginForm() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
-      {/* Header */}
+      {/* Sección del encabezado del sitio */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
+<<<<<<< HEAD
               <img src="ciusa.png" width={100} alt="" />
 
+=======
+              <img src="ciusa.png" width={100} alt="Logo CIUSA" />
+>>>>>>> supabase
               <div>
                 <h1 className="text-xl font-bold text-gray-900">
                   Centro de Idiomas
@@ -82,7 +117,7 @@ export default function LoginForm() {
       </header>
 
       <div className="flex flex-col lg:flex-row min-h-[calc(100vh-80px)]">
-        {/* Left side - Hero Section */}
+        {/* Sección izquierda - Información de la plataforma */}
         <div className="lg:w-1/2 flex items-center justify-center p-8 lg:p-12">
           <div className="max-w-md w-full space-y-8">
             <div className="text-center">
@@ -98,7 +133,7 @@ export default function LoginForm() {
               </p>
             </div>
 
-            {/* Features */}
+            {/* Lista de características */}
             <div className="space-y-4">
               <div className="flex items-center space-x-3">
                 <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -128,7 +163,7 @@ export default function LoginForm() {
           </div>
         </div>
 
-        {/* Right side - Login Form */}
+        {/* Sección derecha - Formulario de inicio de sesión */}
         <div className="lg:w-1/2 flex items-center justify-center p-8 lg:p-12 bg-white lg:bg-gray-50">
           <div className="max-w-md w-full">
             <Card className="shadow-xl border-0">
@@ -141,7 +176,8 @@ export default function LoginForm() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Atributo 'autoComplete' en el formulario para habilitar la función del navegador */}
+                <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
                   <div className="space-y-2">
                     <Label
                       htmlFor="email"
@@ -159,6 +195,8 @@ export default function LoginForm() {
                         onChange={(e) => setEmail(e.target.value)}
                         className="pl-10 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                         required
+                        // Atributo 'autoComplete' para el nombre de usuario
+                        autoComplete="username"
                       />
                     </div>
                   </div>
@@ -180,6 +218,8 @@ export default function LoginForm() {
                         onChange={(e) => setPassword(e.target.value)}
                         className="pl-10 pr-10 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                         required
+                        // Atributo 'autoComplete' para la contraseña actual
+                        autoComplete="current-password"
                       />
                       <button
                         type="button"
@@ -195,7 +235,7 @@ export default function LoginForm() {
                     </div>
                   </div>
 
-                  {/* Checkbox "Recordarme" y enlace "Olvidé mi contraseña" */}
+                  {/* Casilla de "Recordarme" */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <input
@@ -213,9 +253,13 @@ export default function LoginForm() {
                         Recordarme
                       </label>
                     </div>
+<<<<<<< HEAD
                    
+=======
+>>>>>>> supabase
                   </div>
 
+                  {/* Botón de envío del formulario */}
                   <Button
                     type="submit"
                     className="w-full py-3 text-lg font-semibold"
@@ -224,6 +268,7 @@ export default function LoginForm() {
                     {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
                   </Button>
 
+                  {/* Mensaje de error si la autenticación falla */}
                   {error && (
                     <Alert variant="destructive">
                       <AlertCircle className="h-4 w-4" />

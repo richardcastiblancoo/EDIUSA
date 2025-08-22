@@ -14,8 +14,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, MapPin, Users } from "lucide-react";
-import { getAllCourses, getCourseSchedules } from "@/lib/courses";
-import type { Course, Schedule } from "@/lib/courses";
+import { getCourses } from "@/lib/courses";
+import type { Course } from "@/lib/courses";
+interface Schedule {
+  id: string;
+  course_id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  classroom: string;
+}
 
 export default function CoordinatorSchedulesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -28,13 +36,13 @@ export default function CoordinatorSchedulesPage() {
 
   const loadSchedules = async () => {
     setLoading(true);
-    const coursesData = await getAllCourses();
+    const coursesData = await getCourses();
     setCourses(coursesData);
 
     // Load schedules for each course
     const schedulesData: Record<string, Schedule[]> = {};
     for (const course of coursesData) {
-      const courseSchedules = await getCourseSchedules(course.id);
+      const courseSchedules = await fetch(`/api/courses/${course.id}/schedules`).then(res => res.json());
       schedulesData[course.id] = courseSchedules;
     }
     setSchedules(schedulesData);
@@ -165,7 +173,7 @@ export default function CoordinatorSchedulesPage() {
                                 {course.name}
                               </div>
                               <div className="text-muted-foreground">
-                                {course.teacher?.name}
+                                {course.teacherName || 'Sin profesor asignado'}
                               </div>
                               <div className="flex items-center gap-1 mt-1">
                                 <MapPin className="h-3 w-3" />
@@ -191,7 +199,7 @@ export default function CoordinatorSchedulesPage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <CardTitle className="text-lg">{course.name}</CardTitle>
-                    <CardDescription>{course.course_code}</CardDescription>
+                    <CardDescription>{course.code}</CardDescription>
                   </div>
                   <Badge variant="outline">{course.language}</Badge>
                 </div>
@@ -201,7 +209,7 @@ export default function CoordinatorSchedulesPage() {
                   <div className="flex items-center gap-2 text-sm">
                     <Users className="h-4 w-4 text-muted-foreground" />
                     <span>
-                      {course.teacher?.name || "Sin profesor asignado"}
+                      {course.teacherName || "Sin profesor asignado"}
                     </span>
                   </div>
 
