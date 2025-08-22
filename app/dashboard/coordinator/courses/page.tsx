@@ -5,7 +5,7 @@ import DashboardLayout from "@/components/layout/dashboard-layout"
 import CourseManagement from "@/components/coordinator/course-management"
 
 export default function CoordinatorCoursesPage() {
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState(null)
 
   useEffect(() => {
     const savedUser = localStorage.getItem("user")

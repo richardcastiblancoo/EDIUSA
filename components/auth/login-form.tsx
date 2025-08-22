@@ -49,7 +49,7 @@ export default function LoginForm() {
       } else {
         setError(
           result.error ||
-            "Credenciales inválidas. Por favor, verifica tu email y contraseña."
+          "Credenciales inválidas. Por favor, verifica tu email y contraseña."
         );
       }
     } catch (error) {
@@ -66,9 +66,8 @@ export default function LoginForm() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
-              <div className="h-10 w-10 rounded-lg bg-blue-600 flex items-center justify-center">
-                <GraduationCap className="h-6 w-6 text-white" />
-              </div>
+              <img src="ciusa.png" width={100} alt="" />
+
               <div>
                 <h1 className="text-xl font-bold text-gray-900">
                   Centro de Idiomas
@@ -78,11 +77,6 @@ export default function LoginForm() {
                 </p>
               </div>
             </div>
-            <img
-              src="/universidad-sergio-arboleda-logo.png"
-              alt="Universidad Sergio Arboleda"
-              className="h-12 w-auto"
-            />
           </div>
         </div>
       </header>
@@ -219,14 +213,7 @@ export default function LoginForm() {
                         Recordarme
                       </label>
                     </div>
-                    <div className="text-sm">
-                      <a
-                        href="/auth/forgot-password"
-                        className="font-medium text-blue-600 hover:text-blue-500"
-                      >
-                        ¿Olvidaste tu contraseña?
-                      </a>
-                    </div>
+                   
                   </div>
 
                   <Button
