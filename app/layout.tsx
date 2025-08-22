@@ -9,16 +9,15 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Centro de Idiomas Universidad Sergio Arboleda",
-  description:
-  "Sistema de gestión académica para el Centro de Idiomas de la Universidad Sergio Arboleda. Plataforma integral para la gestión académica y administrativa del Centro de Idiomas de la Universidad Sergio Arboleda. Gestión de estudiantes y profesores Administración de cursos y exámenes Seguimiento académico integral",
-     openGraph: {
-    title: "Mi Página Web",
-    description: "Sistema de gestión académica para el Centro de Idiomas de la Universidad Sergio Arboleda. Plataforma integral para la gestión académica y administrativa del Centro de Idiomas de la Universidad Sergio Arboleda. Gestión de estudiantes y profesores Administración de cursos y exámenes Seguimiento académico integral",
+  openGraph: {
+    title: "Centro de Idiomas Universidad Sergio Arboleda",
+    description:
+      "Sistema de gestión académica para el Centro de Idiomas de la Universidad Sergio Arboleda. Plataforma integral para la gestión académica y administrativa del Centro de Idiomas de la Universidad Sergio Arboleda. Gestión de estudiantes y profesores Administración de cursos y exámenes Seguimiento académico integral",
     url: "https://centro-de-idiomas-universidad-sergi.vercel.app/",
     siteName: "Centro de Idiomas Universidad Sergio Arboleda",
     images: [
       {
-        url: "https://centro-de-idiomas-universidad-sergi.vercel.app/", // URL de tu imagen
+        url: "/ciusa.png", // ✅ usar la importación local
         width: 1200,
         height: 630,
         alt: "Centro de Idiomas Universidad Sergio Arboleda",
