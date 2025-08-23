@@ -225,7 +225,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
             <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center">
-              <GraduationCap className="h-5 w-5 text-white" />
+              <img src="/ciusa.png" width={64} height={64} alt="logo ciusa" />
             </div>
             <span className="text-lg font-semibold text-gray-900">Centro de Idiomas</span>
           </div>

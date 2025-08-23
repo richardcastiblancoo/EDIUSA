@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     siteName: "Centro de Idiomas Universidad Sergio Arboleda",
     images: [
       {
-        url: "/ciusa.png", // ✅ usar la importación local
+        url: "/ciusa.png", // ✅ imagen 
         width: 1200,
         height: 630,
         alt: "Centro de Idiomas Universidad Sergio Arboleda",
