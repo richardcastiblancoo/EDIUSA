@@ -93,14 +93,19 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
           icon: UserCheck,
         },
         {
+          name: "Profesores", // Nuevo item para profesores
+          href: "/dashboard/coordinator/teachers",
+          icon: GraduationCap,
+        },
+        {
           name: "Cursos",
           href: "/dashboard/coordinator/courses",
           icon: BookOpen,
         },
         {
-          name: "Horarios",
+          name: "Listado de PQR",
           href: "/dashboard/coordinator/schedules",
-          icon: Calendar,
+          icon: MessageSquare,
         },
         {
           name: "Reportes",
@@ -164,7 +169,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
   const getGroupedNavigation = () => {
     const general = navigationItems.filter((i) => ["Inicio", "Chat IA"].includes(i.name))
     const gestionCoordinator = navigationItems.filter((i) =>
-      ["Usuarios", "Estudiantes", "Cursos", "Horarios"].includes(i.name)
+      ["Usuarios", "Estudiantes", "Profesores", "Cursos", "Listado de PQR"].includes(i.name)
     )
     const gestionTeacher = navigationItems.filter((i) =>
       ["Mis Cursos", "Exámenes", "Estudiantes"].includes(i.name)
