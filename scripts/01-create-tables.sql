@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS courses (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+
+
 -- Create enrollments table
 CREATE TABLE IF NOT EXISTS enrollments (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -77,3 +79,6 @@ CREATE INDEX IF NOT EXISTS idx_enrollments_student ON enrollments(student_id);
 CREATE INDEX IF NOT EXISTS idx_enrollments_course ON enrollments(course_id);
 CREATE INDEX IF NOT EXISTS idx_exam_attempts_exam ON exam_attempts(exam_id);
 CREATE INDEX IF NOT EXISTS idx_exam_attempts_student ON exam_attempts(student_id);
+
+-------
+ALTER TABLE users ADD COLUMN english_level TEXT;

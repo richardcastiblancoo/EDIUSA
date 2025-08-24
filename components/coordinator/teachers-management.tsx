@@ -64,10 +64,13 @@ import {
   UserPlus,
   Trash2,
   Edit,
+  Eye,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 import { supabase } from "@/lib/supabase";
+
+type EnglishLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
 
 interface User {
   id: string;
@@ -76,6 +79,7 @@ interface User {
   phone: string | null;
   role: string;
   document_number: string | null;
+  english_level: EnglishLevel | null;
   created_at: string;
   updated_at: string | null;
   is_active: boolean;
@@ -83,7 +87,7 @@ interface User {
   address: string | null;
 }
 
-interface Teacher extends Omit<User, 'is_active' | 'document_number'> {
+interface Teacher extends Omit<User, "is_active" | "document_number"> {
   status: "active" | "inactive";
   document: string | null;
 }
@@ -119,23 +123,30 @@ export default function TeachersManagement() {
     phone: "",
     document: "",
     status: "active" as "active" | "inactive",
+    english_level: "A1" as EnglishLevel,
   });
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [teacherToDeleteId, setTeacherToDeleteId] = useState<string | null>(null);
+  const [teacherToDeleteId, setTeacherToDeleteId] = useState<string | null>(
+    null
+  );
   const [stats, setStats] = useState<UserStats>({
     total: 0,
     active: 0,
     inactive: 0,
     newThisMonth: 0,
   });
-  const [filterName, setFilterName] = useState("");
   const [filterDocument, setFilterDocument] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [totalPages, setTotalPages] = useState(0);
+
+  const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
+  const [teacherToPreview, setTeacherToPreview] = useState<Teacher | null>(
+    null
+  );
 
   const fetchTeachers = async () => {
     setLoading(true);
@@ -160,6 +171,7 @@ export default function TeachersManagement() {
         phone: dbUser.phone,
         role: dbUser.role,
         document: dbUser.document_number,
+        english_level: dbUser.english_level,
         created_at: dbUser.created_at,
         status: dbUser.is_active ? "active" : "inactive",
       }));
@@ -198,12 +210,13 @@ export default function TeachersManagement() {
 
   useEffect(() => {
     const filtered = teachers.filter((teacher) =>
-      teacher.name.toLowerCase().includes(filterName.toLowerCase()) &&
-      (teacher.document ? teacher.document.toLowerCase().includes(filterDocument.toLowerCase()) : true)
+      teacher.document
+        ? teacher.document.toLowerCase().includes(filterDocument.toLowerCase())
+        : false
     );
     setTotalPages(Math.ceil(filtered.length / itemsPerPage));
     setCurrentPage(1);
-  }, [teachers, filterName, filterDocument, itemsPerPage]);
+  }, [teachers, filterDocument, itemsPerPage]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -219,6 +232,7 @@ export default function TeachersManagement() {
         phone: teacher.phone ?? "",
         document: teacher.document ?? "",
         status: teacher.status,
+        english_level: teacher.english_level ?? "A1",
       });
     } else {
       setCurrentTeacher(null);
@@ -228,6 +242,7 @@ export default function TeachersManagement() {
         phone: "",
         document: "",
         status: "active",
+        english_level: "A1",
       });
     }
     setIsDialogOpen(true);
@@ -235,14 +250,14 @@ export default function TeachersManagement() {
 
   const handleSaveTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { document, status, ...dataToSave } = formData;
+    const { document, status, english_level, ...dataToSave } = formData;
     const is_active = status === "active";
     const document_number = document;
 
     if (currentTeacher) {
       const { error } = await supabase
         .from("users")
-        .update({ ...dataToSave, is_active, document_number })
+        .update({ ...dataToSave, is_active, document_number, english_level })
         .eq("id", currentTeacher.id);
       if (error) {
         console.error("Error updating user:", error);
@@ -260,11 +275,12 @@ export default function TeachersManagement() {
         setIsDialogOpen(false);
       }
     } else {
-      const newTeacherData = { 
-        ...dataToSave, 
-        is_active, 
-        document_number, 
-        role: "teacher", 
+      const newTeacherData = {
+        ...dataToSave,
+        is_active,
+        document_number,
+        english_level,
+        role: "teacher",
       };
       const { error } = await supabase.from("users").insert([newTeacherData]);
       if (error) {
@@ -316,14 +332,23 @@ export default function TeachersManagement() {
     setTeacherToDeleteId(null);
   };
 
+  const handleOpenPreviewDialog = (teacher: Teacher) => {
+    setTeacherToPreview(teacher);
+    setIsPreviewDialogOpen(true);
+  };
+
   const filteredTeachers = teachers.filter((teacher) =>
-    teacher.name.toLowerCase().includes(filterName.toLowerCase()) &&
-    (teacher.document ? teacher.document.toLowerCase().includes(filterDocument.toLowerCase()) : true)
+    teacher.document
+      ? teacher.document.toLowerCase().includes(filterDocument.toLowerCase())
+      : false
   );
 
   const indexOfLastTeacher = currentPage * itemsPerPage;
   const indexOfFirstTeacher = indexOfLastTeacher - itemsPerPage;
-  const currentTeachers = filteredTeachers.slice(indexOfFirstTeacher, indexOfLastTeacher);
+  const currentTeachers = filteredTeachers.slice(
+    indexOfFirstTeacher,
+    indexOfLastTeacher
+  );
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
@@ -338,10 +363,6 @@ export default function TeachersManagement() {
             Administra los profesores del centro de idiomas.
           </p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Añadir Profesor
-        </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -410,13 +431,6 @@ export default function TeachersManagement() {
           <div className="mb-4 flex flex-col sm:flex-row gap-4">
             <Input
               type="text"
-              placeholder="Filtrar por nombre..."
-              value={filterName}
-              onChange={(e) => setFilterName(e.target.value)}
-              className="max-w-xs"
-            />
-            <Input
-              type="text"
               placeholder="Filtrar por documento..."
               value={filterDocument}
               onChange={(e) => setFilterDocument(e.target.value)}
@@ -433,9 +447,14 @@ export default function TeachersManagement() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nombre</TableHead>
-                    <TableHead className="hidden md:table-cell">Documento</TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      Documento
+                    </TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead className="hidden lg:table-cell">Teléfono</TableHead>
+                    <TableHead className="hidden lg:table-cell">
+                      Teléfono
+                    </TableHead>
+                    <TableHead>Nivel</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Acciones</TableHead>
                   </TableRow>
@@ -443,15 +462,23 @@ export default function TeachersManagement() {
                 <TableBody>
                   {currentTeachers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                        No se encontraron profesores que coincidan con la búsqueda.
+                      <TableCell
+                        colSpan={7}
+                        className="text-center py-8 text-gray-500"
+                      >
+                        No se encontraron profesores que coincidan con la
+                        búsqueda.
                       </TableCell>
                     </TableRow>
                   ) : (
                     currentTeachers.map((teacher) => (
                       <TableRow key={teacher.id}>
-                        <TableCell className="font-medium">{teacher.name}</TableCell>
-                        <TableCell className="hidden md:table-cell">{teacher.document}</TableCell>
+                        <TableCell className="font-medium">
+                          {teacher.name}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {teacher.document}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Mail className="h-4 w-4 hidden lg:inline" />
@@ -464,28 +491,55 @@ export default function TeachersManagement() {
                             <span>{teacher.phone}</span>
                           </div>
                         </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {teacher.english_level || "N/A"}
+                          </Badge>
+                        </TableCell>
                         <TableCell>{getStatusBadge(teacher.status)}</TableCell>
                         <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button aria-haspopup="true" size="icon" variant="ghost">
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => handleOpenDialog(teacher)} className="flex items-center gap-2">
-                                <Edit className="h-4 w-4" />
-                                <span>Editar</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => handleDeleteConfirmation(teacher.id)} className="flex items-center gap-2 text-red-600">
-                                <Trash2 className="h-4 w-4" />
-                                <span>Eliminar</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <div className="flex items-center justify-end gap-2 md:justify-start">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleOpenPreviewDialog(teacher)}
+                            >
+                              <Eye className="h-4 w-4 text-blue-600" />
+                              <span className="sr-only">Previsualizar</span>
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  aria-haspopup="true"
+                                  size="icon"
+                                  variant="ghost"
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                  <span className="sr-only">Toggle menu</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                <DropdownMenuItem
+                                  onClick={() => handleOpenDialog(teacher)}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                  <span>Editar</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleDeleteConfirmation(teacher.id)
+                                  }
+                                  className="flex items-center gap-2 text-red-600"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  <span>Eliminar</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -526,7 +580,9 @@ export default function TeachersManagement() {
               {currentTeacher ? "Editar Profesor" : "Añadir Nuevo Profesor"}
             </DialogTitle>
             <DialogDescription>
-              {currentTeacher ? "Modifica los datos del profesor." : "Completa los campos para añadir un nuevo profesor."}
+              {currentTeacher
+                ? "Modifica los datos del profesor."
+                : "Completa los campos para añadir un nuevo profesor."}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSaveTeacher} className="grid gap-4 py-4">
@@ -571,6 +627,27 @@ export default function TeachersManagement() {
               />
             </div>
             <div className="grid gap-2">
+              <Label htmlFor="english_level">Nivel de Inglés</Label>
+              <Select
+                value={formData.english_level}
+                onValueChange={(value: EnglishLevel) =>
+                  setFormData((prev) => ({ ...prev, english_level: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un nivel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="A1">A1</SelectItem>
+                  <SelectItem value="A2">A2</SelectItem>
+                  <SelectItem value="B1">B1</SelectItem>
+                  <SelectItem value="B2">B2</SelectItem>
+                  <SelectItem value="C1">C1</SelectItem>
+                  <SelectItem value="C2">C2</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
               <Label htmlFor="status">Estado</Label>
               <Select
                 value={formData.status}
@@ -599,6 +676,62 @@ export default function TeachersManagement() {
         </DialogContent>
       </Dialog>
 
+      {/* Nuevo Diálogo de Previsualización */}
+      <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detalles de {teacherToPreview?.name}</DialogTitle>
+            <DialogDescription>
+              Información detallada del profesor.
+            </DialogDescription>
+          </DialogHeader>
+          {teacherToPreview && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Nombre:</Label>
+                <div className="col-span-3 font-semibold">
+                  {teacherToPreview.name}
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Documento:</Label>
+                <div className="col-span-3 font-semibold">
+                  {teacherToPreview.document || "N/A"}
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Email:</Label>
+                <div className="col-span-3 font-semibold">
+                  {teacherToPreview.email}
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Teléfono:</Label>
+                <div className="col-span-3 font-semibold">
+                  {teacherToPreview.phone || "N/A"}
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Nivel:</Label>
+                <div className="col-span-3 font-semibold">
+                  <Badge variant="outline">
+                    {teacherToPreview.english_level || "N/A"}
+                  </Badge>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Estado:</Label>
+                <div className="col-span-3 font-semibold">
+                  {getStatusBadge(teacherToPreview.status)}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setIsPreviewDialogOpen(false)}>Cerrar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Diálogo de Confirmación de Eliminación */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
