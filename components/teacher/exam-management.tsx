@@ -166,7 +166,10 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
         order_number: questions.length + 1,
       }
 
-      const newQuestion = await createQuestion(questionData)
+      const newQuestion = await createQuestion({
+        ...questionData,
+        options: questionData.options || undefined
+      })
       if (newQuestion) {
         setMessage({ type: "success", text: "Pregunta agregada exitosamente" })
         loadQuestions(selectedExam.id)

@@ -71,6 +71,7 @@ interface User {
   status: "active" | "inactive";
   created_at: string;
   role: string;
+  document: string | null;
 }
 
 interface UserStats {
@@ -103,6 +104,7 @@ export default function TeachersManagement() {
     email: "",
     phone: "",
     subject: "",
+    document: "",
     status: "active" as "active" | "inactive",
   });
   const { toast } = useToast();
@@ -115,6 +117,13 @@ export default function TeachersManagement() {
     inactive: 0,
     newThisMonth: 0,
   });
+  const [filterName, setFilterName] = useState("");
+  const [filterDocument, setFilterDocument] = useState("");
+  
+  // Estados para la paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const [totalPages, setTotalPages] = useState(0);
 
   const fetchTeachers = async () => {
     setLoading(true);
@@ -165,6 +174,15 @@ export default function TeachersManagement() {
     calculateStats();
   }, [teachers]);
 
+  useEffect(() => {
+    const filtered = teachers.filter((teacher) =>
+      teacher.name.toLowerCase().includes(filterName.toLowerCase()) &&
+      (teacher.document ? teacher.document.toLowerCase().includes(filterDocument.toLowerCase()) : true)
+    );
+    setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+    setCurrentPage(1); // Resetear a la primera página con cada filtro
+  }, [teachers, filterName, filterDocument, itemsPerPage]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({ ...prevData, [name]: value }));
@@ -178,6 +196,7 @@ export default function TeachersManagement() {
         email: teacher.email ?? "",
         phone: teacher.phone ?? "",
         subject: teacher.subject ?? "",
+        document: teacher.document ?? "",
         status: teacher.status,
       });
     } else {
@@ -187,6 +206,7 @@ export default function TeachersManagement() {
         email: "",
         phone: "",
         subject: "",
+        document: "",
         status: "active",
       });
     }
@@ -195,7 +215,7 @@ export default function TeachersManagement() {
 
   const handleSaveTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { subject, ...dataToSave } = formData;
+    const { subject, document, ...dataToSave } = formData;
 
     if (currentTeacher) {
       const { error } = await supabase
@@ -268,6 +288,17 @@ export default function TeachersManagement() {
     setIsDeleteDialogOpen(false);
     setTeacherToDeleteId(null);
   };
+
+  const filteredTeachers = teachers.filter((teacher) =>
+    teacher.name.toLowerCase().includes(filterName.toLowerCase()) &&
+    (teacher.document ? teacher.document.toLowerCase().includes(filterDocument.toLowerCase()) : true)
+  );
+
+  const indexOfLastTeacher = currentPage * itemsPerPage;
+  const indexOfFirstTeacher = indexOfLastTeacher - itemsPerPage;
+  const currentTeachers = filteredTeachers.slice(indexOfFirstTeacher, indexOfLastTeacher);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-6">
@@ -349,74 +380,115 @@ export default function TeachersManagement() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 flex flex-col sm:flex-row gap-4">
+            <Input
+              type="text"
+              placeholder="Filtrar por nombre..."
+              value={filterName}
+              onChange={(e) => setFilterName(e.target.value)}
+              className="max-w-xs"
+            />
+            <Input
+              type="text"
+              placeholder="Filtrar por documento..."
+              value={filterDocument}
+              onChange={(e) => setFilterDocument(e.target.value)}
+              className="max-w-xs"
+            />
+          </div>
           {loading ? (
             <div className="flex justify-center items-center py-8">
               <p>Cargando profesores...</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead className="hidden lg:table-cell">Teléfono</TableHead>
-                  <TableHead className="hidden sm:table-cell">Materia</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {teachers.length === 0 ? (
+            <>
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                      No hay profesores registrados.
-                    </TableCell>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead className="hidden md:table-cell">Documento</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead className="hidden lg:table-cell">Teléfono</TableHead>
+                    <TableHead className="hidden sm:table-cell">Materia</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Acciones</TableHead>
                   </TableRow>
-                ) : (
-                  teachers.map((teacher) => (
-                    <TableRow key={teacher.id}>
-                      <TableCell className="font-medium">{teacher.name}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 hidden lg:inline" />
-                          <span>{teacher.email}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4" />
-                          <span>{teacher.phone}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">{teacher.subject}</TableCell>
-                      <TableCell>{getStatusBadge(teacher.status)}</TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Toggle menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleOpenDialog(teacher)} className="flex items-center gap-2">
-                              <Edit className="h-4 w-4" />
-                              <span>Editar</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleDeleteConfirmation(teacher.id)} className="flex items-center gap-2 text-red-600">
-                              <Trash2 className="h-4 w-4" />
-                              <span>Eliminar</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                </TableHeader>
+                <TableBody>
+                  {currentTeachers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                        No se encontraron profesores que coincidan con la búsqueda.
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    currentTeachers.map((teacher) => (
+                      <TableRow key={teacher.id}>
+                        <TableCell className="font-medium">{teacher.name}</TableCell>
+                        <TableCell className="hidden md:table-cell">{teacher.document}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4 hidden lg:inline" />
+                            <span>{teacher.email}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4" />
+                            <span>{teacher.phone}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">{teacher.subject}</TableCell>
+                        <TableCell>{getStatusBadge(teacher.status)}</TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button aria-haspopup="true" size="icon" variant="ghost">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Toggle menu</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                              <DropdownMenuItem onClick={() => handleOpenDialog(teacher)} className="flex items-center gap-2">
+                                <Edit className="h-4 w-4" />
+                                <span>Editar</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleDeleteConfirmation(teacher.id)} className="flex items-center gap-2 text-red-600">
+                                <Trash2 className="h-4 w-4" />
+                                <span>Eliminar</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-4 mt-6">
+                  <Button
+                    onClick={() => paginate(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    variant="outline"
+                  >
+                    Anterior
+                  </Button>
+                  <span className="text-sm text-gray-700">
+                    Página {currentPage} de {totalPages}
+                  </span>
+                  <Button
+                    onClick={() => paginate(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    variant="outline"
+                  >
+                    Siguiente
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -439,6 +511,16 @@ export default function TeachersManagement() {
                 id="name"
                 name="name"
                 value={formData.name}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="document">Documento</Label>
+              <Input
+                id="document"
+                name="document"
+                value={formData.document}
                 onChange={handleInputChange}
                 required
               />
