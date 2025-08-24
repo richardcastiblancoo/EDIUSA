@@ -48,6 +48,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   MoreHorizontal,
   Mail,
   Phone,
@@ -67,10 +74,17 @@ interface User {
   name: string;
   email: string;
   phone: string | null;
-  subject: string | null;
-  status: "active" | "inactive";
-  created_at: string;
   role: string;
+  document_number: string | null;
+  created_at: string;
+  updated_at: string | null;
+  is_active: boolean;
+  avatar: string | null;
+  address: string | null;
+}
+
+interface Teacher extends Omit<User, 'is_active' | 'document_number'> {
+  status: "active" | "inactive";
   document: string | null;
 }
 
@@ -96,14 +110,13 @@ const getStatusBadge = (status: "active" | "inactive") => {
 };
 
 export default function TeachersManagement() {
-  const [teachers, setTeachers] = useState<User[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentTeacher, setCurrentTeacher] = useState<User | null>(null);
+  const [currentTeacher, setCurrentTeacher] = useState<Teacher | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
-    subject: "",
     document: "",
     status: "active" as "active" | "inactive",
   });
@@ -119,8 +132,7 @@ export default function TeachersManagement() {
   });
   const [filterName, setFilterName] = useState("");
   const [filterDocument, setFilterDocument] = useState("");
-  
-  // Estados para la paginación
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [totalPages, setTotalPages] = useState(0);
@@ -131,7 +143,7 @@ export default function TeachersManagement() {
       .from("users")
       .select("*")
       .eq("role", "teacher");
-      
+
     if (error) {
       console.error("Error fetching teachers:", error);
       toast({
@@ -141,7 +153,17 @@ export default function TeachersManagement() {
       });
       setTeachers([]);
     } else {
-      setTeachers(data as User[]);
+      const mappedTeachers = data.map((dbUser: User) => ({
+        id: dbUser.id,
+        name: dbUser.name,
+        email: dbUser.email,
+        phone: dbUser.phone,
+        role: dbUser.role,
+        document: dbUser.document_number,
+        created_at: dbUser.created_at,
+        status: dbUser.is_active ? "active" : "inactive",
+      }));
+      setTeachers(mappedTeachers);
     }
     setLoading(false);
   };
@@ -180,7 +202,7 @@ export default function TeachersManagement() {
       (teacher.document ? teacher.document.toLowerCase().includes(filterDocument.toLowerCase()) : true)
     );
     setTotalPages(Math.ceil(filtered.length / itemsPerPage));
-    setCurrentPage(1); // Resetear a la primera página con cada filtro
+    setCurrentPage(1);
   }, [teachers, filterName, filterDocument, itemsPerPage]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -188,14 +210,13 @@ export default function TeachersManagement() {
     setFormData((prevData) => ({ ...prevData, [name]: value }));
   };
 
-  const handleOpenDialog = (teacher?: User) => {
+  const handleOpenDialog = (teacher?: Teacher) => {
     if (teacher) {
       setCurrentTeacher(teacher);
       setFormData({
         name: teacher.name ?? "",
         email: teacher.email ?? "",
         phone: teacher.phone ?? "",
-        subject: teacher.subject ?? "",
         document: teacher.document ?? "",
         status: teacher.status,
       });
@@ -205,7 +226,6 @@ export default function TeachersManagement() {
         name: "",
         email: "",
         phone: "",
-        subject: "",
         document: "",
         status: "active",
       });
@@ -215,12 +235,14 @@ export default function TeachersManagement() {
 
   const handleSaveTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { subject, document, ...dataToSave } = formData;
+    const { document, status, ...dataToSave } = formData;
+    const is_active = status === "active";
+    const document_number = document;
 
     if (currentTeacher) {
       const { error } = await supabase
         .from("users")
-        .update(dataToSave)
+        .update({ ...dataToSave, is_active, document_number })
         .eq("id", currentTeacher.id);
       if (error) {
         console.error("Error updating user:", error);
@@ -238,7 +260,12 @@ export default function TeachersManagement() {
         setIsDialogOpen(false);
       }
     } else {
-      const newTeacherData = { ...dataToSave, role: "teacher", created_at: new Date().toISOString() };
+      const newTeacherData = { 
+        ...dataToSave, 
+        is_active, 
+        document_number, 
+        role: "teacher", 
+      };
       const { error } = await supabase.from("users").insert([newTeacherData]);
       if (error) {
         console.error("Error adding user:", error);
@@ -409,7 +436,6 @@ export default function TeachersManagement() {
                     <TableHead className="hidden md:table-cell">Documento</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead className="hidden lg:table-cell">Teléfono</TableHead>
-                    <TableHead className="hidden sm:table-cell">Materia</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Acciones</TableHead>
                   </TableRow>
@@ -417,7 +443,7 @@ export default function TeachersManagement() {
                 <TableBody>
                   {currentTeachers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                         No se encontraron profesores que coincidan con la búsqueda.
                       </TableCell>
                     </TableRow>
@@ -438,7 +464,6 @@ export default function TeachersManagement() {
                             <span>{teacher.phone}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="hidden sm:table-cell">{teacher.subject}</TableCell>
                         <TableCell>{getStatusBadge(teacher.status)}</TableCell>
                         <TableCell>
                           <DropdownMenu>
@@ -546,14 +571,21 @@ export default function TeachersManagement() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="subject">Materia/Curso</Label>
-              <Input
-                id="subject"
-                name="subject"
-                value={formData.subject}
-                onChange={handleInputChange}
-                required
-              />
+              <Label htmlFor="status">Estado</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value: "active" | "inactive") =>
+                  setFormData((prev) => ({ ...prev, status: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Activo</SelectItem>
+                  <SelectItem value="inactive">Inactivo</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>

@@ -31,7 +31,7 @@ export default function TeacherDashboard() {
         console.error("Error fetching courses:", error)
         // Podrías mostrar un mensaje de error al usuario aquí
       } else {
-        setMyCourses(data as Course[] ?? [])
+        setMyCourses((data ?? []) as Course[])
       }
       setIsLoading(false)
     }
