@@ -1,14 +1,14 @@
+// src/components/ImageUpload.tsx
 "use client"
 
 import type React from "react"
-
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Upload, Camera, Loader2, X } from "lucide-react"
-import { uploadImage, deleteUserImage } from "@/lib/images"
+import { Upload, Camera, Loader2, X, Image as ImageIcon } from "lucide-react"
+import { uploadImage, deleteUserImage, getUserImage } from "@/lib/images"
 
 interface ImageUploadProps {
   userId: string
@@ -29,24 +29,46 @@ export default function ImageUpload({
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false)
   const [imageUrl, setImageUrl] = useState(currentImageUrl || "")
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const fetchImage = async () => {
+      if (!currentImageUrl) {
+        const url = await getUserImage(userId, imageType);
+        if (url) {
+          setImageUrl(url);
+          onImageUpdate?.(url);
+        }
+      }
+    };
+    fetchImage();
+  }, [userId, imageType, currentImageUrl, onImageUpdate]);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (!file) return
+    if (!file) {
+      return
+    }
 
-    // Validate file type
     if (!file.type.startsWith("image/")) {
-      setMessage({ type: "error", text: "Por favor selecciona un archivo de imagen válido" })
+      setMessage({ type: "error", text: "Por favor selecciona un archivo de imagen válido." })
       return
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setMessage({ type: "error", text: "El archivo es muy grande. Máximo 5MB permitido" })
+    if (file.size > 1 * 1024 * 1024) { // 1MB
+      setMessage({ type: "error", text: "El archivo es muy grande. Máximo 1MB permitido." })
       return
     }
+
+    // Crear URL de previsualización
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setPreviewUrl(reader.result as string)
+    }
+    reader.readAsDataURL(file)
 
     setUploading(true)
     setMessage(null)
@@ -55,13 +77,15 @@ export default function ImageUpload({
       const uploadedUrl = await uploadImage(file, userId, imageType)
       if (uploadedUrl) {
         setImageUrl(uploadedUrl)
-        setMessage({ type: "success", text: "Imagen subida exitosamente" })
+        setPreviewUrl(null)
+        setMessage({ type: "success", text: "Imagen subida exitosamente." })
         onImageUpdate?.(uploadedUrl)
       } else {
-        setMessage({ type: "error", text: "Error al subir la imagen" })
+        setMessage({ type: "error", text: "Error al subir la imagen." })
       }
-    } catch {
-      setMessage({ type: "error", text: "Error inesperado al subir la imagen" })
+    } catch (error) {
+      console.error("Error al subir la imagen:", error)
+      setMessage({ type: "error", text: "Error inesperado al subir la imagen." })
     } finally {
       setUploading(false)
     }
@@ -73,26 +97,24 @@ export default function ImageUpload({
         const ok = await deleteUserImage(userId, imageType)
         if (ok) {
           setImageUrl("")
-          setMessage({ type: "success", text: "Imagen eliminada exitosamente" })
+          setPreviewUrl(null)
+          setMessage({ type: "success", text: "Imagen eliminada exitosamente." })
           onImageUpdate?.(null)
         } else {
-          setMessage({ type: "error", text: "No se pudo eliminar la imagen" })
+          setMessage({ type: "error", text: "No se pudo eliminar la imagen." })
         }
-      } catch {
-        setMessage({ type: "error", text: "Error inesperado al eliminar la imagen" })
+      } catch (error) {
+        console.error("Error al eliminar la imagen:", error)
+        setMessage({ type: "error", text: "Error inesperado al eliminar la imagen." })
       }
     }
-  }
-
-  const triggerFileInput = () => {
-    fileInputRef.current?.click()
   }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Camera className="h-5 w-5" />
+          <ImageIcon className="h-5 w-5" />
           {title}
         </CardTitle>
         <CardDescription>{description}</CardDescription>
@@ -107,18 +129,18 @@ export default function ImageUpload({
         <div className="flex items-center gap-4">
           {imageType === "avatar" ? (
             <Avatar className="h-20 w-20">
-              <AvatarImage src={imageUrl || "/placeholder.svg?height=80&width=80&text=Avatar"} />
+              <AvatarImage src={previewUrl || imageUrl || "/placeholder.svg?height=80&width=80&text=Avatar"} />
               <AvatarFallback>
                 <Camera className="h-8 w-8" />
               </AvatarFallback>
             </Avatar>
           ) : (
-            <div className="w-32 h-20 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
-              {imageUrl ? (
+            <div className="w-32 h-20 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 overflow-hidden">
+              {(previewUrl || imageUrl) ? (
                 <img
-                  src={imageUrl || "/placeholder.svg?height=80&width=128&text=Image"}
+                  src={previewUrl || imageUrl || "/placeholder.svg?height=80&width=128&text=Image"}
                   alt={title}
-                  className="w-full h-full object-cover rounded-lg"
+                  className="w-full h-full object-cover"
                 />
               ) : (
                 <Camera className="h-8 w-8 text-gray-400" />
@@ -126,8 +148,8 @@ export default function ImageUpload({
             </div>
           )}
 
-          <div className="flex flex-col gap-2">
-            <Button onClick={triggerFileInput} disabled={uploading} variant="outline">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} variant="outline">
               {uploading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -140,7 +162,10 @@ export default function ImageUpload({
                 </>
               )}
             </Button>
-
+            <Button onClick={() => cameraInputRef.current?.click()} disabled={uploading} variant="outline">
+              <Camera className="mr-2 h-4 w-4" />
+              Tomar Foto
+            </Button>
             {imageUrl && (
               <Button
                 onClick={handleRemoveImage}
@@ -156,20 +181,15 @@ export default function ImageUpload({
         </div>
 
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
+        <input ref={cameraInputRef} type="file" accept="image/*" capture="user" onChange={handleFileSelect} className="hidden" />
 
         <div className="text-xs text-muted-foreground">
           <p>Formatos soportados: JPG, PNG, GIF</p>
-          <p>Tamaño máximo: 5MB</p>
+          <p>Tamaño máximo: 1MB</p>
           {imageType === "avatar" && <p>Recomendado: 400x400px</p>}
           {imageType === "logo" && <p>Recomendado: 200x100px</p>}
           {imageType === "banner" && <p>Recomendado: 1200x300px</p>}
         </div>
-
-        <Alert>
-          <AlertDescription>
-            <strong>Nota:</strong> Las imágenes se almacenan en Supabase Storage y se registran en user_images.
-          </AlertDescription>
-        </Alert>
       </CardContent>
     </Card>
   )

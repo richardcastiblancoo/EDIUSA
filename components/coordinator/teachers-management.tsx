@@ -60,22 +60,20 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
-// Importa el cliente de Supabase
 import { supabase } from "@/lib/supabase";
 
-// Define una interfaz para el tipo de datos de un profesor
-interface Teacher {
+interface User {
   id: string;
   name: string;
   email: string;
-  phone: string;
-  subject: string;
+  phone: string | null;
+  subject: string | null;
   status: "active" | "inactive";
   created_at: string;
+  role: string;
 }
 
-// Interfaz para las estadísticas
-interface TeacherStats {
+interface UserStats {
   total: number;
   active: number;
   inactive: number;
@@ -97,9 +95,9 @@ const getStatusBadge = (status: "active" | "inactive") => {
 };
 
 export default function TeachersManagement() {
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [teachers, setTeachers] = useState<User[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentTeacher, setCurrentTeacher] = useState<Teacher | null>(null);
+  const [currentTeacher, setCurrentTeacher] = useState<User | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -111,17 +109,20 @@ export default function TeachersManagement() {
   const [loading, setLoading] = useState(true);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [teacherToDeleteId, setTeacherToDeleteId] = useState<string | null>(null);
-  const [stats, setStats] = useState<TeacherStats>({
+  const [stats, setStats] = useState<UserStats>({
     total: 0,
     active: 0,
     inactive: 0,
     newThisMonth: 0,
   });
 
-  // --- Lógica de Supabase y gestión de datos ---
   const fetchTeachers = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("teachers").select("*");
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("role", "teacher");
+      
     if (error) {
       console.error("Error fetching teachers:", error);
       toast({
@@ -131,7 +132,7 @@ export default function TeachersManagement() {
       });
       setTeachers([]);
     } else {
-      setTeachers(data as Teacher[]);
+      setTeachers(data as User[]);
     }
     setLoading(false);
   };
@@ -169,14 +170,14 @@ export default function TeachersManagement() {
     setFormData((prevData) => ({ ...prevData, [name]: value }));
   };
 
-  const handleOpenDialog = (teacher?: Teacher) => {
+  const handleOpenDialog = (teacher?: User) => {
     if (teacher) {
       setCurrentTeacher(teacher);
       setFormData({
-        name: teacher.name,
-        email: teacher.email,
-        phone: teacher.phone,
-        subject: teacher.subject,
+        name: teacher.name ?? "",
+        email: teacher.email ?? "",
+        phone: teacher.phone ?? "",
+        subject: teacher.subject ?? "",
         status: teacher.status,
       });
     } else {
@@ -194,13 +195,15 @@ export default function TeachersManagement() {
 
   const handleSaveTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
+    const { subject, ...dataToSave } = formData;
+
     if (currentTeacher) {
       const { error } = await supabase
-        .from("teachers")
-        .update(formData)
+        .from("users")
+        .update(dataToSave)
         .eq("id", currentTeacher.id);
       if (error) {
-        console.error("Error updating teacher:", error);
+        console.error("Error updating user:", error);
         toast({
           title: "Error",
           description: "No se pudo actualizar el profesor.",
@@ -215,9 +218,10 @@ export default function TeachersManagement() {
         setIsDialogOpen(false);
       }
     } else {
-      const { error } = await supabase.from("teachers").insert([formData]);
+      const newTeacherData = { ...dataToSave, role: "teacher", created_at: new Date().toISOString() };
+      const { error } = await supabase.from("users").insert([newTeacherData]);
       if (error) {
-        console.error("Error adding teacher:", error);
+        console.error("Error adding user:", error);
         toast({
           title: "Error",
           description: "No se pudo agregar el profesor.",
@@ -243,12 +247,12 @@ export default function TeachersManagement() {
     if (!teacherToDeleteId) return;
 
     const { error } = await supabase
-      .from("teachers")
+      .from("users")
       .delete()
       .eq("id", teacherToDeleteId);
 
     if (error) {
-      console.error("Error deleting teacher:", error);
+      console.error("Error deleting user:", error);
       toast({
         title: "Error",
         description: "No se pudo eliminar el profesor.",
@@ -276,9 +280,12 @@ export default function TeachersManagement() {
             Administra los profesores del centro de idiomas.
           </p>
         </div>
+        <Button onClick={() => handleOpenDialog()}>
+          <UserPlus className="h-4 w-4 mr-2" />
+          Añadir Profesor
+        </Button>
       </div>
 
-      {/* Sección de Estadísticas */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="hover:scale-105 transition-transform duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -414,13 +421,15 @@ export default function TeachersManagement() {
         </CardContent>
       </Card>
 
-      {/* Diálogo de Edición */}
+      {/* Diálogo de Edición/Creación */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Editar Profesor</DialogTitle>
+            <DialogTitle>
+              {currentTeacher ? "Editar Profesor" : "Añadir Nuevo Profesor"}
+            </DialogTitle>
             <DialogDescription>
-              Modifica los datos del profesor.
+              {currentTeacher ? "Modifica los datos del profesor." : "Completa los campos para añadir un nuevo profesor."}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSaveTeacher} className="grid gap-4 py-4">
@@ -468,7 +477,9 @@ export default function TeachersManagement() {
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit">Guardar Cambios</Button>
+              <Button type="submit">
+                {currentTeacher ? "Guardar Cambios" : "Añadir Profesor"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

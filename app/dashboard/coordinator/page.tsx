@@ -4,15 +4,11 @@ import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import DashboardLayout from "@/components/layout/dashboard-layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Users, BookOpen, Calendar, TrendingUp, UserCheck, ClipboardList, BarChart3 } from "lucide-react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase";
-// First install framer-motion package using:
-// npm install framer-motion
-// or
-// yarn add framer-motion
 import { motion } from "framer-motion";
 
 export default function CoordinatorDashboard() {
@@ -154,7 +150,7 @@ export default function CoordinatorDashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            whileHover={{ scale: 1.05 }} // Add this line for hover effect
+            whileHover={{ scale: 1.05 }}
           >
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -172,7 +168,7 @@ export default function CoordinatorDashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            whileHover={{ scale: 1.05 }} // Add this line for hover effect
+            whileHover={{ scale: 1.05 }}
           >
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -190,7 +186,7 @@ export default function CoordinatorDashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            whileHover={{ scale: 1.05 }} // Add this line for hover effect
+            whileHover={{ scale: 1.05 }}
           >
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -208,7 +204,7 @@ export default function CoordinatorDashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
-            whileHover={{ scale: 1.05 }} // Add this line for hover effect
+            whileHover={{ scale: 1.05 }}
           >
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -226,7 +222,7 @@ export default function CoordinatorDashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.5 }}
-            whileHover={{ scale: 1.05 }} // Add this line for hover effect
+            whileHover={{ scale: 1.05 }}
           >
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -278,46 +274,6 @@ export default function CoordinatorDashboard() {
             ))}
           </div>
         </div>
-
-        {/* Recent Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Actividad Reciente</CardTitle>
-            <CardDescription>Últimas acciones en el sistema</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-4">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Nuevo estudiante registrado</p>
-                  <p className="text-xs text-gray-500">Ana García se inscribió en Inglés B1 - hace 2 horas</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Examen programado</p>
-                  <p className="text-xs text-gray-500">Prof. Rodríguez creó examen de Francés A2 - hace 4 horas</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Curso actualizado</p>
-                  <p className="text-xs text-gray-500">Horario de Alemán A1 modificado - hace 6 horas</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Nuevo profesor asignado</p>
-                  <p className="text-xs text-gray-500">Prof. Martinez asignado a Italiano B2 - hace 1 día</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </DashboardLayout>
   )

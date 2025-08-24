@@ -67,11 +67,11 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
         href: role ? `/dashboard/${role}` : "/dashboard",
         icon: Home,
       },
-      {
-        name: "Chat IA",
-        href: "/chat",
-        icon: MessageSquare,
-      },
+     // {
+      //  name: "Chat IA",
+       // href: "/chat",
+      //  icon: MessageSquare,
+     // },
       {
         name: "Perfil",
         href: "/profile",
