@@ -1,153 +1,97 @@
-import { supabase } from "./supabase"
-import type { User } from "./supabase"
+import { createClient } from "@supabase/supabase-js"
+import type { User } from "@supabase/supabase-js"
 
-export async function loginUser(email: string, password: string): Promise<User | null> {
-  try {
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+// Credenciales de Supabase
+// Aquí se obtienen las variables de entorno para la URL y la clave de Supabase.
+// Es crucial que estas variables estén configuradas en tu archivo .env.local
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 
-    if (authError) {
-      console.error("Supabase Auth login error:", authError.message);
-      // Si hay un error de autenticación de Supabase, puedes manejarlo aquí.
-      // Por ejemplo, si las credenciales son incorrectas, authError contendrá el mensaje.
-      
-      // Si aún quieres mantener los usuarios mock para desarrollo o pruebas,
-      // puedes intentar autenticar con ellos si la autenticación de Supabase falla.
-      const mockUsers: User[] = [
-        {
-          id: "1",
-          email: "coordinador@usa.edu.co",
-          password: "123456",
-          name: "María González",
-          role: "coordinator",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: "2",
-          email: "profesor@usa.edu.co",
-          password: "123456",
-          name: "Carlos Rodríguez",
-          role: "teacher",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: "3",
-          email: "estudiante@usa.edu.co",
-          password: "123456",
-          name: "Ana López",
-          role: "student",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ];
-      return mockUsers.find((user) => user.email === email && user.password === password) || null;
-    }
+const supabase = createClient(supabaseUrl, supabaseKey)
 
-    if (authData.user) {
-      // Si la autenticación de Supabase es exitosa, obtenemos el ID del usuario autenticado.
-      // Luego, podemos buscar los datos adicionales del usuario en tu tabla 'users' si es necesario.
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", authData.user.id)
-        .single();
-
-      if (userError) {
-        console.error("Error fetching user data:", userError);
-        return null;
-      }
-      return userData as User;
-    }
-
-    return null; // Si no hay usuario autenticado y no se encontró en los mocks
-  } catch (error) {
-    console.error("Login error:", error);
-    return null;
-  }
+// User type definition (expanded for all custom fields)
+export type User = User & {
+    name: string;
+    document_number?: string;
+    phone?: string;
+    academic_level?: string;
+    cohort?: string;
+    status?: "active" | "inactive" | "graduado" | "egresado";
 }
 
-  export async function createUser(userData: Omit<User, "id" | "created_at" | "updated_at">): Promise<User | null> {
-    try {
-      const { data, error } = await supabase
-        .from("users")
-        .insert([
-          {
-            ...userData,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-        ])
-        .select()
-        .single()
+// Data types for creation and update
+export type UserCreateData = {
+    name: string;
+    email: string;
+    password?: string;
+    role: string;
+    document_number?: string;
+    phone?: string;
+    academic_level?: string;
+    cohort?: string;
+    status?: "active" | "inactive" | "graduado" | "egresado";
+    photo?: string;
+}
 
-      if (error) {
-        console.error("Create user error:", error)
-        return null
-      }
+export type UserUpdateData = {
+    name?: string;
+    email?: string;
+    document_number?: string;
+    phone?: string;
+    academic_level?: string;
+    cohort?: string;
+    status?: "active" | "inactive" | "graduado" | "egresado";
+    photo?: string;
+}
 
-      return data
-    } catch (error) {
-      console.error("Create user error:", error)
-      return null
+// Functions
+export const getAllUsers = async (): Promise<User[]> => {
+    const { data, error } = await supabase.from("users").select("*")
+
+    if (error) {
+        console.error("Error fetching users:", error)
+        throw error
     }
-  }
 
-  export async function updateUser(id: string, userData: Partial<User>): Promise<User | null> {
-    try {
-      const { data, error } = await supabase
-        .from("users")
-        .update({
-          ...userData,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", id)
-        .select()
-        .single()
+    return data as User[]
+}
 
-      if (error) {
+export const createUser = async (userData: UserCreateData) => {
+    const { email, password, role, ...profileData } = userData;
+    
+    // Create the user in auth.users table
+    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
+    if (authError) throw authError;
+
+    // Insert additional profile data into the public.users table
+    const { error: insertError } = await supabase.from("users").insert({
+        id: authData.user?.id,
+        email: authData.user?.email,
+        role,
+        ...profileData,
+    });
+
+    if (insertError) {
+        console.error("Error creating user profile:", insertError);
+        throw insertError;
+    }
+}
+
+
+export const updateUser = async (userId: string, updateData: UserUpdateData) => {
+    const { error } = await supabase.from("users").update(updateData).eq("id", userId)
+
+    if (error) {
         console.error("Update user error:", error)
-        return null
-      }
-
-      return data
-    } catch (error) {
-      console.error("Update user error:", error)
-      return null
+        throw error
     }
-  }
+}
 
-  export async function deleteUser(id: string): Promise<boolean> {
-    try {
-      const { error } = await supabase.from("users").delete().eq("id", id)
+export const deleteUser = async (userId: string) => {
+    const { error } = await supabase.from("users").delete().eq("id", userId)
 
-      if (error) {
+    if (error) {
         console.error("Delete user error:", error)
-        return false
-      }
-
-      return true
-    } catch (error) {
-      console.error("Delete user error:", error)
-      return false
+        throw error
     }
-  }
-
-  export async function getAllUsers(): Promise<User[]> {
-    try {
-      const { data, error } = await supabase.from("users").select("*").order("created_at", { ascending: false })
-
-      if (error) {
-        console.error("Get users error:", error)
-        return []
-      }
-
-      return data || []
-    } catch (error) {
-      console.error("Get users error:", error)
-      return []
-    }
-  }
+}

@@ -82,3 +82,15 @@ CREATE INDEX IF NOT EXISTS idx_exam_attempts_student ON exam_attempts(student_id
 
 -------
 ALTER TABLE users ADD COLUMN english_level TEXT;
+
+------
+ALTER TABLE public.users ADD COLUMN academic_level TEXT;
+
+-- Añade la columna 'cohort'
+ALTER TABLE public.users ADD COLUMN cohort TEXT;
+
+-- Añade la columna 'status' con valores específicos
+ALTER TABLE public.users ADD COLUMN status TEXT CHECK (status IN ('active', 'inactive', 'graduado', 'egresado'));
+
+-----
+ALTER TABLE public.users ADD COLUMN photo TEXT;
