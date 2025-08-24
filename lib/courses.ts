@@ -5,15 +5,16 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Tipos para los datos del curso
 export type Course = {
   id: string;
   name: string;
   description: string | null;
   language: string;
   level: string;
-  code: string;
-  capacity: number;
-  enrolled_count: number;
+  code: string | null;
+  max_students: number | null; // <-- Columna corregida
+  enrolled_count: number | null;
   duration_weeks: number | null;
   hours_per_week: number | null;
   price: number | null;
@@ -24,7 +25,8 @@ export type Course = {
   room: string | null;
 };
 
-type CourseCreate = Omit<Course, "id" | "created_at" | "enrolled_count">;
+// Tipo para la creación de un curso, omitiendo los campos generados por la DB
+type CourseCreate = Omit<Course, "id" | "enrolled_count">;
 
 /**
  * Obtiene todos los cursos de la base de datos.

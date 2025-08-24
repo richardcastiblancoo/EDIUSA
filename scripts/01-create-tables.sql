@@ -94,3 +94,39 @@ ALTER TABLE public.users ADD COLUMN status TEXT CHECK (status IN ('active', 'ina
 
 -----
 ALTER TABLE public.users ADD COLUMN photo TEXT;
+
+
+----------------------------
+-- Creación de la tabla de lecciones
+-- Esta tabla se usa para estructurar el contenido de cada curso.
+CREATE TABLE IF NOT EXISTS lessons (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  course_id UUID REFERENCES courses(id),
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  content TEXT, -- Aquí puedes almacenar el contenido de la lección (texto, Markdown, etc.)
+  order_index INTEGER NOT NULL, -- Para controlar el orden de las lecciones dentro de un curso
+  media_url VARCHAR(500), -- URL a un video, archivo, etc.
+  is_published BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Creación de un índice para mejorar la consulta de lecciones por curso.
+CREATE INDEX IF NOT EXISTS idx_lessons_course ON lessons(course_id);
+
+-- Creación de la tabla de recursos de lecciones (opcional, para archivos adjuntos, etc.)
+CREATE TABLE IF NOT EXISTS lesson_resources (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    lesson_id UUID REFERENCES lessons(id),
+    resource_type VARCHAR(50) NOT NULL,
+    resource_url TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Creación de un índice para los recursos de lecciones.
+CREATE INDEX IF NOT EXISTS idx_resources_lesson ON lesson_resources(lesson_id);
+
+-----
+ALTER TABLE courses
+ADD COLUMN code TEXT;

@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,55 +25,65 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, Trash2, Search, BookOpen, Users, Clock, Calendar, X, Loader2, Eye as EyeIcon } from "lucide-react"
+} from "@/components/ui/alert-dialog";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Edit, Trash2, Search, BookOpen, Users, Clock, Calendar, X, Loader2, Eye as EyeIcon } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
-// Importaciones de utilidades de Supabase
-import { Course, createCourse, updateCourse, deleteCourse, getCourses } from "@/lib/courses"
-import { getStudentsForCourse, addStudentToCourse } from "@/lib/students"
-import { toast } from "@/hooks/use-toast"
+// Importaciones de tipos y funciones de Supabase (ajustadas)
+import { Course, createCourse, updateCourse, deleteCourse, getCourses } from "@/lib/courses";
+import { getStudentsForCourse, searchStudents, addStudentsToCourse } from "@/lib/students";
+import { getTeachers } from "@/lib/teachers"; // <--- Nueva importación para cargar profesores
 
+// Definiciones de tipos para los datos
 type Student = {
-  id: string
-  name: string
-  course_id: string
-  documentId: string
-  photoUrl: string
-}
+  id: string;
+  name: string;
+  course_id: string | null;
+  documentId: string;
+  photoUrl: string;
+};
 
 type Teacher = {
-  id: string
-  name: string
+  id: string;
+  name: string;
+};
+
+// Custom hook para implementar el debounce
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+  return debouncedValue;
 }
 
-// Lista simulada de profesores
-const allTeachers: Teacher[] = [
-  { id: "1", name: "Ana Torres" },
-  { id: "2", name: "Carlos Ruiz" },
-  { id: "3", name: "Elena Gómez" },
-  { id: "4", name: "David López" },
-]
-
+// Componente principal de gestión de cursos
 export default function CourseManagement() {
-  const [courses, setCourses] = useState<Course[]>([])
-  const [filteredCourses, setFilteredCourses] = useState<Course[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterLanguage, setFilterLanguage] = useState("all")
-  const [filterLevel, setFilterLevel] = useState("all")
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [editingCourse, setEditingCourse] = useState<Course | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  // --- Estado del componente ---
+  const { toast } = useToast();
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterLanguage, setFilterLanguage] = useState("all");
+  const [filterLevel, setFilterLevel] = useState("all");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [studentsByCourse, setStudentsByCourse] = useState<{ [key: string]: Student[] }>({});
-  
-  // Nuevo estado para la búsqueda de estudiantes
+  const [teachers, setTeachers] = useState<Teacher[]>([]); // <--- Nuevo estado para profesores
+
   const [studentSearchTerm, setStudentSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Student[]>([]);
   const [isStudentSearchLoading, setIsStudentSearchLoading] = useState(false);
 
-  // Nuevos estados para la previsualización
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
   const [previewingCourse, setPreviewingCourse] = useState<Course | null>(null);
 
@@ -91,20 +101,19 @@ export default function CourseManagement() {
     start_date: "",
     end_date: "",
     assignedStudents: [] as Student[],
-  })
+  });
 
-  // Carga inicial de cursos y estudiantes
-  useEffect(() => {
-    loadCourses()
-  }, [])
-
-  // Filtra los cursos cada vez que el estado cambia
-  useEffect(() => {
-    filterCourses()
-  }, [courses, searchTerm, filterLanguage, filterLevel])
-
-  // Debounce para la búsqueda de estudiantes
   const debouncedSearchTerm = useDebounce(studentSearchTerm, 500);
+
+  // --- Efectos de carga y filtrado ---
+  useEffect(() => {
+    loadCourses();
+    loadTeachers(); // <--- Cargar la lista de profesores al iniciar
+  }, []);
+
+  useEffect(() => {
+    filterCourses();
+  }, [courses, searchTerm, filterLanguage, filterLevel]);
 
   useEffect(() => {
     if (debouncedSearchTerm) {
@@ -114,12 +123,12 @@ export default function CourseManagement() {
     }
   }, [debouncedSearchTerm]);
 
-
+  // --- Funciones de manejo de datos ---
   const loadCourses = async () => {
     try {
-      const coursesData = await getCourses()
-      setCourses(coursesData)
-      
+      const coursesData = await getCourses();
+      setCourses(coursesData);
+
       const studentsData = await Promise.all(
         coursesData.map(async (course) => {
           const students = await getStudentsForCourse(course.id);
@@ -128,26 +137,34 @@ export default function CourseManagement() {
       );
 
       const newStudentsByCourse = studentsData.reduce((acc, curr) => {
-        acc[curr.courseId] = curr.students.map(student => ({
-          id: student.id,
-          name: student.name,
-          course_id: student.course_id,
-          documentId: student.documentId || '',
-          photoUrl: student.photoUrl || ''
-        }));
+        acc[curr.courseId] = curr.students;
         return acc;
       }, {} as { [key: string]: Student[] });
       setStudentsByCourse(newStudentsByCourse);
 
     } catch (error) {
-      console.error("Error loading courses:", error)
+      console.error("Error loading courses:", error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar los cursos",
+        description: "No se pudieron cargar los cursos.",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
+
+  const loadTeachers = async () => {
+    try {
+      const teachersData = await getTeachers();
+      setTeachers(teachersData);
+    } catch (error) {
+      console.error("Error loading teachers:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los profesores.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSearchStudents = async (query: string) => {
     setIsStudentSearchLoading(true);
@@ -163,26 +180,26 @@ export default function CourseManagement() {
   };
 
   const filterCourses = () => {
-    let filtered = courses
+    let filtered = courses;
 
     if (searchTerm) {
       filtered = filtered.filter(
         (course) =>
           course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           (course.description?.toLowerCase().includes(searchTerm.toLowerCase()) || false),
-      )
+      );
     }
 
     if (filterLanguage !== "all") {
-      filtered = filtered.filter((course) => course.language === filterLanguage)
+      filtered = filtered.filter((course) => course.language === filterLanguage);
     }
 
     if (filterLevel !== "all") {
-      filtered = filtered.filter((course) => course.level === filterLevel)
+      filtered = filtered.filter((course) => course.level === filterLevel);
     }
 
-    setFilteredCourses(filtered)
-  }
+    setFilteredCourses(filtered);
+  };
 
   const resetForm = () => {
     setFormData({
@@ -199,56 +216,75 @@ export default function CourseManagement() {
       start_date: "",
       end_date: "",
       assignedStudents: [],
-    })
+    });
     setStudentSearchTerm("");
     setSearchResults([]);
-  }
-  
+  };
+
   const handleCreate = async () => {
-    if (!formData.name || !formData.language || !formData.level) {
-      toast({
-        title: "Error",
-        description: "Por favor completa todos los campos requeridos",
-        variant: "destructive",
-      })
-      return
+    if (!formData.name || !formData.language || !formData.level || !formData.teacher_id) {
+        toast({
+            title: "Error",
+            description: "Por favor, completa todos los campos obligatorios.",
+            variant: "destructive",
+        });
+        return;
     }
 
-    setIsLoading(true)
+    if (!formData.start_date || !formData.end_date) {
+        toast({
+            title: "Error",
+            description: "Las fechas de inicio y fin son obligatorias.",
+            variant: "destructive",
+        });
+        return;
+    }
+
+    setIsLoading(true);
     try {
-      const newCourse = await createCourse({
-        ...formData,
-        code: formData.name.substring(0, 10),
-        capacity: formData.max_students,
-        enrolled_count: formData.assignedStudents.length,
-        room: "TBD",
-      })
-      
-      if (newCourse) {
-        await addStudentsToCourse(newCourse.id, formData.assignedStudents.map(s => s.id));
-      }
+        const newCourse = await createCourse({
+            name: formData.name,
+            description: formData.description,
+            language: formData.language,
+            level: formData.level,
+            code: formData.name.substring(0, 10).toUpperCase().replace(/\s/g, ''),
+            max_students: formData.max_students,
+            enrolled_count: formData.assignedStudents.length,
+            duration_weeks: formData.duration_weeks,
+            hours_per_week: formData.hours_per_week,
+            price: formData.price,
+            teacher_id: formData.teacher_id,
+            schedule: formData.schedule,
+            start_date: formData.start_date,
+            end_date: formData.end_date,
+            room: "TBD",
+        });
 
-      await loadCourses()
-      setIsCreateDialogOpen(false)
-      resetForm()
-      toast({
-        title: "Éxito",
-        description: "Curso creado exitosamente",
-      })
+        if (newCourse && formData.assignedStudents.length > 0) {
+            await addStudentsToCourse(newCourse.id, formData.assignedStudents.map(s => s.id));
+        }
+
+        await loadCourses();
+        setIsCreateDialogOpen(false);
+        resetForm();
+        toast({
+            title: "Éxito",
+            description: "Curso creado exitosamente.",
+        });
     } catch (error) {
-      console.error("Error creating course:", error)
-      toast({
-        title: "Error",
-        description: "No se pudo crear el curso",
-        variant: "destructive",
-      })
+        console.error("Error creating course:", error);
+        toast({
+            title: "Error",
+            description: `No se pudo crear el curso: ${error.message || 'Error desconocido'}`,
+            variant: "destructive",
+        });
     } finally {
-      setIsLoading(false)
+        setIsLoading(false);
     }
-  }
-  
+  };
+
   const handleEdit = (course: Course) => {
-    setEditingCourse(course)
+    setEditingCourse(course);
     setFormData({
       name: course.name,
       description: course.description || "",
@@ -256,82 +292,83 @@ export default function CourseManagement() {
       level: course.level,
       duration_weeks: course.duration_weeks || 12,
       hours_per_week: course.hours_per_week || 4,
-      max_students: course.capacity || 20,
+      max_students: course.max_students || 20,
       price: course.price || 0,
       teacher_id: course.teacher_id || "",
       schedule: course.schedule || "",
       start_date: course.start_date || "",
       end_date: course.end_date || "",
       assignedStudents: studentsByCourse[course.id] || [],
-    })
-    setIsEditDialogOpen(true)
+    });
+    setIsEditDialogOpen(true);
     setStudentSearchTerm("");
     setSearchResults([]);
-  }
+  };
 
   const handlePreview = (course: Course) => {
     setPreviewingCourse(course);
     setIsPreviewDialogOpen(true);
-  }
+  };
 
   const handleUpdate = async () => {
     if (!editingCourse || !formData.name || !formData.language || !formData.level) {
       toast({
         title: "Error",
-        description: "Por favor completa todos los campos requeridos",
+        description: "Por favor completa todos los campos requeridos.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       await updateCourse(editingCourse.id, {
         ...formData,
         enrolled_count: formData.assignedStudents.length,
-      })
+      });
+      // Actualiza las inscripciones en la base de datos
       await addStudentsToCourse(editingCourse.id, formData.assignedStudents.map(s => s.id));
 
-      await loadCourses()
-      setIsEditDialogOpen(false)
-      setEditingCourse(null)
-      resetForm()
+      await loadCourses();
+      setIsEditDialogOpen(false);
+      setEditingCourse(null);
+      resetForm();
       toast({
         title: "Éxito",
-        description: "Curso actualizado exitosamente",
-      })
+        description: "Curso actualizado exitosamente.",
+      });
     } catch (error) {
-      console.error("Error updating course:", error)
+      console.error("Error updating course:", error);
       toast({
         title: "Error",
-        description: "No se pudo actualizar el curso",
+        description: "No se pudo actualizar el curso.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleDelete = async (courseId: string) => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      await deleteCourse(courseId)
-      await loadCourses()
+      await deleteCourse(courseId);
+      await loadCourses();
       toast({
         title: "Éxito",
-        description: "Curso eliminado exitosamente",
-      })
+        description: "Curso eliminado exitosamente.",
+      });
     } catch (error) {
-      console.error("Error deleting course:", error)
+      console.error("Error deleting course:", error);
       toast({
         title: "Error",
-        description: "No se pudo eliminar el curso",
+        description: "No se pudo eliminar el curso.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleAddStudentToForm = (student: Student) => {
     setFormData(prev => ({
@@ -339,15 +376,16 @@ export default function CourseManagement() {
       assignedStudents: [...prev.assignedStudents, student]
     }));
     setStudentSearchTerm("");
-  }
+  };
 
   const handleRemoveStudentFromForm = (studentId: string) => {
     setFormData(prev => ({
       ...prev,
       assignedStudents: prev.assignedStudents.filter(s => s.id !== studentId)
     }));
-  }
+  };
 
+  // --- Funciones de utilidad para la UI ---
   const getLevelColor = (level: string) => {
     const colors = {
       A1: "bg-green-100 text-green-800",
@@ -356,9 +394,9 @@ export default function CourseManagement() {
       B2: "bg-yellow-200 text-yellow-900",
       C1: "bg-orange-100 text-orange-800",
       C2: "bg-red-100 text-red-800",
-    }
-    return colors[level as keyof typeof colors] || "bg-gray-100 text-gray-800"
-  }
+    };
+    return colors[level as keyof typeof colors] || "bg-gray-100 text-gray-800";
+  };
 
   const getLanguageFlag = (language: string) => {
     const flags = {
@@ -368,22 +406,23 @@ export default function CourseManagement() {
       Italiano: "🇮🇹",
       Portugués: "🇧🇷",
       Mandarín: "🇨🇳",
-    }
-    return flags[language as keyof typeof flags] || "🌐"
-  }
+    };
+    return flags[language as keyof typeof flags] || "🌐";
+  };
 
   const isStudentAssigned = (student: Student) => {
     return formData.assignedStudents.some(s => s.id === student.id);
-  }
+  };
 
   const getTeacherName = (teacherId: string | null) => {
-    const teacher = allTeachers.find(t => t.id === teacherId);
+    const teacher = teachers.find(t => t.id === teacherId);
     return teacher ? teacher.name : 'No asignado';
   };
 
+  // --- Renderizado del componente ---
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-6 p-6">
+      {/* Header y botón de crear */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestión de Cursos</h1>
@@ -426,7 +465,7 @@ export default function CourseManagement() {
                     <SelectItem value="Alemán">🇩🇪 Alemán</SelectItem>
                     <SelectItem value="Italiano">🇮🇹 Italiano</SelectItem>
                     <SelectItem value="Portugués">🇧🇷 Portugués</SelectItem>
-                    <SelectItem value="Mandarín">�🇳 Mandarín</SelectItem>
+                    <SelectItem value="Mandarín">🇨🇳 Mandarín</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -456,7 +495,7 @@ export default function CourseManagement() {
                     <SelectValue placeholder="Selecciona un profesor" />
                   </SelectTrigger>
                   <SelectContent>
-                    {allTeachers.map((teacher) => (
+                    {teachers.map((teacher) => (
                       <SelectItem key={teacher.id} value={teacher.id}>
                         {teacher.name}
                       </SelectItem>
@@ -489,6 +528,42 @@ export default function CourseManagement() {
                   type="number"
                   value={formData.hours_per_week}
                   onChange={(e) => setFormData({ ...formData, hours_per_week: Number.parseInt(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="price">Precio</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: Number.parseFloat(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="start_date">Fecha de Inicio *</Label>
+                <Input
+                  id="start_date"
+                  type="date"
+                  value={formData.start_date}
+                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="end_date">Fecha de Fin *</Label>
+                <Input
+                  id="end_date"
+                  type="date"
+                  value={formData.end_date}
+                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="schedule">Horario</Label>
+                <Input
+                  id="schedule"
+                  value={formData.schedule}
+                  onChange={(e) => setFormData({ ...formData, schedule: e.target.value })}
+                  placeholder="Ej: Lunes y miércoles 10:00 - 12:00"
                 />
               </div>
               <div className="col-span-2 space-y-2">
@@ -526,7 +601,7 @@ export default function CourseManagement() {
                             onClick={() => handleAddStudentToForm(student)}
                           >
                             <img
-                              src={student.photoUrl}
+                              src={student.photoUrl || "https://api.dicebear.com/7.x/notionists/svg?seed=placeholder"}
                               alt={`Foto de ${student.name}`}
                               className="w-8 h-8 rounded-full"
                             />
@@ -579,7 +654,7 @@ export default function CourseManagement() {
         </Dialog>
       </div>
 
-      {/* Filters */}
+      {/* Filtros */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-4">
@@ -653,7 +728,7 @@ export default function CourseManagement() {
                   </div>
                   <div className="flex items-center gap-1">
                     <Users className="h-4 w-4" />
-                    {studentsByCourse[course.id]?.length || 0} / {course.capacity || course.max_students}
+                    {studentsByCourse[course.id]?.length || 0} / {course.max_students}
                   </div>
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
@@ -666,7 +741,7 @@ export default function CourseManagement() {
                     <span className="font-medium">Horario:</span> {course.schedule}
                   </div>
                 )}
-                
+
                 {/* Sección de Estudiantes */}
                 <div className="space-y-2 pt-4 border-t mt-4">
                   <h4 className="font-semibold text-gray-800">Estudiantes inscritos:</h4>
@@ -805,7 +880,7 @@ export default function CourseManagement() {
                     <SelectValue placeholder="Selecciona un profesor" />
                   </SelectTrigger>
                   <SelectContent>
-                    {allTeachers.map((teacher) => (
+                    {teachers.map((teacher) => (
                       <SelectItem key={teacher.id} value={teacher.id}>
                         {teacher.name}
                       </SelectItem>
@@ -840,6 +915,41 @@ export default function CourseManagement() {
                 onChange={(e) => setFormData({ ...formData, hours_per_week: Number.parseInt(e.target.value) })}
               />
             </div>
+            <div className="space-y-2">
+                <Label htmlFor="edit-price">Precio</Label>
+                <Input
+                  id="edit-price"
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: Number.parseFloat(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-start_date">Fecha de Inicio *</Label>
+                <Input
+                  id="edit-start_date"
+                  type="date"
+                  value={formData.start_date}
+                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-end_date">Fecha de Fin *</Label>
+                <Input
+                  id="edit-end_date"
+                  type="date"
+                  value={formData.end_date}
+                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="edit-schedule">Horario</Label>
+                <Input
+                  id="edit-schedule"
+                  value={formData.schedule}
+                  onChange={(e) => setFormData({ ...formData, schedule: e.target.value })}
+                />
+              </div>
             <div className="col-span-2 space-y-2">
               <Label htmlFor="edit-description">Descripción</Label>
               <Textarea
@@ -848,7 +958,7 @@ export default function CourseManagement() {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
-            
+
             {/* Sección para agregar estudiantes en el editor */}
             <div className="col-span-2 space-y-2">
                 <Label>Asignar Estudiantes</Label>
@@ -874,7 +984,7 @@ export default function CourseManagement() {
                             onClick={() => handleAddStudentToForm(student)}
                           >
                             <img
-                              src={student.photoUrl}
+                              src={student.photoUrl || "https://api.dicebear.com/7.x/notionists/svg?seed=placeholder"}
                               alt={`Foto de ${student.name}`}
                               className="w-8 h-8 rounded-full"
                             />
@@ -914,7 +1024,6 @@ export default function CourseManagement() {
                   </ul>
                 </div>
               </div>
-
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
@@ -964,7 +1073,7 @@ export default function CourseManagement() {
                   </div>
                   <div className="space-y-1">
                     <p className="font-medium">Máx. Estudiantes:</p>
-                    <p>{previewingCourse.capacity}</p>
+                    <p>{previewingCourse.max_students}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="font-medium">Duración:</p>
@@ -1004,19 +1113,5 @@ export default function CourseManagement() {
         </DialogContent>
       </Dialog>
     </div>
-  )
-}
-
-// Custom hook para implementar el debounce
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
-  return debouncedValue;
+  );
 }
