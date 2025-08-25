@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react" // NUEVOS CAMBIOS: importar 'useRef'
+import { useState, useEffect, useRef } from "react" 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -31,17 +31,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-// NUEVOS CAMBIOS: Importar las librerías
 import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
 import { toast } from "@/components/ui/use-toast"
 
-// Define las nuevas interfaces para los datos del reporte de estudiante
+// Define las interfaces para los datos del reporte de estudiante
 interface LessonReport {
   lessonName: string
-  date: string
+  date: string // Fecha obligatoria para cada lección
   attendance: "Presente" | "Ausente" | "Tarde"
-  notes: number
+  notes: number // Notas del estudiante, 0 por defecto si no tiene
 }
 
 interface CourseReport {
@@ -53,12 +52,12 @@ interface CourseReport {
 interface StudentReportData {
   studentName: string
   studentId: string
-  overallAvgNotes: number
-  overallAttendanceRate: number
+  overallAvgNotes: number // Promedio general, 0 si no tiene notas
+  overallAttendanceRate: number // Tasa de asistencia general, 0 si no tiene registros
   courses: CourseReport[]
 }
 
-// Datos de prueba para simular la carga de datos
+// Datos de ejemplo para el reporte
 const mockStudentData: StudentReportData = {
   studentName: "Juan Pérez",
   studentId: "STU001",
@@ -126,17 +125,17 @@ export default function StudentReportDashboard() {
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
         let heightLeft = imgHeight;
         let position = 0;
-  
+
         pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
-  
+
         while (heightLeft >= 0) {
           position = heightLeft - imgHeight;
           pdf.addPage();
           pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
           heightLeft -= pageHeight;
         }
-  
+
         pdf.save(`reporte-${reportData?.studentName || "estudiante"}.pdf`);
         toast({
           title: "Éxito",
@@ -159,7 +158,7 @@ export default function StudentReportDashboard() {
     }
     setExporting(false);
   };
-  
+
 
   if (loading) {
     return (
@@ -222,7 +221,7 @@ export default function StudentReportDashboard() {
           )}
         </Button>
       </div>
-      
+
       {/* NUEVOS CAMBIOS: el ref para capturar el contenido */}
       <div ref={reportRef} className="space-y-4 p-4 bg-white rounded-md shadow-sm">
         <Tabs defaultValue="summary" className="space-y-4">

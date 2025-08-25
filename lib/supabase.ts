@@ -90,3 +90,18 @@ export interface Schedule {
   created_at: string
   updated_at: string
 }
+
+export interface PQR {
+  id: string;
+  course_id: string;
+  student_id: string;
+  teacher_id: string;
+  subject: string;
+  message: string;
+  status: "pending" | "in_progress" | "resolved" | "closed";
+  teacher_response?: string;
+  coordinator_response?: string;
+  resolved_at?: string;
+  created_at: string;
+  updated_at: string;
+}

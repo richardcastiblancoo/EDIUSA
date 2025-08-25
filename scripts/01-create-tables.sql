@@ -130,3 +130,48 @@ CREATE INDEX IF NOT EXISTS idx_resources_lesson ON lesson_resources(lesson_id);
 -----
 ALTER TABLE courses
 ADD COLUMN code TEXT;
+
+
+
+----------  reporte 
+create table attendance (
+    id uuid primary key,
+    enrollment_id uuid references enrollments(id),
+    lesson_id uuid references lessons(id),
+    status varchar(20), -- 'Presente', 'Ausente', 'Tarde'
+    created_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+
+create table grades (
+    id uuid primary key,
+    enrollment_id uuid references enrollments(id),
+    lesson_id uuid references lessons(id),
+    score numeric(5,2), -- Nota del estudiante
+    created_at timestamp with time zone default timezone('utc'::text, now()),
+    updated_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+------------------- pqr
+
+-- Crear tabla de PQR
+CREATE TABLE IF NOT EXISTS pqrs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  course_id UUID REFERENCES courses(id),
+  student_id UUID REFERENCES users(id),
+  teacher_id UUID REFERENCES users(id),
+  subject VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'resolved', 'closed')),
+  teacher_response TEXT,
+  coordinator_response TEXT,
+  resolved_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Crear índices para mejorar el rendimiento de las consultas
+CREATE INDEX IF NOT EXISTS pqrs_course_id_idx ON pqrs(course_id);
+CREATE INDEX IF NOT EXISTS pqrs_student_id_idx ON pqrs(student_id);
+CREATE INDEX IF NOT EXISTS pqrs_teacher_id_idx ON pqrs(teacher_id);
+CREATE INDEX IF NOT EXISTS pqrs_status_idx ON pqrs(status);

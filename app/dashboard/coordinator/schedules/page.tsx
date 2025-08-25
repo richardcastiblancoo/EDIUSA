@@ -17,60 +17,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { AlertCircle, CheckCircle2, CircleDashed, MailQuestion, MessageSquare, Clock, ArrowRight, XCircle } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// Remove unused import since PQRStatus is not being used in this file
 
-// Mock data and API functions
-// In a real application, these would be fetched from your API
+// Tipos para PQR
 type PQRStatusType = "pending" | "in_progress" | "resolved" | "closed";
 
-interface PQR {
-  id: string;
-  courseId: string;
-  courseName: string;
-  studentName: string;
-  subject: string;
-  message: string;
-  createdAt: string;
-  status: PQRStatusType;
-  coordinatorResponse?: string;
-  resolvedAt?: string;
-}
-
-const mockPqrs: PQR[] = [
-  {
-    id: "pqr-001",
-    courseId: "course-001",
-    courseName: "Introducción a la Programación",
-    studentName: "Juan Pérez",
-    subject: "Consulta sobre nota final",
-    message: "Hola, ¿podrían revisar mi nota del examen final? Creo que hubo un error en la calificación de una pregunta.",
-    createdAt: "2025-08-20T10:00:00Z",
-    status: "pending",
-  },
-  {
-    id: "pqr-002",
-    courseId: "course-002",
-    courseName: "Bases de Datos Avanzadas",
-    studentName: "Ana Gómez",
-    subject: "Reclamo por horario de clase",
-    message: "El horario de la clase de los miércoles se superpone con otra clase obligatoria. ¿Hay posibilidad de un cambio o de recibir la grabación?",
-    createdAt: "2025-08-19T15:30:00Z",
-    status: "in_progress",
-    coordinatorResponse: "Estamos revisando su petición con el profesor del curso y la oficina de admisiones. Le informaremos tan pronto tengamos una solución.",
-  },
-  {
-    id: "pqr-003",
-    courseId: "course-001",
-    courseName: "Introducción a la Programación",
-    studentName: "Pedro Ramírez",
-    subject: "Queja sobre material de estudio",
-    message: "El material de lectura de la semana 5 está desactualizado y no coincide con el contenido de las clases. Sugiero que lo revisen.",
-    createdAt: "2025-08-18T09:15:00Z",
-    status: "resolved",
-    coordinatorResponse: "Gracias por tu retroalimentación. Hemos actualizado el material de estudio y lo hemos subido a la plataforma. Puedes acceder a la nueva versión ahora.",
-    resolvedAt: "2025-08-18T14:00:00Z",
-  },
-];
+import type { PQR } from "@/lib/supabase";
 
 const getStatusIcon = (status: PQRStatusType) => {
   switch (status) {
@@ -127,37 +78,55 @@ export default function CoordinatorPQRPage() {
   const [newStatus, setNewStatus] = useState<PQRStatusType>("in_progress");
 
   useEffect(() => {
-    // Simulating API call
-    setLoading(true);
-    setTimeout(() => {
-      setPqrs(mockPqrs);
-      setLoading(false);
-    }, 1000);
+    const fetchPQRs = async () => {
+      setLoading(true);
+      try {
+        // Aquí deberías llamar a tu API real para obtener los PQRs
+        // Por ejemplo: const data = await getPQRsForCoordinator();
+        // setPqrs(data);
+        setPqrs([]);
+      } catch (error) {
+        console.error("Error fetching PQRs:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPQRs();
   }, []);
 
   const handleSelectPqr = (pqr: PQR) => {
     setSelectedPqr(pqr);
-    setResponse(pqr.coordinatorResponse || "");
-    setNewStatus(pqr.status);
+    setResponse(pqr.coordinator_response || "");
+    setNewStatus(pqr.status as PQRStatusType);
   };
 
-  const handleUpdatePqr = () => {
+  const handleUpdatePqr = async () => {
     if (!selectedPqr) return;
 
-    // Simulating API call to update PQR
-    const updatedPqrs = pqrs.map((pqr) =>
-      pqr.id === selectedPqr.id
-        ? {
-            ...pqr,
-            status: newStatus,
-            coordinatorResponse: response,
-            resolvedAt: newStatus === "resolved" ? new Date().toISOString() : pqr.resolvedAt,
-          }
-        : pqr
-    );
-    setPqrs(updatedPqrs);
-    alert("PQR actualizado exitosamente.");
-    setSelectedPqr(null);
+    try {
+      // Aquí deberías llamar a tu API real para actualizar el PQR
+      // Por ejemplo: await updatePQRByCoordinator(selectedPqr.id, newStatus, response);
+      
+      // Actualizar la lista local
+      const updatedPqrs = pqrs.map((pqr) =>
+        pqr.id === selectedPqr.id
+          ? {
+              ...pqr,
+              status: newStatus,
+              coordinator_response: response,
+              resolved_at: newStatus === "resolved" ? new Date().toISOString() : pqr.resolved_at,
+            }
+          : pqr
+      );
+      
+      setPqrs(updatedPqrs);
+      alert("PQR actualizado exitosamente.");
+      setSelectedPqr(null);
+    } catch (error) {
+      console.error("Error updating PQR:", error);
+      alert("Error al actualizar el PQR. Inténtalo de nuevo.");
+    }
   };
 
   const getStatusCount = (status: PQRStatusType) => {

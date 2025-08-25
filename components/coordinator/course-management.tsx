@@ -78,7 +78,7 @@ export default function CourseManagement() {
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [studentsByCourse, setStudentsByCourse] = useState<{ [key: string]: Student[] }>({});
-  const [teachers, setTeachers] = useState<Teacher[]>([]); // <--- Nuevo estado para profesores
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
 
   const [studentSearchTerm, setStudentSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Student[]>([]);
@@ -95,7 +95,6 @@ export default function CourseManagement() {
     duration_weeks: 12,
     hours_per_week: 4,
     max_students: 20,
-    price: 0,
     teacher_id: "",
     schedule: "",
     start_date: "",
@@ -108,7 +107,7 @@ export default function CourseManagement() {
   // --- Efectos de carga y filtrado ---
   useEffect(() => {
     loadCourses();
-    loadTeachers(); // <--- Cargar la lista de profesores al iniciar
+    loadTeachers();
   }, []);
 
   useEffect(() => {
@@ -210,7 +209,6 @@ export default function CourseManagement() {
       duration_weeks: 12,
       hours_per_week: 4,
       max_students: 20,
-      price: 0,
       teacher_id: "",
       schedule: "",
       start_date: "",
@@ -223,63 +221,62 @@ export default function CourseManagement() {
 
   const handleCreate = async () => {
     if (!formData.name || !formData.language || !formData.level || !formData.teacher_id) {
-        toast({
-            title: "Error",
-            description: "Por favor, completa todos los campos obligatorios.",
-            variant: "destructive",
-        });
-        return;
+      toast({
+        title: "Error",
+        description: "Por favor, completa todos los campos obligatorios.",
+        variant: "destructive",
+      });
+      return;
     }
 
     if (!formData.start_date || !formData.end_date) {
-        toast({
-            title: "Error",
-            description: "Las fechas de inicio y fin son obligatorias.",
-            variant: "destructive",
-        });
-        return;
+      toast({
+        title: "Error",
+        description: "Las fechas de inicio y fin son obligatorias.",
+        variant: "destructive",
+      });
+      return;
     }
 
     setIsLoading(true);
     try {
-        const newCourse = await createCourse({
-            name: formData.name,
-            description: formData.description,
-            language: formData.language,
-            level: formData.level,
-            code: formData.name.substring(0, 10).toUpperCase().replace(/\s/g, ''),
-            max_students: formData.max_students,
-            enrolled_count: formData.assignedStudents.length,
-            duration_weeks: formData.duration_weeks,
-            hours_per_week: formData.hours_per_week,
-            price: formData.price,
-            teacher_id: formData.teacher_id,
-            schedule: formData.schedule,
-            start_date: formData.start_date,
-            end_date: formData.end_date,
-            room: "TBD",
-        });
+      const newCourse = await createCourse({
+        name: formData.name,
+        description: formData.description,
+        language: formData.language,
+        level: formData.level,
+        code: formData.name.substring(0, 10).toUpperCase().replace(/\s/g, ''),
+        max_students: formData.max_students,
+        enrolled_count: formData.assignedStudents.length,
+        duration_weeks: formData.duration_weeks,
+        hours_per_week: formData.hours_per_week,
+        teacher_id: formData.teacher_id,
+        schedule: formData.schedule,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        room: "TBD",
+      });
 
-        if (newCourse && formData.assignedStudents.length > 0) {
-            await addStudentsToCourse(newCourse.id, formData.assignedStudents.map(s => s.id));
-        }
+      if (newCourse && formData.assignedStudents.length > 0) {
+        await addStudentsToCourse(newCourse.id, formData.assignedStudents.map(s => s.id));
+      }
 
-        await loadCourses();
-        setIsCreateDialogOpen(false);
-        resetForm();
-        toast({
-            title: "Éxito",
-            description: "Curso creado exitosamente.",
-        });
+      await loadCourses();
+      setIsCreateDialogOpen(false);
+      resetForm();
+      toast({
+        title: "Éxito",
+        description: "Curso creado exitosamente.",
+      });
     } catch (error) {
-        console.error("Error creating course:", error);
-        toast({
-            title: "Error",
-            description: `No se pudo crear el curso: ${error.message || 'Error desconocido'}`,
-            variant: "destructive",
-        });
+      console.error("Error creating course:", error);
+      toast({
+        title: "Error",
+        description: `No se pudo crear el curso: ${error.message || 'Error desconocido'}`,
+        variant: "destructive",
+      });
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -293,7 +290,6 @@ export default function CourseManagement() {
       duration_weeks: course.duration_weeks || 12,
       hours_per_week: course.hours_per_week || 4,
       max_students: course.max_students || 20,
-      price: course.price || 0,
       teacher_id: course.teacher_id || "",
       schedule: course.schedule || "",
       start_date: course.start_date || "",
@@ -322,12 +318,17 @@ export default function CourseManagement() {
 
     setIsLoading(true);
     try {
+      // Separar los datos del curso de los estudiantes asignados
+      const { assignedStudents, ...courseData } = formData;
+
+      // Actualizar el curso
       await updateCourse(editingCourse.id, {
-        ...formData,
-        enrolled_count: formData.assignedStudents.length,
+        ...courseData,
+        enrolled_count: assignedStudents.length,
       });
-      // Actualiza las inscripciones en la base de datos
-      await addStudentsToCourse(editingCourse.id, formData.assignedStudents.map(s => s.id));
+
+      // Actualizar las inscripciones en la base de datos
+      await addStudentsToCourse(editingCourse.id, assignedStudents.map(s => s.id));
 
       await loadCourses();
       setIsEditDialogOpen(false);
@@ -531,15 +532,6 @@ export default function CourseManagement() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="price">Precio</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: Number.parseFloat(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="start_date">Fecha de Inicio *</Label>
                 <Input
                   id="start_date"
@@ -581,10 +573,10 @@ export default function CourseManagement() {
                 <Label>Asignar Estudiantes</Label>
                 <div className="relative">
                   <Input
-                    placeholder="Buscar por nombre o documento..."
-                    value={studentSearchTerm}
-                    onChange={(e) => setStudentSearchTerm(e.target.value)}
-                  />
+                  placeholder="Buscar por nombre o documento..."
+                  value={studentSearchTerm}
+                  onChange={(e) => setStudentSearchTerm(e.target.value)}
+                />
                   {isStudentSearchLoading && (
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                       <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
@@ -720,6 +712,12 @@ export default function CourseManagement() {
             <CardContent>
               <div className="space-y-3">
                 {course.description && <p className="text-sm text-gray-600 line-clamp-2">{course.description}</p>}
+
+                {/* --- CAMBIO AQUÍ: Profesor Asignado --- */}
+                <div className="text-sm text-gray-700">
+                  <span className="font-semibold">Profesor:</span> {getTeacherName(course.teacher_id)}
+                </div>
+                {/* --- FIN DEL CAMBIO --- */}
 
                 <div className="flex items-center gap-4 text-sm text-gray-500">
                   <div className="flex items-center gap-1">
@@ -871,23 +869,23 @@ export default function CourseManagement() {
               </Select>
             </div>
             <div className="space-y-2">
-                <Label htmlFor="edit-teacher">Profesor *</Label>
-                <Select
-                  value={formData.teacher_id}
-                  onValueChange={(value) => setFormData({ ...formData, teacher_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un profesor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teachers.map((teacher) => (
-                      <SelectItem key={teacher.id} value={teacher.id}>
-                        {teacher.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Label htmlFor="edit-teacher">Profesor *</Label>
+              <Select
+                value={formData.teacher_id}
+                onValueChange={(value) => setFormData({ ...formData, teacher_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un profesor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teachers.map((teacher) => (
+                    <SelectItem key={teacher.id} value={teacher.id}>
+                      {teacher.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="edit-max_students">Máximo Estudiantes</Label>
               <Input
@@ -916,40 +914,31 @@ export default function CourseManagement() {
               />
             </div>
             <div className="space-y-2">
-                <Label htmlFor="edit-price">Precio</Label>
-                <Input
-                  id="edit-price"
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: Number.parseFloat(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-start_date">Fecha de Inicio *</Label>
-                <Input
-                  id="edit-start_date"
-                  type="date"
-                  value={formData.start_date}
-                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-end_date">Fecha de Fin *</Label>
-                <Input
-                  id="edit-end_date"
-                  type="date"
-                  value={formData.end_date}
-                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                />
-              </div>
-              <div className="col-span-2 space-y-2">
-                <Label htmlFor="edit-schedule">Horario</Label>
-                <Input
-                  id="edit-schedule"
-                  value={formData.schedule}
-                  onChange={(e) => setFormData({ ...formData, schedule: e.target.value })}
-                />
-              </div>
+              <Label htmlFor="edit-start_date">Cohorte - Fecha de Inicio *</Label>
+              <Input
+                id="edit-start_date"
+                type="date"
+                value={formData.start_date}
+                onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-end_date">Cohorte - Fecha de Fin *</Label>
+              <Input
+                id="edit-end_date"
+                type="date"
+                value={formData.end_date}
+                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+              />
+            </div>
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="edit-schedule">Horario (texto)</Label>
+              <Input
+                id="edit-schedule"
+                value={formData.schedule}
+                onChange={(e) => setFormData({ ...formData, schedule: e.target.value })}
+              />
+            </div>
             <div className="col-span-2 space-y-2">
               <Label htmlFor="edit-description">Descripción</Label>
               <Textarea
@@ -961,69 +950,69 @@ export default function CourseManagement() {
 
             {/* Sección para agregar estudiantes en el editor */}
             <div className="col-span-2 space-y-2">
-                <Label>Asignar Estudiantes</Label>
-                <div className="relative">
-                  <Input
-                    placeholder="Buscar por nombre o documento..."
-                    value={studentSearchTerm}
-                    onChange={(e) => setStudentSearchTerm(e.target.value)}
-                  />
-                  {isStudentSearchLoading && (
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                      <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                    </div>
-                  )}
-                  {debouncedSearchTerm && searchResults.length > 0 && (
-                    <ul className="absolute z-10 w-full bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto mt-1">
-                      {searchResults
-                        .filter(student => !isStudentAssigned(student))
-                        .map((student) => (
-                          <li
-                            key={student.id}
-                            className="p-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
-                            onClick={() => handleAddStudentToForm(student)}
-                          >
-                            <img
-                              src={student.photoUrl || "https://api.dicebear.com/7.x/notionists/svg?seed=placeholder"}
-                              alt={`Foto de ${student.name}`}
-                              className="w-8 h-8 rounded-full"
-                            />
-                            <div>
-                              <div className="font-medium">{student.name}</div>
-                              <div className="text-xs text-gray-500">Doc: {student.documentId}</div>
-                            </div>
-                          </li>
-                        ))}
-                    </ul>
-                  )}
-                  {debouncedSearchTerm && searchResults.length === 0 && !isStudentSearchLoading && (
-                    <ul className="absolute z-10 w-full bg-white border rounded-md shadow-lg mt-1">
-                      <li className="p-2 text-center text-gray-500">No se encontraron resultados</li>
-                    </ul>
-                  )}
-                </div>
-                <div className="space-y-2 mt-4">
-                  <p className="font-medium text-sm">Estudiantes asignados ({formData.assignedStudents.length}):</p>
-                  <ul className="grid grid-cols-2 gap-2">
-                    {formData.assignedStudents.map(student => (
-                      <li key={student.id} className="flex items-center justify-between p-2 bg-gray-100 rounded-md">
-                        <div className="flex items-center gap-2">
-                          <img src={student.photoUrl} alt={`Foto de ${student.name}`} className="w-6 h-6 rounded-full" />
-                          <span className="text-sm">{student.name}</span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => handleRemoveStudentFromForm(student.id)}
+              <Label>Asignar Estudiantes</Label>
+              <div className="relative">
+                <Input
+                  placeholder="Buscar por nombre o documento..."
+                  value={studentSearchTerm}
+                  onChange={(e) => setStudentSearchTerm(e.target.value)}
+                />
+                {isStudentSearchLoading && (
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                  </div>
+                )}
+                {debouncedSearchTerm && searchResults.length > 0 && (
+                  <ul className="absolute z-10 w-full bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto mt-1">
+                    {searchResults
+                      .filter(student => !isStudentAssigned(student))
+                      .map((student) => (
+                        <li
+                          key={student.id}
+                          className="p-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
+                          onClick={() => handleAddStudentToForm(student)}
                         >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </li>
-                    ))}
+                          <img
+                            src={student.photoUrl || "https://api.dicebear.com/7.x/notionists/svg?seed=placeholder"}
+                            alt={`Foto de ${student.name}`}
+                            className="w-8 h-8 rounded-full"
+                          />
+                          <div>
+                            <div className="font-medium">{student.name}</div>
+                            <div className="text-xs text-gray-500">Doc: {student.documentId}</div>
+                          </div>
+                        </li>
+                      ))}
                   </ul>
-                </div>
+                )}
+                {debouncedSearchTerm && searchResults.length === 0 && !isStudentSearchLoading && (
+                  <ul className="absolute z-10 w-full bg-white border rounded-md shadow-lg mt-1">
+                    <li className="p-2 text-center text-gray-500">No se encontraron resultados</li>
+                  </ul>
+                )}
               </div>
+              <div className="space-y-2 mt-4">
+                <p className="font-medium text-sm">Estudiantes asignados ({formData.assignedStudents.length}):</p>
+                <ul className="grid grid-cols-2 gap-2">
+                  {formData.assignedStudents.map(student => (
+                    <li key={student.id} className="flex items-center justify-between p-2 bg-gray-100 rounded-md">
+                      <div className="flex items-center gap-2">
+                        <img src={student.photoUrl} alt={`Foto de ${student.name}`} className="w-6 h-6 rounded-full" />
+                        <span className="text-sm">{student.name}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => handleRemoveStudentFromForm(student.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
@@ -1087,22 +1076,43 @@ export default function CourseManagement() {
 
                 <div className="space-y-2 border-t pt-4">
                   <h4 className="font-semibold text-gray-800">Estudiantes inscritos: ({studentsByCourse[previewingCourse.id]?.length || 0})</h4>
-                  <ul className="grid grid-cols-2 gap-2 text-sm text-gray-600">
-                    {studentsByCourse[previewingCourse.id]?.length > 0 ? (
-                      studentsByCourse[previewingCourse.id]?.map((student) => (
-                        <li key={student.id} className="flex items-center gap-2">
-                          <img
-                            src={student.photoUrl || "https://api.dicebear.com/7.x/notionists/svg?seed=placeholder"}
-                            alt={`Foto de ${student.name}`}
-                            className="w-6 h-6 rounded-full"
-                          />
-                          {student.name}
-                        </li>
-                      ))
-                    ) : (
-                      <li>No hay estudiantes inscritos.</li>
-                    )}
-                  </ul>
+                  <div className="relative overflow-x-auto">
+                    <table className="w-full text-sm text-left text-gray-500">
+                      <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                        <tr>
+                          <th scope="col" className="px-6 py-3">Estudiante</th>
+                          <th scope="col" className="px-6 py-3">Documento</th>
+                          <th scope="col" className="px-6 py-3">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {studentsByCourse[previewingCourse.id]?.length > 0 ? (
+                          studentsByCourse[previewingCourse.id]?.map((student) => (
+                            <tr key={student.id} className="bg-white border-b hover:bg-gray-50">
+                              <td className="px-6 py-4 flex items-center gap-2">
+                                <img
+                                  src={student.photoUrl || "https://api.dicebear.com/7.x/notionists/svg?seed=placeholder"}
+                                  alt={`Foto de ${student.name}`}
+                                  className="w-6 h-6 rounded-full"
+                                />
+                                {student.name}
+                              </td>
+                              <td className="px-6 py-4">{student.documentId}</td>
+                              <td className="px-6 py-4">
+                                <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                  Activo
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={3} className="px-6 py-4 text-center">No hay estudiantes inscritos.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
               <DialogFooter>
