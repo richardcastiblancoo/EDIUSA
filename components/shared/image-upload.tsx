@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Upload, Camera, Loader2, X, Image as ImageIcon } from "lucide-react"
+import { Upload, Camera, Loader2, X, Image as ImageIcon, Save } from "lucide-react"
 import { uploadImage, deleteUserImage, getUserImage } from "@/lib/images"
 
 interface ImageUploadProps {
@@ -31,6 +31,7 @@ export default function ImageUpload({
   const [imageUrl, setImageUrl] = useState(currentImageUrl || "")
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
 
@@ -69,23 +70,35 @@ export default function ImageUpload({
       setPreviewUrl(reader.result as string)
     }
     reader.readAsDataURL(file)
+    
+    // Guardar el archivo seleccionado para subirlo después
+    setSelectedFile(file)
+    setMessage(null)
+  }
+
+  const handleSaveImage = async () => {
+    if (!selectedFile) {
+      setMessage({ type: "error", text: "No hay imagen seleccionada para guardar." })
+      return
+    }
 
     setUploading(true)
     setMessage(null)
 
     try {
-      const uploadedUrl = await uploadImage(file, userId, imageType)
+      const uploadedUrl = await uploadImage(selectedFile, userId, imageType)
       if (uploadedUrl) {
         setImageUrl(uploadedUrl)
         setPreviewUrl(null)
-        setMessage({ type: "success", text: "Imagen subida exitosamente." })
+        setSelectedFile(null)
+        setMessage({ type: "success", text: "Imagen guardada exitosamente." })
         onImageUpdate?.(uploadedUrl)
       } else {
-        setMessage({ type: "error", text: "Error al subir la imagen." })
+        setMessage({ type: "error", text: "Error al guardar la imagen." })
       }
     } catch (error) {
-      console.error("Error al subir la imagen:", error)
-      setMessage({ type: "error", text: "Error inesperado al subir la imagen." })
+      console.error("Error al guardar la imagen:", error)
+      setMessage({ type: "error", text: "Error inesperado al guardar la imagen." })
     } finally {
       setUploading(false)
     }
@@ -98,6 +111,7 @@ export default function ImageUpload({
         if (ok) {
           setImageUrl("")
           setPreviewUrl(null)
+          setSelectedFile(null)
           setMessage({ type: "success", text: "Imagen eliminada exitosamente." })
           onImageUpdate?.(null)
         } else {
@@ -150,22 +164,28 @@ export default function ImageUpload({
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} variant="outline">
-              {uploading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Subiendo...
-                </>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  {imageUrl ? "Cambiar" : "Subir"} Imagen
-                </>
-              )}
+              <Upload className="mr-2 h-4 w-4" />
+              Seleccionar Imagen
             </Button>
             <Button onClick={() => cameraInputRef.current?.click()} disabled={uploading} variant="outline">
               <Camera className="mr-2 h-4 w-4" />
               Tomar Foto
             </Button>
+            {previewUrl && (
+              <Button onClick={handleSaveImage} disabled={uploading} variant="default">
+                {uploading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Guardar Imagen
+                  </>
+                )}
+              </Button>
+            )}
             {imageUrl && (
               <Button
                 onClick={handleRemoveImage}

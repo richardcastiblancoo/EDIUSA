@@ -328,7 +328,7 @@ export default function UserManagement() {
 
     return (
       <Avatar className={`h-8 w-8 ${avatarMap[(role as keyof typeof avatarMap) || "student"]}`}>
-        <AvatarFallback>
+        <AvatarFallback className="flex items-center justify-center">
           {avatarIconMap[(role as keyof typeof avatarIconMap) || "student"]}
         </AvatarFallback>
       </Avatar>

@@ -175,3 +175,23 @@ CREATE INDEX IF NOT EXISTS pqrs_course_id_idx ON pqrs(course_id);
 CREATE INDEX IF NOT EXISTS pqrs_student_id_idx ON pqrs(student_id);
 CREATE INDEX IF NOT EXISTS pqrs_teacher_id_idx ON pqrs(teacher_id);
 CREATE INDEX IF NOT EXISTS pqrs_status_idx ON pqrs(status);
+
+
+-----------------------
+-- Crear tabla para almacenar información de imágenes de usuario
+CREATE TABLE IF NOT EXISTS user_images (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id),
+  image_type VARCHAR(50) CHECK (image_type IN ('avatar', 'logo', 'banner')),
+  image_url TEXT NOT NULL,
+  original_filename TEXT,
+  file_size INTEGER,
+  mime_type VARCHAR(100),
+  uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  is_active BOOLEAN DEFAULT TRUE
+);
+
+-- Crear índices para mejorar el rendimiento
+CREATE INDEX IF NOT EXISTS idx_user_images_user ON user_images(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_images_type ON user_images(image_type);
+CREATE INDEX IF NOT EXISTS idx_user_images_active ON user_images(is_active);

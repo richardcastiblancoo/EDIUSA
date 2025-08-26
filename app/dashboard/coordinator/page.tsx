@@ -66,11 +66,11 @@ export default function CoordinatorDashboard() {
         totalCourses = coursesCount || 0;
       }
 
-      // Fetch active exams (assuming 'published' status means active)
+      // Fetch active exams (using is_active instead of non-existent status field)
       const { count: examsCount, error: examsError } = await supabase
         .from('exams')
         .select('*', { count: 'exact' })
-        .eq('status', 'published');
+        .eq('is_active', true);
       if (examsError) {
         console.error('Error fetching active exams count:', examsError);
       } else {

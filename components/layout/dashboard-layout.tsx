@@ -166,6 +166,11 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
           href: "/dashboard/student/grades",
           icon: FileText,
         },
+        {
+          name: "PQR",
+          href: "/dashboard/student/pqr",
+          icon: MessageSquare,
+        },
         ...baseItems.slice(2),
       ]
     }
