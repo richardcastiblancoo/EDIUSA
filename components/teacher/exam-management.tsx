@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import type React from "react"
 
@@ -21,16 +21,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Edit, Trash2, FileText, Clock, Loader2, Save } from "lucide-react"
+import { Plus, Edit, Trash2, FileText, Clock, Loader2, Save, Users } from "lucide-react"
+import { Toaster, toast } from 'sonner' // Importación para las notificaciones flotantes
 import {
   getExamsByTeacher,
   createExam,
   updateExam,
+  deleteExam,
   getExamQuestions,
   createQuestion,
   deleteQuestion,
+  getExamSubmissions,
 } from "@/lib/exams"
 import type { Exam, Question } from "@/lib/exams"
+import { getCourseAssignmentsByTeacher } from "@/lib/assignments";
+
 
 interface ExamManagementProps {
   teacherId: string
@@ -42,11 +47,13 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
   const [creating, setCreating] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [questionsDialogOpen, setQuestionsDialogOpen] = useState(false)
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false)
   const [editingExam, setEditingExam] = useState<Exam | null>(null)
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
+  const [examSubmissions, setExamSubmissions] = useState<any[]>([])
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
-
+  const [teacherCourses, setTeacherCourses] = useState<any[]>([])
   const [examForm, setExamForm] = useState({
     title: "",
     description: "",
@@ -71,6 +78,7 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
 
   useEffect(() => {
     loadExams()
+    loadTeacherCourses()
   }, [teacherId])
 
   const loadExams = async () => {
@@ -160,7 +168,7 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
         exam_id: selectedExam.id,
         question_text: questionForm.question_text,
         question_type: questionForm.question_type,
-        options: questionForm.question_type === "multiple_choice" ? questionForm.options : null,
+        options: questionForm.question_type === "multiple_choice" ? questionForm.options.filter(opt => opt.trim() !== '') : null,
         correct_answer: questionForm.correct_answer,
         points: questionForm.points,
         order_number: questions.length + 1,
@@ -220,6 +228,34 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
     }
   }
 
+  const handleDeleteExam = (exam: Exam) => {
+    toast.promise(deleteExam(exam.id), {
+      loading: `Eliminando examen "${exam.title}"...`,
+      success: () => {
+        loadExams();
+        return `El examen "${exam.title}" ha sido eliminado.`;
+      },
+      error: `Error al eliminar el examen "${exam.title}".`
+    });
+  };
+
+  const handleReviewExam = async (exam: Exam) => {
+    setSelectedExam(exam)
+    const submissions = await getExamSubmissions(exam.id)
+    setExamSubmissions(submissions)
+    setReviewDialogOpen(true)
+  }
+
+  const loadTeacherCourses = async () => {
+    if (!teacherId) return
+    try {
+      const courses = await getCourseAssignmentsByTeacher(teacherId)
+      setTeacherCourses(courses)
+    } catch (error) {
+      console.error("Error cargando cursos:", error)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -230,6 +266,7 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
 
   return (
     <div className="space-y-6">
+      <Toaster richColors position="top-right" /> {/* Componente para mostrar las notificaciones */}
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">Gestión de Exámenes</h2>
@@ -267,7 +304,7 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
                   <Label htmlFor="exam_type">Tipo de Examen</Label>
                   <Select
                     value={examForm.exam_type}
-                    onValueChange={(value) => setExamForm({ ...examForm, exam_type: value })}
+                    onValueChange={(value) => setExamForm({ ...examForm, exam_type: value as Exam["exam_type"] })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -351,6 +388,26 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="course_id">Curso *</Label>
+                <Select
+                  value={examForm.course_id}
+                  onValueChange={(value) => setExamForm({ ...examForm, course_id: value })}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un curso" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teacherCourses.map((course) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="flex justify-end gap-2 pt-4">
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                   Cancelar
@@ -416,6 +473,12 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
                       <Button variant="outline" size="sm" onClick={() => handleManageQuestions(exam)}>
                         <FileText className="h-4 w-4" />
                       </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDeleteExam(exam)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleReviewExam(exam)}>
+                        <Users className="h-4 w-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -466,9 +529,8 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
                           {question.options.map((option, optIndex) => (
                             <div
                               key={optIndex}
-                              className={`text-sm p-2 rounded ${
-                                option === question.correct_answer ? "bg-green-100 text-green-800" : "bg-gray-50"
-                              }`}
+                              className={`text-sm p-2 rounded ${option === question.correct_answer ? "bg-green-100 text-green-800" : "bg-gray-50"
+                                }`}
                             >
                               {String.fromCharCode(65 + optIndex)}. {option}
                               {option === question.correct_answer && " ✓"}
@@ -508,7 +570,7 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
                     <Label htmlFor="question_type">Tipo de Pregunta</Label>
                     <Select
                       value={questionForm.question_type}
-                      onValueChange={(value: any) => setQuestionForm({ ...questionForm, question_type: value })}
+                      onValueChange={(value) => setQuestionForm({ ...questionForm, question_type: value as Question["question_type"] })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -540,7 +602,7 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
                   <div className="space-y-2">
                     <Label>Opciones</Label>
                     {questionForm.options.map((option, index) => (
-                      <div key={index} className="flex gap-2">
+                      <div key={index} className="mb-2">
                         <Input
                           value={option}
                           onChange={(e) => {
@@ -562,16 +624,19 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
                     <Select
                       value={questionForm.correct_answer}
                       onValueChange={(value) => setQuestionForm({ ...questionForm, correct_answer: value })}
+                      required={questionForm.options.filter(opt => opt.trim() !== '').length > 0}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecciona la respuesta correcta" />
                       </SelectTrigger>
                       <SelectContent>
-                        {questionForm.options.map((option, index) => (
-                          <SelectItem key={index} value={option}>
-                            {String.fromCharCode(65 + index)}. {option}
-                          </SelectItem>
-                        ))}
+                        {questionForm.options
+                          .filter(option => option.trim() !== '') // Only include non-empty options
+                          .map((option, index) => (
+                            <SelectItem key={index} value={option}>
+                              {String.fromCharCode(65 + index)}. {option}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   ) : (
@@ -580,6 +645,7 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
                       value={questionForm.correct_answer}
                       onChange={(e) => setQuestionForm({ ...questionForm, correct_answer: e.target.value })}
                       placeholder="Respuesta correcta o criterios de evaluación..."
+                      required
                     />
                   )}
                 </div>
@@ -596,6 +662,65 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
               </form>
             </TabsContent>
           </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* Agregar el diálogo de revisión de exámenes al final del componente */}
+      <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
+        <DialogContent className="sm:max-w-[800px]">
+          <DialogHeader>
+            <DialogTitle>Revisión de Examen: {selectedExam?.title}</DialogTitle>
+            <DialogDescription>
+              Entregas de estudiantes para este examen
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-[500px] overflow-y-auto">
+            {examSubmissions.length === 0 ? (
+              <Alert>
+                <AlertDescription>No hay entregas para este examen todavía.</AlertDescription>
+              </Alert>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Estudiante</TableHead>
+                    <TableHead>Fecha de entrega</TableHead>
+                    <TableHead>Tiempo usado</TableHead>
+                    <TableHead>Advertencias</TableHead>
+                    <TableHead>Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {examSubmissions.map((submission) => (
+                    <TableRow key={submission.id}>
+                      <TableCell>
+                        {submission.students?.first_name} {submission.students?.last_name}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(submission.submitted_at).toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        {Math.floor(submission.time_spent / 60)}min {submission.time_spent % 60}s
+                      </TableCell>
+                      <TableCell>
+                        {submission.warnings?.length > 0 ? (
+                          <Badge variant="destructive">{submission.warnings.length} advertencias</Badge>
+                        ) : (
+                          <Badge variant="outline">Sin advertencias</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="outline" size="sm">
+                          Ver detalles
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -195,3 +195,44 @@ CREATE TABLE IF NOT EXISTS user_images (
 CREATE INDEX IF NOT EXISTS idx_user_images_user ON user_images(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_images_type ON user_images(image_type);
 CREATE INDEX IF NOT EXISTS idx_user_images_active ON user_images(is_active);
+
+--------------------
+ALTER TABLE exams ADD COLUMN created_by UUID REFERENCES users(id);
+
+ALTER TABLE exams 
+  ADD COLUMN instructions TEXT,
+  ADD COLUMN passing_score INTEGER DEFAULT 70,
+  ADD COLUMN show_results BOOLEAN DEFAULT true,
+  ADD COLUMN randomize_questions BOOLEAN DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS exams (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  course_id UUID REFERENCES courses(id),
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  duration_minutes INTEGER NOT NULL,
+  total_questions INTEGER NOT NULL,
+  exam_type VARCHAR(50) NOT NULL,
+  due_date TIMESTAMP WITH TIME ZONE,
+  max_attempts INTEGER DEFAULT 1,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+--------------------
+CREATE TABLE exam_submissions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  exam_id UUID REFERENCES exams(id) NOT NULL,
+  student_id UUID REFERENCES users(id) NOT NULL,
+  answers JSONB NOT NULL,
+  time_spent INTEGER NOT NULL,
+  warnings TEXT[] DEFAULT '{}',
+  recording_url TEXT,
+  screen_captures TEXT[] DEFAULT '{}',
+  submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  graded BOOLEAN DEFAULT FALSE,
+  score NUMERIC(5,2),
+  feedback TEXT,
+  graded_by UUID REFERENCES users(id),
+  graded_at TIMESTAMP WITH TIME ZONE
+);

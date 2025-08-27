@@ -10,6 +10,8 @@ import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Camera, Mic, Monitor, Clock, AlertTriangle, CheckCircle, ArrowLeft, ArrowRight } from "lucide-react"
+import { submitExamWithMonitoring } from "@/lib/exams"
+import { useAuth } from "@/lib/auth-context" // Asumiendo que tienes un contexto de autenticación
 
 interface ExamInterfaceProps {
   exam: any
@@ -31,6 +33,9 @@ export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) 
   }>({})
   const [examStarted, setExamStarted] = useState(false)
   const [warnings, setWarnings] = useState<string[]>([])
+  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([])
+  const [screenCaptures, setScreenCaptures] = useState<string[]>([])
+  const { user } = useAuth() // Para obtener el ID del estudiante
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -93,12 +98,41 @@ export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) 
         // Start recording
         const combinedStream = new MediaStream([...cameraStream.getTracks(), ...screenStream.getTracks()])
 
-        const mediaRecorder = new MediaRecorder(combinedStream)
+        const mediaRecorder = new MediaRecorder(combinedStream, {
+          mimeType: 'video/webm;codecs=vp9'
+        })
         mediaRecorderRef.current = mediaRecorder
-
-        mediaRecorder.start()
+        
+        // Guardar los chunks de grabación
+        const chunks: Blob[] = []
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            chunks.push(e.data)
+            setRecordedChunks([...chunks])
+          }
+        }
+        
+        // Configurar para guardar datos cada 10 segundos
+        mediaRecorder.start(10000)
         setExamStarted(true)
-
+        
+        // Capturar pantalla cada 30 segundos
+        const captureInterval = setInterval(() => {
+          const videoTrack = screenStream.getVideoTracks()[0];
+          const imageCapture = new (window as any).ImageCapture(videoTrack);
+          imageCapture.grabFrame().then((bitmap: ImageBitmap) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = bitmap.width;
+            canvas.height = bitmap.height;
+            const context = canvas.getContext('2d');
+            context?.drawImage(bitmap, 0, 0);
+            const screenshot = canvas.toDataURL('image/jpeg');
+            setScreenCaptures(prev => [...prev, screenshot]);
+          }).catch((error: Error) => {
+            console.error('Error capturing screen:', error);
+          });
+        }, 30000)
+        
         // Monitor for tab changes, window focus, etc.
         const handleVisibilityChange = () => {
           if (document.hidden) {
@@ -170,29 +204,62 @@ export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) 
     }))
   }
 
-  const handleSubmitExam = () => {
+  const handleSubmitExam = async () => {
     // Stop all recordings
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop()
     }
-
+  
     // Stop all media streams
     Object.values(mediaStreams).forEach((stream) => {
       stream?.getTracks().forEach((track) => track.stop())
     })
-
+    
+    // Crear un blob con todos los chunks grabados
+    const recordingBlob = new Blob(recordedChunks, { type: 'video/webm' })
+    
+    // Subir la grabación a Supabase Storage (asumiendo que tienes configurado el bucket)
+    const recordingFile = new File([recordingBlob], `exam_${exam.id}_${user.id}_${Date.now()}.webm`, {
+      type: 'video/webm'
+    })
+    
+    // Subir el archivo a Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('exam-recordings')
+      .upload(`recordings/${recordingFile.name}`, recordingFile)
+    
+    if (uploadError) {
+      console.error("Error uploading recording:", uploadError)
+      alert("Error al subir la grabación. Por favor, contacta al soporte.")
+      return
+    }
+    
+    // Obtener la URL pública
+    const { data: publicUrlData } = supabase.storage
+      .from('exam-recordings')
+      .getPublicUrl(`recordings/${recordingFile.name}`)
+    
+    const recordingUrl = publicUrlData?.publicUrl
+    
     // Submit exam data
     const examData = {
-      examId: exam.id,
+      exam_id: exam.id,
+      student_id: user.id,
       answers,
-      timeSpent: exam.duration * 60 - timeLeft,
+      time_spent: exam.duration * 60 - timeLeft,
       warnings,
-      timestamp: new Date().toISOString(),
+      recording_url: recordingUrl,
+      screen_captures: screenCaptures
     }
-
-    console.log("Exam submitted:", examData)
-    alert("Examen enviado exitosamente")
-    onComplete()
+  
+    const submitted = await submitExamWithMonitoring(examData)
+    
+    if (submitted) {
+      alert("Examen enviado exitosamente")
+      onComplete()
+    } else {
+      alert("Error al enviar el examen. Por favor, intenta nuevamente.")
+    }
   }
 
   const progress = ((currentQuestion + 1) / questions.length) * 100

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Upload, Camera, Loader2, X, Image as ImageIcon, Save } from "lucide-react"
-import { uploadImage, deleteUserImage } from "@/lib/images"
+import { uploadImage, deleteUserImage } from "@/lib/images" // Assuming these are correctly implemented
 import { createClient } from '@supabase/supabase-js'
 
 interface ImageUploadProps {
@@ -37,12 +37,16 @@ export default function ImageUpload({
 
   useEffect(() => {
     const fetchImage = async () => {
+      // Only fetch if currentImageUrl is not provided, implying we need to check Supabase
       if (!currentImageUrl) {
         const url = await getUserImage(userId, imageType);
         if (url) {
           setImageUrl(url);
           onImageUpdate?.(url);
         }
+      } else {
+        // If currentImageUrl is provided, use it directly
+        setImageUrl(currentImageUrl);
       }
     };
     fetchImage();
@@ -59,7 +63,8 @@ export default function ImageUpload({
       return
     }
 
-    if (file.size > 1 * 1024 * 1024) { // 1MB
+    // Convert 1MB to bytes for comparison
+    if (file.size > 1 * 1024 * 1024) {
       setMessage({ type: "error", text: "El archivo es muy grande. Máximo 1MB permitido." })
       return
     }
@@ -89,8 +94,8 @@ export default function ImageUpload({
       const uploadedUrl = await uploadImage(selectedFile, userId, imageType)
       if (uploadedUrl) {
         setImageUrl(uploadedUrl)
-        setPreviewUrl(null)
-        setSelectedFile(null)
+        setPreviewUrl(null) // Clear preview after successful upload
+        setSelectedFile(null) // Clear selected file
         setMessage({ type: "success", text: "Imagen guardada exitosamente." })
         onImageUpdate?.(uploadedUrl)
       } else {
@@ -105,6 +110,7 @@ export default function ImageUpload({
   }
 
   const handleRemoveImage = async () => {
+    // Adding confirmation for delete action
     if (confirm("¿Estás seguro de eliminar esta imagen?")) {
       try {
         const ok = await deleteUserImage(userId, imageType)
@@ -167,6 +173,7 @@ export default function ImageUpload({
               <Upload className="mr-2 h-4 w-4" />
               Seleccionar Imagen
             </Button>
+            {/* This button triggers the hidden camera input */}
             <Button onClick={() => cameraInputRef.current?.click()} disabled={uploading} variant="outline">
               <Camera className="mr-2 h-4 w-4" />
               Tomar Foto
@@ -176,7 +183,7 @@ export default function ImageUpload({
 
         {/* Botones de guardar cambios y eliminar - SOLO ESTA SECCIÓN */}
         <div className="flex justify-end space-x-2 mt-4">
-          {selectedFile && (
+          {selectedFile && ( // Only show save button if a new file is selected
             <Button
               onClick={handleSaveImage}
               disabled={uploading}
@@ -195,11 +202,12 @@ export default function ImageUpload({
               )}
             </Button>
           )}
-          {imageUrl && (
+          {(imageUrl || selectedFile) && ( // Show delete if there's an existing image OR a selected new image (for discarding)
             <Button
               onClick={handleRemoveImage}
               variant="outline"
               className="text-red-600 hover:text-red-700"
+              disabled={uploading} // Disable delete during upload
             >
               <X className="mr-2 h-4 w-4" />
               Eliminar
@@ -207,7 +215,9 @@ export default function ImageUpload({
           )}
         </div>
 
+        {/* Hidden input for file selection */}
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
+        {/* Hidden input for camera capture - this is the magic line */}
         <input ref={cameraInputRef} type="file" accept="image/*" capture="user" onChange={handleFileSelect} className="hidden" />
 
         <div className="text-xs text-muted-foreground">
@@ -227,16 +237,15 @@ export async function getUserImage(userId: string, imageType: "avatar" | "logo" 
   try {
     // Verificar que tenemos las credenciales de Supabase
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      console.error("Supabase client not initialized");
+      console.error("Supabase client not initialized: Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
       return null;
     }
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    process.env.NEXT_PUBLIC_SUPABASE_URL
-    supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    ); // Corrected: removed redundant lines here
+
     const { data, error } = await supabase
       .from("user_images")
       .select("image_url")
@@ -246,14 +255,19 @@ export async function getUserImage(userId: string, imageType: "avatar" | "logo" 
       .single();
 
     if (error) {
-      console.error("Error fetching user image:", error);
+      // Differentiate between no image found (e.g., Postgrest: 406 "No rows found") and actual errors
+      if (error.code === 'PGRST116') { // Common code for "No rows found"
+        console.info(`No active ${imageType} image found for user ${userId}.`);
+        return null;
+      }
+      console.error(`Error fetching user ${imageType} image for user ${userId}:`, error);
       return null;
     }
 
     if (!data) return null;
     return data.image_url;
   } catch (error) {
-    console.error("Get user image error:", error);
+    console.error("Get user image (unexpected) error:", error);
     return null;
   }
 }

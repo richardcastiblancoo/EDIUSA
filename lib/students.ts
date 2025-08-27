@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { getUserImage } from "@/lib/images";
 
 // Definición de tipos para el estudiante, incluyendo campos de la tabla `users`
 export type Student = {
@@ -60,13 +61,25 @@ export async function getStudentsForCourse(courseId: string): Promise<Student[]>
     return [];
   }
 
-  return data.map((enrollment: any) => ({
-    id: enrollment.users.id,
-    name: enrollment.users.name,
-    email: enrollment.users.email,
-    documentId: enrollment.users.document_number,
-    photoUrl: enrollment.users.photo || `https://api.dicebear.com/7.x/notionists/svg?seed=${enrollment.users.id}`,
-  })) as Student[];
+  // Crear un array para almacenar las promesas de obtención de imágenes
+  const studentsWithImages = await Promise.all(
+    data.map(async (enrollment: any) => {
+      // Obtener la imagen del usuario desde Supabase Storage
+      const photoUrl = await getUserImage(enrollment.users.id, "avatar") ||
+        enrollment.users.photo ||
+        "/placeholder-user.jpg";
+
+      return {
+        id: enrollment.users.id,
+        name: enrollment.users.name,
+        email: enrollment.users.email,
+        documentId: enrollment.users.document_number,
+        photoUrl: photoUrl,
+      };
+    })
+  );
+
+  return studentsWithImages as Student[];
 }
 
 /**
@@ -105,17 +118,25 @@ export async function getStudentsForTeacher(teacherId: string): Promise<Student[
     // 3. Eliminar duplicados (si un estudiante está en varios cursos)
     const studentsMap = new Map();
     
-    enrollments.forEach((enrollment: any) => {
-      if (!studentsMap.has(enrollment.users.id)) {
-        studentsMap.set(enrollment.users.id, {
-          id: enrollment.users.id,
-          name: enrollment.users.name,
-          email: enrollment.users.email,
-          documentId: enrollment.users.document_number,
-          photoUrl: enrollment.users.photo || `https://api.dicebear.com/7.x/notionists/svg?seed=${enrollment.users.id}`,
-        });
-      }
-    });
+    // Procesar cada inscripción y obtener la imagen del estudiante
+    await Promise.all(
+      enrollments.map(async (enrollment: any) => {
+        if (!studentsMap.has(enrollment.users.id)) {
+          // Obtener la imagen del usuario desde Supabase Storage
+          const photoUrl = await getUserImage(enrollment.users.id, "avatar") || 
+                          enrollment.users.photo || 
+                          "/placeholder-user.jpg";
+          
+          studentsMap.set(enrollment.users.id, {
+            id: enrollment.users.id,
+            name: enrollment.users.name,
+            email: enrollment.users.email,
+            documentId: enrollment.users.document_number,
+            photoUrl: photoUrl,
+          });
+        }
+      })
+    );
 
     return Array.from(studentsMap.values());
   } catch (error) {
@@ -222,7 +243,7 @@ export async function registerGrade(
       // Actualizar registro existente
       const { data, error } = await supabase
         .from("grades")
-        .update({ 
+        .update({
           score,
           updated_at: new Date().toISOString()
         })
@@ -371,7 +392,7 @@ export async function searchStudents(query: string): Promise<Student[]> {
 export async function addStudentsToCourse(courseId: string, studentIds: string[]): Promise<boolean> {
   try {
     if (!studentIds.length) return true;
-    
+
     // Verificar si alguno de los estudiantes ya está inscrito en el curso
     const { data: existingEnrollments, error: checkError } = await supabase
       .from("enrollments")
@@ -392,7 +413,7 @@ export async function addStudentsToCourse(courseId: string, studentIds: string[]
       // Todos los estudiantes ya están inscritos
       return true;
     }
-    
+
     // Crear nuevas inscripciones para los estudiantes no inscritos
     const enrollments = newStudentIds.map(studentId => ({
       id: crypto.randomUUID(),

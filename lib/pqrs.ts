@@ -133,3 +133,65 @@ export async function getPQRsByStudent(studentId: string): Promise<PQR[]> {
 
   return data || [];
 }
+
+/**
+ * Obtiene todos los PQRs dirigidos al coordinador.
+ * @returns Lista de PQRs para el coordinador
+ */
+export async function getPQRsForCoordinator(): Promise<PQR[]> {
+  const { data, error } = await supabase
+    .from("pqrs")
+    .select(`
+      *,
+      courses:course_id (name),
+      students:student_id (name)
+    `)
+    .is("teacher_id", null);
+
+  if (error) {
+    console.error("Error fetching coordinator PQRs:", error);
+    throw error;
+  }
+
+  return data || [];
+}
+
+/**
+ * Actualiza un PQR con la respuesta del coordinador y/o cambio de estado.
+ * @param pqrId ID del PQR a actualizar
+ * @param status Nuevo estado del PQR
+ * @param coordinatorResponse Respuesta del coordinador
+ * @returns El PQR actualizado
+ */
+export async function updatePQRByCoordinator(
+  pqrId: string,
+  status: string,
+  coordinatorResponse?: string
+): Promise<PQR | null> {
+  const updates: any = {
+    status,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (coordinatorResponse) {
+    updates.coordinator_response = coordinatorResponse;
+  }
+
+  if (status === "resolved") {
+    updates.resolved_at = new Date().toISOString();
+  }
+
+  const { data, error } = await supabase
+    .from("pqrs")
+    .update(updates)
+    .eq("id", pqrId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating PQR by coordinator:", error);
+    throw error;
+  }
+
+  return data;
+}

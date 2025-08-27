@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { AlertCircle, CheckCircle2, CircleDashed, MailQuestion, MessageSquare, Clock, ArrowRight, XCircle } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getPQRsForCoordinator, updatePQRByCoordinator } from "@/lib/pqrs";
 
 // Tipos para PQR
 type PQRStatusType = "pending" | "in_progress" | "resolved" | "closed";
@@ -81,10 +82,8 @@ export default function CoordinatorPQRPage() {
     const fetchPQRs = async () => {
       setLoading(true);
       try {
-        // Aquí deberías llamar a tu API real para obtener los PQRs
-        // Por ejemplo: const data = await getPQRsForCoordinator();
-        // setPqrs(data);
-        setPqrs([]);
+        const data = await getPQRsForCoordinator();
+        setPqrs(data);
       } catch (error) {
         console.error("Error fetching PQRs:", error);
       } finally {
@@ -105,8 +104,7 @@ export default function CoordinatorPQRPage() {
     if (!selectedPqr) return;
 
     try {
-      // Aquí deberías llamar a tu API real para actualizar el PQR
-      // Por ejemplo: await updatePQRByCoordinator(selectedPqr.id, newStatus, response);
+      await updatePQRByCoordinator(selectedPqr.id, newStatus, response);
       
       // Actualizar la lista local
       const updatedPqrs = pqrs.map((pqr) =>
