@@ -1,16 +1,9 @@
 import { createClient } from "@supabase/supabase-js"
-import type { User } from "@supabase/supabase-js"
-
-// Credenciales de Supabase
-// Aquí se obtienen las variables de entorno para la URL y la clave de Supabase.
-// Es crucial que estas variables estén configuradas en tu archivo .env.local
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-
-const supabase = createClient(supabaseUrl, supabaseKey)
+import type { User as SupabaseUser } from "@supabase/supabase-js"
+import { supabase } from "./supabase"
 
 // User type definition (expanded for all custom fields)
-export type User = User & {
+export type User = SupabaseUser & {
     name: string;
     document_number?: string;
     phone?: string;
@@ -56,27 +49,33 @@ export const getAllUsers = async (): Promise<User[]> => {
     return data as User[]
 }
 
-export const createUser = async (userData: UserCreateData) => {
+export const createUser = async (userData: UserCreateData, maxRetries = 3, initialDelay = 1000) => {
     const { email, password, role, ...profileData } = userData;
-    
-    // Create the user in auth.users table
-    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
-    if (authError) throw authError;
 
-    // Insert additional profile data into the public.users table
-    const { error: insertError } = await supabase.from("users").insert({
-        id: authData.user?.id,
-        email: authData.user?.email,
-        role,
-        ...profileData,
-    });
+    try {
+        // Generar un ID único para el usuario
+        const userId = crypto.randomUUID();
+        
+        // Insertar directamente en la tabla users sin usar supabase.auth.signUp
+        const { data, error: insertError } = await supabase.from("users").insert({
+            id: userId,
+            email,
+            password, // Ahora puede ser de cualquier longitud
+            role,
+            ...profileData,
+        }).select().single();
 
-    if (insertError) {
-        console.error("Error creating user profile:", insertError);
-        throw insertError;
+        if (insertError) {
+            console.error("Error creating user profile:", insertError);
+            throw insertError;
+        }
+
+        return data;
+    } catch (error) {
+        console.error("Error creating user:", error);
+        throw error;
     }
 }
-
 
 export const updateUser = async (userId: string, updateData: UserUpdateData) => {
     const { error } = await supabase.from("users").update(updateData).eq("id", userId)

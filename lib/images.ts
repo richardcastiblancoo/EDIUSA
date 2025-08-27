@@ -66,19 +66,30 @@ export async function uploadImage(
 
 export async function getUserImage(userId: string, imageType: "avatar" | "logo" | "banner"): Promise<string | null> {
   try {
+    // Verificar que tenemos las credenciales de Supabase
+    if (!supabase) {
+      console.error("Supabase client not initialized");
+      return null;
+    }
+    
     const { data, error } = await supabase
       .from("user_images")
       .select("image_url")
       .eq("user_id", userId)
       .eq("image_type", imageType)
       .eq("is_active", true)
-      .single()
+      .maybeSingle(); // Usar maybeSingle() en lugar de single()
 
-    if (error || !data) return null
-    return data.image_url
+    if (error && error.code !== 'PGRST116') { // Ignorar el error específico de "no rows"
+      console.error("Error fetching user image:", error);
+      return null;
+    }
+    
+    if (!data) return null;
+    return data.image_url;
   } catch (error) {
-    console.error("Get user image error:", error)
-    return null
+    console.error("Get user image error:", error);
+    return null;
   }
 }
 

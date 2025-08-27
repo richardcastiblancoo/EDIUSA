@@ -62,29 +62,53 @@ import {
   EyeOff,
   ChevronLeft,
   ChevronRight,
+  Upload,
+  X,
 } from "lucide-react";
 import { getAllUsers, createUser, updateUser, deleteUser } from "@/lib/auth";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getUserImage, uploadImage } from "@/lib/images";
+import ImageUpload from "@/components/shared/image-upload"
 
 // Define el tipo para los roles
 type UserRole = "coordinator" | "teacher" | "student";
 
 // Extiende la interfaz User para incluir un campo de última actividad
-interface UserWithStatus extends User {
+interface UserWithStatus {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  phone?: string;
   document_number?: string;
+  image_url?: string; // Añadir campo para la URL de la imagen
+}
+
+// Remove duplicate PAGE_SIZE declaration since it's already declared below
+
+// Componente de tabla de usuarios, optimizado para ser un componente separado
+// Modificar la interfaz UserWithStatus para incluir la imagen
+interface UserWithStatus {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  phone?: string;
+  document_number?: string;
+  image_url?: string; // Añadir campo para la URL de la imagen
 }
 
 const PAGE_SIZE = 10;
 
 // Componente de tabla de usuarios, optimizado para ser un componente separado
 const UserTable = ({ users, getRoleAvatar, getRoleBadge, handleEdit, handleDelete, handleView }: {
-    users: UserWithStatus[],
-    getRoleAvatar: (role: string) => React.ReactNode,
-    getRoleBadge: (role: string) => React.ReactNode,
-    handleEdit: (user: UserWithStatus) => void,
-    handleDelete: (user: UserWithStatus) => void,
-    handleView: (user: UserWithStatus) => void,
-  }) => {
+  users: UserWithStatus[],
+  getRoleAvatar: (role: string) => React.ReactNode,
+  getRoleBadge: (role: string) => React.ReactNode,
+  handleEdit: (user: UserWithStatus) => void,
+  handleDelete: (user: UserWithStatus) => void,
+  handleView: (user: UserWithStatus) => void,
+}) => {
   return (
     <Table>
       <TableHeader>
@@ -111,7 +135,16 @@ const UserTable = ({ users, getRoleAvatar, getRoleBadge, handleEdit, handleDelet
           users.map((user) => (
             <TableRow key={user.id}>
               <TableCell className="font-medium flex items-center gap-2">
-                {getRoleAvatar(user.role)}
+                {/* Mostrar Avatar con imagen si existe, o el avatar por defecto */}
+                <Avatar className="h-8 w-8">
+                  {user.image_url ? (
+                    <AvatarImage src={user.image_url} alt={user.name} />
+                  ) : (
+                    <AvatarFallback>
+                      {getRoleAvatar(user.role)}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
                 {user.name}
               </TableCell>
               <TableCell>{user.email}</TableCell>
@@ -149,7 +182,7 @@ const UserTable = ({ users, getRoleAvatar, getRoleBadge, handleEdit, handleDelet
         )}
       </TableBody>
     </Table>
-);
+  );
 };
 
 
@@ -160,6 +193,7 @@ export default function UserManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserWithStatus | null>(null);
   const [viewingUser, setViewingUser] = useState<UserWithStatus | null>(null);
+  const [viewingUserImage, setViewingUserImage] = useState<string | null>(null);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -177,11 +211,35 @@ export default function UserManagement() {
     phone: "",
     document_number: "",
   });
+  
+  // Agregar un estado para la imagen temporal durante la creación
+  const [tempImageFile, setTempImageFile] = useState<File | null>(null);
+  const [tempImagePreview, setTempImagePreview] = useState<string | null>(null);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
     const userData = await getAllUsers();
-    setUsers(userData);
+
+    // Crear un array de promesas para cargar las imágenes de todos los usuarios
+    const usersWithImages = await Promise.all(
+      userData.map(async (user) => {
+        const imageUrl = await getUserImage(user.id, "avatar");
+        return {
+          id: user.id,
+          name: user.name || '',
+          email: user.email || '',
+          role: user.role || 'student',
+          phone: user.phone,
+          document_number: user.document_number,
+          image_url: imageUrl
+        };
+      })
+    );
+    
+    setUsers(usersWithImages.map(user => ({
+      ...user,
+      image_url: user.image_url || undefined
+    })));
     setLoading(false);
     setMessage(null);
   }, []);
@@ -201,35 +259,42 @@ export default function UserManagement() {
     });
     setEditingUser(null);
     setShowPassword(false);
+    setTempImageFile(null);
+    setTempImagePreview(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Se elimina la validación de longitud mínima de contraseña
     setCreating(true);
-
     try {
       let success = false;
       let newOrUpdatedUser;
-
       if (editingUser) {
         const dataToSend = { ...formData };
         if (!dataToSend.password) {
-          delete dataToSend.password;
+          dataToSend.password = undefined;
         }
-
         newOrUpdatedUser = await updateUser(editingUser.id, dataToSend);
-        success = !!newOrUpdatedUser;
+        success = newOrUpdatedUser !== null && newOrUpdatedUser !== undefined;
       } else {
         newOrUpdatedUser = await createUser(formData);
-        success = !!newOrUpdatedUser;
+        success = newOrUpdatedUser !== null && newOrUpdatedUser !== undefined;
+        
+        // Si se creó el usuario exitosamente y hay una imagen temporal, subirla
+        if (success && tempImageFile && newOrUpdatedUser?.id) {
+          try {
+            await uploadImage(tempImageFile, newOrUpdatedUser.id, "avatar");
+          } catch (imageError) {
+            console.error("Error al subir la imagen del nuevo usuario:", imageError);
+            // No marcamos como error la operación completa, ya que el usuario se creó correctamente
+          }
+        }
       }
-
       if (success) {
         setMessage({
           type: "success",
-          text: `Usuario ${
-            editingUser ? "actualizado" : "creado"
-          } exitosamente`,
+          text: `Usuario ${editingUser ? "actualizado" : "creado"} exitosamente`,
         });
         setDialogOpen(false);
         resetForm();
@@ -237,17 +302,57 @@ export default function UserManagement() {
       } else {
         setMessage({
           type: "error",
-          text: `Error al ${
-            editingUser ? "actualizar" : "crear"
-          } usuario. Verifique los datos.`,
+          text: `Error al ${editingUser ? "actualizar" : "crear"} usuario. Verifique los datos.`,
         });
       }
     } catch (error) {
       console.error("Error en handleSubmit:", error);
-      setMessage({ type: "error", text: "Error inesperado" });
+      // Mejorar el manejo de errores para mostrar mensajes específicos
+      if ((error as Error).message?.includes("security purposes")) {
+        setMessage({
+          type: "error",
+          text: "Has excedido el límite de solicitudes. Por favor, espera un minuto antes de intentarlo nuevamente."
+        });
+      } else {
+        setMessage({
+          type: "error",
+          text: `Error: ${(error as Error).message || "Error inesperado"}`
+        });
+      }
     } finally {
       setCreating(false);
     }
+  };
+  
+  // Función para manejar la selección de imagen para nuevos usuarios
+  const handleNewUserImageSelect = (file: File) => {
+    if (!file) return;
+    
+    if (!file.type.startsWith("image/")) {
+      setMessage({ type: "error", text: "Por favor selecciona un archivo de imagen válido." });
+      return;
+    }
+    
+    if (file.size > 1 * 1024 * 1024) { // 1MB
+      setMessage({ type: "error", text: "El archivo es muy grande. Máximo 1MB permitido." });
+      return;
+    }
+    
+    // Crear URL de previsualización
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setTempImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    
+    setTempImageFile(file);
+    setMessage(null);
+  };
+  
+  // Función para eliminar la imagen temporal
+  const handleRemoveTempImage = () => {
+    setTempImageFile(null);
+    setTempImagePreview(null);
   };
 
   const handleEdit = useCallback((user: UserWithStatus) => {
@@ -267,8 +372,16 @@ export default function UserManagement() {
     setUserToDelete(user);
   }, []);
 
-  const handleView = useCallback((user: UserWithStatus) => {
+  const handleView = useCallback(async (user: UserWithStatus) => {
     setViewingUser(user);
+    // Cargar la imagen del usuario cuando se abre la vista detallada
+    try {
+      const imageUrl = await getUserImage(user.id, "avatar");
+      setViewingUserImage(imageUrl);
+    } catch (error) {
+      console.error("Error al cargar la imagen del usuario:", error);
+      setViewingUserImage(null);
+    }
   }, []);
 
   const confirmDelete = async () => {
@@ -276,7 +389,7 @@ export default function UserManagement() {
       setCreating(true);
       try {
         const success = await deleteUser(userToDelete.id);
-        if (success) {
+        if (success !== undefined && success !== null) {
           setMessage({
             type: "success",
             text: "Usuario eliminado exitosamente",
@@ -419,21 +532,91 @@ export default function UserManagement() {
                     ? "Modifica los datos del usuario"
                     : "Completa los datos para crear un nuevo usuario"}
                 </DialogDescription>
-              </DialogHeader>
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nombre Completo</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
-                      required
-                    />
+                </DialogHeader>
+                
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Componente de carga de imagen para usuarios nuevos y existentes */}
+                  <div className="mb-4">
+                    {editingUser ? (
+                      <ImageUpload
+                        userId={editingUser.id}
+                        imageType="avatar"
+                        title="Foto de perfil"
+                        description="Sube una foto para el usuario"
+                        onImageUpdate={(url) => {
+                          setViewingUserImage(url);
+                        }}
+                      />
+                    ) : (
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="text-lg font-medium">Foto de perfil</h3>
+                          <p className="text-sm text-muted-foreground">Sube una foto para el usuario</p>
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                          <Avatar className="h-20 w-20">
+                            {tempImagePreview ? (
+                              <AvatarImage src={tempImagePreview} />
+                            ) : (
+                              <AvatarFallback>
+                                {formData.name ? formData.name.charAt(0) : "U"}
+                              </AvatarFallback>
+                            )}
+                          </Avatar>
+                          
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <input 
+                              type="file" 
+                              id="newUserImage" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={(e) => e.target.files?.[0] && handleNewUserImageSelect(e.target.files[0])}
+                            />
+                            <Button 
+                              type="button" 
+                              onClick={() => document.getElementById("newUserImage")?.click()} 
+                              variant="outline"
+                            >
+                              <Upload className="mr-2 h-4 w-4" />
+                              Seleccionar Imagen
+                            </Button>
+                            
+                            {tempImagePreview && (
+                              <Button 
+                                type="button" 
+                                onClick={handleRemoveTempImage} 
+                                variant="outline" 
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <X className="mr-2 h-4 w-4" />
+                                Eliminar
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="text-xs text-muted-foreground">
+                          <p>Formatos soportados: JPG, PNG, GIF</p>
+                          <p>Tamaño máximo: 1MB</p>
+                          <p>Recomendado: 400x400px</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Nombre Completo</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) =>
+                          setFormData({ ...formData, name: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="role">Rol</Label>
@@ -549,13 +732,15 @@ export default function UserManagement() {
         </div>
       </div>
 
-      {message && (
-        <Alert variant={message.type === "error" ? "destructive" : "default"}>
-          {message.type === "error" && <AlertCircle className="h-4 w-4" />}
-          {message.type === "error" && <AlertTitle>Error</AlertTitle>}
-          <AlertDescription>{message.text}</AlertDescription>
-        </Alert>
-      )}
+      {
+        message && (
+          <Alert variant={message.type === "error" ? "destructive" : "default"}>
+            {message.type === "error" && <AlertCircle className="h-4 w-4" />}
+            {message.type === "error" && <AlertTitle>Error</AlertTitle>}
+            <AlertDescription>{message.text}</AlertDescription>
+          </Alert>
+        )
+      }
 
       {/* Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -847,7 +1032,16 @@ export default function UserManagement() {
           {viewingUser && (
             <div className="space-y-4 py-4">
               <div className="flex items-center gap-4">
-                {getRoleAvatar(viewingUser.role)}
+                {/* Mostrar la imagen del usuario si existe */}
+                <Avatar className="h-16 w-16">
+                  {viewingUserImage ? (
+                    <AvatarImage src={viewingUserImage} alt={viewingUser.name} />
+                  ) : (
+                    <AvatarFallback>
+                      {getRoleAvatar(viewingUser.role)}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
                 <div className="grid gap-1">
                   <h3 className="text-lg font-bold">
                     {viewingUser.name}
@@ -899,6 +1093,6 @@ export default function UserManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </div >
   );
 }

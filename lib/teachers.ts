@@ -1,25 +1,11 @@
-import { createClient } from "@supabase/supabase-js";
-
-// Configura el cliente de Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Missing Supabase credentials");
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from "./supabase";
 
 // Definición de tipos
+// Actualizar el tipo Teacher para incluir la URL de la foto
 export type Teacher = {
   id: string;
   name: string;
-};
-
-export type Student = {
-  id: string;
-  name: string;
-  photoUrl: string;
+  photoUrl: string; // Añadido campo para la foto
 };
 
 // Función para obtener la lista de profesores de la base de datos
@@ -27,14 +13,18 @@ export async function getTeachers(): Promise<Teacher[]> {
   try {
     const { data, error } = await supabase
       .from("users")
-      .select("id, name")
+      .select("id, name, photo") // Añadido campo photo
       .eq("role", "teacher");
 
     if (error) {
       throw error;
     }
 
-    return data || [];
+    return data.map(teacher => ({
+      id: teacher.id,
+      name: teacher.name,
+      photoUrl: teacher.photo || "https://api.dicebear.com/7.x/notionists/svg?seed=" + teacher.id // Imagen por defecto si no hay foto
+    })) || [];
   } catch (error) {
     console.error("Error fetching teachers:", error);
     return [];
@@ -43,7 +33,7 @@ export async function getTeachers(): Promise<Teacher[]> {
 
 // <--- NUEVA FUNCIÓN AGREGADA --->
 // Función para obtener los estudiantes asignados a un profesor por su ID
-export async function getStudentsForTeacher(teacherId: string): Promise<Student[]> {
+export async function getStudentsForTeacher(teacherId: string): Promise<{id: string, name: string, photoUrl: string}[]> {
   try {
     // 1. Obtener los IDs de los cursos que imparte este profesor
     const { data: coursesData, error: coursesError } = await supabase
@@ -79,7 +69,7 @@ export async function getStudentsForTeacher(teacherId: string): Promise<Student[
 
     // Usar un Set para eliminar duplicados si un estudiante está en varios cursos del mismo profesor
     const uniqueStudents = Array.from(new Set(studentsData.map(s => s.id)))
-      .map(id => studentsData.find(s => s.id === id)) as Student[];
+      .map(id => studentsData.find(s => s.id === id)) as {id: string, name: string, photoUrl: string}[];
 
     return uniqueStudents || [];
   } catch (error) {

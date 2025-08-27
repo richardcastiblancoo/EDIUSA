@@ -21,7 +21,8 @@ export default function PWAInstaller() {
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault()
+      // Don't prevent default here - this allows the browser's native prompt to show
+      // e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
       setShowInstallPrompt(true)
     }

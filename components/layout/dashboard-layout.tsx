@@ -291,7 +291,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
         <div className="p-4 border-t border-gray-200 bg-white">
           <div className="flex items-center space-x-3">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={user?.avatar || "/placeholder.svg"} />
+             
               <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">

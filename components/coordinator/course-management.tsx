@@ -136,7 +136,10 @@ export default function CourseManagement() {
       );
 
       const newStudentsByCourse = studentsData.reduce((acc, curr) => {
-        acc[curr.courseId] = curr.students;
+        acc[curr.courseId] = curr.students.map(student => ({
+          ...student,
+          course_id: curr.courseId
+        }));
         return acc;
       }, {} as { [key: string]: Student[] });
       setStudentsByCourse(newStudentsByCourse);
@@ -169,7 +172,10 @@ export default function CourseManagement() {
     setIsStudentSearchLoading(true);
     try {
       const results = await searchStudents(query);
-      setSearchResults(results);
+      setSearchResults(results.map(student => ({
+        ...student,
+        course_id: null // Add missing required course_id property
+      })));
     } catch (error) {
       console.error("Error searching students:", error);
       setSearchResults([]);
@@ -247,7 +253,7 @@ export default function CourseManagement() {
         level: formData.level,
         code: formData.name.substring(0, 10).toUpperCase().replace(/\s/g, ''),
         max_students: formData.max_students,
-        enrolled_count: formData.assignedStudents.length,
+// enrolled_count will be calculated automatically in the backend
         duration_weeks: formData.duration_weeks,
         hours_per_week: formData.hours_per_week,
         teacher_id: formData.teacher_id,
@@ -272,7 +278,7 @@ export default function CourseManagement() {
       console.error("Error creating course:", error);
       toast({
         title: "Error",
-        description: `No se pudo crear el curso: ${error.message || 'Error desconocido'}`,
+        description: `No se pudo crear el curso: ${error instanceof Error ? error.message : 'Error desconocido'}`,
         variant: "destructive",
       });
     } finally {
@@ -573,10 +579,10 @@ export default function CourseManagement() {
                 <Label>Asignar Estudiantes</Label>
                 <div className="relative">
                   <Input
-                  placeholder="Buscar por nombre o documento..."
-                  value={studentSearchTerm}
-                  onChange={(e) => setStudentSearchTerm(e.target.value)}
-                />
+                    placeholder="Buscar por nombre o documento..."
+                    value={studentSearchTerm}
+                    onChange={(e) => setStudentSearchTerm(e.target.value)}
+                  />
                   {isStudentSearchLoading && (
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                       <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
@@ -869,23 +875,30 @@ export default function CourseManagement() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-teacher">Profesor *</Label>
-              <Select
-                value={formData.teacher_id}
-                onValueChange={(value) => setFormData({ ...formData, teacher_id: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un profesor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teachers.map((teacher) => (
-                    <SelectItem key={teacher.id} value={teacher.id}>
-                      {teacher.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <Label htmlFor="edit-teacher">Profesor *</Label>
+                <Select
+                  value={formData.teacher_id}
+                  onValueChange={(value) => setFormData({ ...formData, teacher_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un profesor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teachers.map((teacher) => (
+                      <SelectItem key={teacher.id} value={teacher.id}>
+                        <div className="flex items-center gap-2">
+                          <img 
+                            src={teacher.photoUrl || "https://api.dicebear.com/7.x/notionists/svg?seed=" + teacher.id} 
+                            alt={`Foto de ${teacher.name}`} 
+                            className="w-6 h-6 rounded-full" 
+                          />
+                          {teacher.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             <div className="space-y-2">
               <Label htmlFor="edit-max_students">Máximo Estudiantes</Label>
               <Input

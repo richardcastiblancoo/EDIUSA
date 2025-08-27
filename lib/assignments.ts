@@ -53,11 +53,11 @@ export async function assignCourseToTeacher(
   }
 }
 
-export async function getCourseAssignmentsByTeacher(teacherId: string): Promise<CourseAssignment[]> {
+export async function getCourseAssignmentsByTeacher(teacherId: string): Promise<any[]> {
   try {
     const { data, error } = await supabase
-      .from("course_assignments")
-      .select("*, course:courses(*)")
+      .from("courses")
+      .select("*")
       .eq("teacher_id", teacherId);
 
     if (error) {

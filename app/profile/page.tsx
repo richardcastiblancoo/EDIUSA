@@ -10,7 +10,7 @@ import { useAuth } from "@/lib/auth-context"
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { user, loading } = useAuth()
+  const { user, loading, updateUser } = useAuth()
 
   useEffect(() => {
     if (!loading && !user) {
@@ -23,12 +23,10 @@ export default function ProfilePage() {
   }
 
   const handleUserUpdate = (updatedUser: User) => {
-    const auth = useAuth()
-    if (!auth) return
-    auth.updateUser(updatedUser)
+    // Usamos directamente updateUser que ya extrajimos del hook useAuth
+    updateUser(updatedUser)
     localStorage.setItem("user", JSON.stringify(updatedUser))
   }
-
 
   return (
     <DashboardLayout userRole={user.role}>

@@ -1,4 +1,3 @@
-// src/components/ImageUpload.tsx
 "use client"
 
 import type React from "react"
@@ -8,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Upload, Camera, Loader2, X, Image as ImageIcon, Save } from "lucide-react"
-import { uploadImage, deleteUserImage, getUserImage } from "@/lib/images"
+import { uploadImage, deleteUserImage } from "@/lib/images"
+import { createClient } from '@supabase/supabase-js'
 
 interface ImageUploadProps {
   userId: string
@@ -70,7 +70,7 @@ export default function ImageUpload({
       setPreviewUrl(reader.result as string)
     }
     reader.readAsDataURL(file)
-    
+
     // Guardar el archivo seleccionado para subirlo después
     setSelectedFile(file)
     setMessage(null)
@@ -143,7 +143,7 @@ export default function ImageUpload({
         <div className="flex items-center gap-4">
           {imageType === "avatar" ? (
             <Avatar className="h-20 w-20">
-              <AvatarImage src={previewUrl || imageUrl || "/placeholder.svg?height=80&width=80&text=Avatar"} />
+              <AvatarImage src={previewUrl || imageUrl || "https://api.dicebear.com/7.x/notionists/svg?seed=image"} />
               <AvatarFallback>
                 <Camera className="h-8 w-8" />
               </AvatarFallback>
@@ -171,33 +171,40 @@ export default function ImageUpload({
               <Camera className="mr-2 h-4 w-4" />
               Tomar Foto
             </Button>
-            {previewUrl && (
-              <Button onClick={handleSaveImage} disabled={uploading} variant="default">
-                {uploading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Guardar Imagen
-                  </>
-                )}
-              </Button>
-            )}
-            {imageUrl && (
-              <Button
-                onClick={handleRemoveImage}
-                variant="outline"
-                size="sm"
-                className="text-red-600 hover:text-red-700 bg-transparent"
-              >
-                <X className="mr-2 h-4 w-4" />
-                Eliminar
-              </Button>
-            )}
           </div>
+        </div>
+
+        {/* Botones de guardar cambios y eliminar - SOLO ESTA SECCIÓN */}
+        <div className="flex justify-end space-x-2 mt-4">
+          {selectedFile && (
+            <Button
+              onClick={handleSaveImage}
+              disabled={uploading}
+              variant="default"
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Guardar Cambios
+                </>
+              )}
+            </Button>
+          )}
+          {imageUrl && (
+            <Button
+              onClick={handleRemoveImage}
+              variant="outline"
+              className="text-red-600 hover:text-red-700"
+            >
+              <X className="mr-2 h-4 w-4" />
+              Eliminar
+            </Button>
+          )}
         </div>
 
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
@@ -213,4 +220,40 @@ export default function ImageUpload({
       </CardContent>
     </Card>
   )
+}
+
+// En la función getUserImage, añade un manejo de errores más detallado
+export async function getUserImage(userId: string, imageType: "avatar" | "logo" | "banner"): Promise<string | null> {
+  try {
+    // Verificar que tenemos las credenciales de Supabase
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      console.error("Supabase client not initialized");
+      return null;
+    }
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    process.env.NEXT_PUBLIC_SUPABASE_URL
+    supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    const { data, error } = await supabase
+      .from("user_images")
+      .select("image_url")
+      .eq("user_id", userId)
+      .eq("image_type", imageType)
+      .eq("is_active", true)
+      .single();
+
+    if (error) {
+      console.error("Error fetching user image:", error);
+      return null;
+    }
+
+    if (!data) return null;
+    return data.image_url;
+  } catch (error) {
+    console.error("Get user image error:", error);
+    return null;
+  }
 }

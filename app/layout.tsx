@@ -47,10 +47,11 @@ export default function RootLayout({
         <link rel="icon" href="/ciusa.png" />
         <meta name="theme-color" content="#2563eb" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta
           name="apple-mobile-web-app-title"
-          content="Centro de Idiomas USA"
+          content="Centro de Idiomas Universidad Sergio Arboleda"
         />
         <link rel="apple-touch-icon" href="/icon-192x192.png" />
       </head>

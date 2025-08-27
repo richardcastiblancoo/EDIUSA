@@ -24,9 +24,10 @@ export default function TeacherCoursesPage() {
         const assignments = await getCourseAssignmentsByTeacher(user.id)
         const coursesWithStudents = await Promise.all(
           assignments.map(async (assignment) => {
-            const students = await getStudentsForCourse(assignment.course.id)
+            // Cambiado de assignment.course_id a assignment.id
+            const students = await getStudentsForCourse(assignment.id)
             return {
-              ...assignment.course,
+              ...assignment,
               students
             }
           })
@@ -70,7 +71,7 @@ export default function TeacherCoursesPage() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {courses.map((course) => (
-              <Card key={course.id}>
+              <Card key={course.id}>                
                 <CardHeader>
                   <CardTitle>{course.name}</CardTitle>
                   <CardDescription>
@@ -84,10 +85,42 @@ export default function TeacherCoursesPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
+                    {course.description && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-1">Descripción</h4>
+                        <p className="text-sm text-muted-foreground">{course.description}</p>
+                      </div>
+                    )}
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <h4 className="text-sm font-medium mb-1">Duración</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {course.duration_weeks ? `${course.duration_weeks} semanas` : "No especificada"}
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-medium mb-1">Horas/Semana</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {course.hours_per_week ? `${course.hours_per_week} horas` : "No especificado"}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {course.schedule && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-1">Horario</h4>
+                        <p className="text-sm text-muted-foreground">{course.schedule}</p>
+                      </div>
+                    )}
+                    
                     <div>
-                      <h4 className="text-sm font-medium mb-2">Estudiantes inscritos</h4>
+                      <h4 className="text-sm font-medium mb-1">Estudiantes inscritos</h4>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {course.students.length} de {course.max_students || "∞"}
+                      </p>
                       <div className="flex flex-wrap gap-2">
-                        {course.students.map((student: any) => (
+                        {course.students.slice(0, 5).map((student: any) => (
                           <div key={student.id} className="flex items-center gap-2">
                             <Avatar className="h-8 w-8">
                               <AvatarImage src={student.photoUrl} />
@@ -96,6 +129,9 @@ export default function TeacherCoursesPage() {
                             <span className="text-sm">{student.name}</span>
                           </div>
                         ))}
+                        {course.students.length > 5 && (
+                          <Badge variant="secondary">+{course.students.length - 5} más</Badge>
+                        )}
                         {course.students.length === 0 && (
                           <p className="text-sm text-muted-foreground">No hay estudiantes inscritos</p>
                         )}

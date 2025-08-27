@@ -101,7 +101,7 @@ export default function ProfileSettings({ user, onUserUpdate }: ProfileSettingsP
         document_number: profileForm.document_number || "" as unknown as string,
       })
 
-      if (updatedUser) {
+      if (updatedUser && Object.keys(updatedUser as object).length > 0) {
         setMessage({ type: "success", text: currentLanguage === "es" ? "Perfil actualizado exitosamente" : "Profile updated successfully" })
         onUserUpdate(updatedUser)
         localStorage.setItem("user", JSON.stringify(updatedUser))
@@ -119,20 +119,23 @@ export default function ProfileSettings({ user, onUserUpdate }: ProfileSettingsP
   const handleAvatarUpdate = async (imageUrl: string | null) => {
     try {
       setLoading(true)
-      const updated = await updateUserApi(user.id, { avatar: imageUrl ?? "" })
-      if (updated) {
-        setAvatarUrl(imageUrl || "")
-        onUserUpdate(updated)
-        localStorage.setItem("user", JSON.stringify(updated))
-        updateAuthUser({ avatar: updated.avatar })
-        setMessage({
-          type: "success",
-          text: imageUrl ? (currentLanguage === "es" ? "Foto de perfil actualizada" : "Profile picture updated") : (currentLanguage === "es" ? "Foto de perfil eliminada" : "Profile picture removed"),
-        })
-      } else {
-        setMessage({ type: "error", text: currentLanguage === "es" ? "No se pudo actualizar la foto de perfil" : "Failed to update profile picture" })
-      }
-    } catch {
+
+      // No intentamos actualizar un campo 'avatar' inexistente
+      // Solo actualizamos la interfaz de usuario con la URL de la imagen
+      setAvatarUrl(imageUrl || "")
+
+      // Actualizamos el estado local del usuario
+      const updatedUserData = { ...user, avatar_url: imageUrl || "" };
+      onUserUpdate(updatedUserData)
+      localStorage.setItem("user", JSON.stringify(updatedUserData))
+      updateAuthUser({ avatar_url: imageUrl || "" })
+
+      setMessage({
+        type: "success",
+        text: imageUrl ? (currentLanguage === "es" ? "Foto de perfil actualizada" : "Profile picture updated") : (currentLanguage === "es" ? "Foto de perfil eliminada" : "Profile picture removed"),
+      })
+    } catch (error) {
+      console.error("Error al actualizar avatar:", error)
       setMessage({ type: "error", text: currentLanguage === "es" ? "Error al actualizar la foto de perfil" : "Error updating profile picture" })
     } finally {
       setLoading(false)
