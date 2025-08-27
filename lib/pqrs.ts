@@ -28,32 +28,38 @@ export async function getPQRsByTeacher(teacherId: string): Promise<PQR[]> {
  * Crea un nuevo PQR enviado por un estudiante.
  * @param studentId ID del estudiante que envía el PQR
  * @param courseId ID del curso relacionado con el PQR
- * @param teacherId ID del profesor del curso
+ * @param teacherId ID del profesor del curso (null si va dirigido al coordinador)
  * @param subject Asunto del PQR
  * @param message Mensaje o contenido del PQR
+ * @param isForCoordinator Indica si el PQR va dirigido al coordinador
  * @returns El PQR creado
  */
 export async function createPQR(
   studentId: string,
   courseId: string,
-  teacherId: string,
+  teacherId: string | null,
   subject: string,
-  message: string
+  message: string,
+  isForCoordinator: boolean = false
 ): Promise<PQR | null> {
+  const pqrData: any = {
+    student_id: studentId,
+    course_id: courseId,
+    subject,
+    message,
+    status: "pending",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  // Si es para el coordinador, dejamos teacher_id como null
+  if (!isForCoordinator && teacherId) {
+    pqrData.teacher_id = teacherId;
+  }
+
   const { data, error } = await supabase
     .from("pqrs")
-    .insert([
-      {
-        student_id: studentId,
-        course_id: courseId,
-        teacher_id: teacherId,
-        subject,
-        message,
-        status: "pending",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-    ])
+    .insert([pqrData])
     .select()
     .single();
 

@@ -312,3 +312,108 @@ export async function getStudentDetailsWithTeacher(studentId: string): Promise<S
     return null;
   }
 }
+
+/**
+ * Busca estudiantes por nombre o número de documento.
+ * @param query Término de búsqueda (nombre o documento)
+ * @returns Lista de estudiantes que coinciden con la búsqueda
+ */
+export async function searchStudents(query: string): Promise<Student[]> {
+  if (!query || query.trim() === "") {
+    return [];
+  }
+
+  const searchTerm = query.toLowerCase().trim();
+
+  try {
+    // Primero intentamos buscar por documento exacto (prioridad)
+    let { data: documentMatch, error: documentError } = await supabase
+      .from("users")
+      .select("id, name, email, document_number, photo")
+      .eq("role", "student")
+      .eq("document_number", searchTerm)
+      .limit(10);
+
+    if (documentError) throw documentError;
+
+    // Si no encontramos por documento exacto, buscamos por coincidencia parcial
+    if (!documentMatch || documentMatch.length === 0) {
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, name, email, document_number, photo")
+        .eq("role", "student")
+        .or(`name.ilike.%${searchTerm}%,document_number.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+        .limit(10);
+
+      if (error) throw error;
+      documentMatch = data;
+    }
+
+    return documentMatch.map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      documentId: user.document_number,
+      photoUrl: user.photo || `https://api.dicebear.com/7.x/notionists/svg?seed=${user.id}`,
+    }));
+  } catch (error) {
+    console.error("Error searching students:", error);
+    return [];
+  }
+}
+
+/**
+ * Añade múltiples estudiantes a un curso específico.
+ * @param courseId El ID del curso al que se añadirán los estudiantes.
+ * @param studentIds Array con los IDs de los estudiantes a añadir.
+ * @returns Un booleano indicando si la operación fue exitosa.
+ */
+export async function addStudentsToCourse(courseId: string, studentIds: string[]): Promise<boolean> {
+  try {
+    if (!studentIds.length) return true;
+    
+    // Verificar si alguno de los estudiantes ya está inscrito en el curso
+    const { data: existingEnrollments, error: checkError } = await supabase
+      .from("enrollments")
+      .select("student_id")
+      .eq("course_id", courseId)
+      .in("student_id", studentIds);
+
+    if (checkError) {
+      console.error("Error al verificar inscripciones existentes:", checkError);
+      return false;
+    }
+
+    // Filtrar los estudiantes que ya están inscritos
+    const existingStudentIds = existingEnrollments.map(e => e.student_id);
+    const newStudentIds = studentIds.filter(id => !existingStudentIds.includes(id));
+
+    if (newStudentIds.length === 0) {
+      // Todos los estudiantes ya están inscritos
+      return true;
+    }
+    
+    // Crear nuevas inscripciones para los estudiantes no inscritos
+    const enrollments = newStudentIds.map(studentId => ({
+      id: crypto.randomUUID(),
+      course_id: courseId,
+      student_id: studentId,
+      enrollment_date: new Date().toISOString(),
+      status: "active"
+    }));
+
+    const { error } = await supabase
+      .from("enrollments")
+      .insert(enrollments);
+
+    if (error) {
+      console.error("Error al añadir estudiantes al curso:", error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error al añadir estudiantes al curso:", error);
+    return false;
+  }
+}

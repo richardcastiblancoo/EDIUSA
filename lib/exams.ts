@@ -121,3 +121,53 @@ export async function deleteQuestion(id: string): Promise<boolean> {
     return false
   }
 }
+
+/**
+ * Obtiene los exámenes programados para un estudiante específico.
+ * @param studentId El ID del estudiante.
+ * @returns {Promise<Exam[]>} Una lista de exámenes programados para el estudiante.
+ */
+export async function getStudentExams(studentId: string): Promise<Exam[]> {
+  try {
+    const { data, error } = await supabase
+      .from("enrollments")
+      .select(`
+        courses (id),
+        student_id
+      `)
+      .eq("student_id", studentId)
+
+    if (error) throw error
+
+    if (!data || data.length === 0) return []
+
+    // Extraer los IDs de los cursos en los que está inscrito el estudiante
+    const courseIds = data.map(enrollment => {
+      const course = enrollment.courses as unknown as { id: string };
+      if (!course || typeof course.id !== 'string') {
+        throw new Error('Invalid course data structure');
+      }
+      return course.id;
+    })
+
+    // Obtener los exámenes asociados a esos cursos que aún no han vencido
+    const currentDate = new Date().toISOString()
+    const { data: exams, error: examsError } = await supabase
+      .from("exams")
+      .select(`
+        *,
+        courses:course_id (name, language, level)
+      `)
+      .in("course_id", courseIds)
+      .gt("due_date", currentDate) // Solo exámenes futuros
+      .eq("is_active", true)
+      .order("due_date", { ascending: true })
+
+    if (examsError) throw examsError
+
+    return exams || []
+  } catch (error) {
+    console.error("Error fetching student exams:", error)
+    return []
+  }
+}

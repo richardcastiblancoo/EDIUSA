@@ -87,10 +87,29 @@ export const updateUser = async (userId: string, updateData: UserUpdateData) => 
 }
 
 export const deleteUser = async (userId: string) => {
-    const { error } = await supabase.from("users").delete().eq("id", userId)
+    try {
+        // Primero eliminar las referencias en la tabla user_images
+        const { error: imageError } = await supabase
+            .from("user_images")
+            .delete()
+            .eq("user_id", userId)
 
-    if (error) {
-        console.error("Delete user error:", error)
+        if (imageError) {
+            console.error("Error al eliminar imágenes del usuario:", imageError)
+            throw imageError
+        }
+
+        // Luego eliminar el usuario
+        const { error } = await supabase.from("users").delete().eq("id", userId)
+
+        if (error) {
+            console.error("Delete user error:", error)
+            throw error
+        }
+
+        return true
+    } catch (error) {
+        console.error("Error al eliminar usuario:", error)
         throw error
     }
 }

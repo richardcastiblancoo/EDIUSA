@@ -42,7 +42,7 @@ export default function StudentManagement() {
   const [viewingStudent, setViewingStudent] = useState<User | null>(null)
   const [formData, setFormData] = useState({
     name: "",
-    document_number: "", 
+    document_number: "",
     email: "",
     phone: "",
     academic_level: "",
@@ -171,7 +171,7 @@ export default function StudentManagement() {
   const resetForm = () => {
     setFormData({
       name: "",
-      document_number: "", 
+      document_number: "",
       email: "",
       phone: "",
       academic_level: "",
@@ -186,8 +186,8 @@ export default function StudentManagement() {
     setFormData({
       name: student.name,
       // @ts-ignore
-      document_number: student.document_number || "", 
-      email: student.email,
+      document_number: student.document_number || "",
+      email: student.email || "",
       // @ts-ignore
       phone: student.phone || "",
       // @ts-ignore
@@ -212,7 +212,7 @@ export default function StudentManagement() {
       // @ts-ignore
       student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       // @ts-ignore
-      student.document_number?.toLowerCase().includes(searchTerm.toLowerCase()) 
+      student.document_number?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesLevel = selectedLevel === "all" || student.academic_level === selectedLevel
     return matchesSearch && matchesLevel
   })
@@ -371,7 +371,7 @@ export default function StudentManagement() {
                       <span className="font-medium">{student.name}</span>
                     </TableCell>
                     {/* @ts-ignore */}
-                    <TableCell>{student.document_number || "-"}</TableCell> 
+                    <TableCell>{student.document_number || "-"}</TableCell>
                     <TableCell>{student.email}</TableCell>
                     {/* @ts-ignore */}
                     <TableCell>{student.phone || "-"}</TableCell>
@@ -432,7 +432,7 @@ export default function StudentManagement() {
                 <div className="space-y-2">
                   <Label>Documento</Label>
                   {/* @ts-ignore */}
-                  <p className="text-sm font-medium">{viewingStudent.document_number || "-"}</p> 
+                  <p className="text-sm font-medium">{viewingStudent.document_number || "-"}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -493,8 +493,8 @@ export default function StudentManagement() {
                 <Label htmlFor="edit-document">Documento</Label>
                 <Input
                   id="edit-document"
-                  value={formData.document_number} 
-                  onChange={(e) => setFormData({ ...formData, document_number: e.target.value })} 
+                  value={formData.document_number}
+                  onChange={(e) => setFormData({ ...formData, document_number: e.target.value })}
                   placeholder="123456789"
                 />
               </div>
@@ -564,7 +564,7 @@ export default function StudentManagement() {
               <Select
                 value={formData.status}
                 onValueChange={(value: "active" | "inactive" | "graduado" | "egresado") =>
-                  setFormData({ ...formData, status: value })
+                  setFormData({ ...formData, status: value as "active" | "inactive" | "graduado" | "egresado" })
                 }
               >
                 <SelectTrigger>

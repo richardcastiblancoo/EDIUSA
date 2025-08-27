@@ -20,6 +20,7 @@ import { createPQR, getPQRsByStudent } from "@/lib/pqrs";
 import { getStudentCourses } from "@/lib/courses";
 import type { PQR } from "@/lib/supabase";
 import type { CourseWithTeacher } from "@/lib/courses";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface PQRFormProps {
   studentId: string;
@@ -33,6 +34,7 @@ export default function PQRForm({ studentId }: PQRFormProps) {
     courseId: "",
     subject: "",
     message: "",
+    recipient: "teacher", // Nuevo campo para seleccionar destinatario
   });
   const [submitting, setSubmitting] = useState(false);
   const [selectedPqr, setSelectedPqr] = useState<PQR | null>(null);
@@ -72,6 +74,13 @@ export default function PQRForm({ studentId }: PQRFormProps) {
     }));
   };
 
+  const handleRecipientChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      recipient: value,
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.courseId || !formData.subject || !formData.message) {
@@ -82,16 +91,25 @@ export default function PQRForm({ studentId }: PQRFormProps) {
     setSubmitting(true);
     try {
       const selectedCourse = courses.find(course => course.id === formData.courseId);
-      if (!selectedCourse || !selectedCourse.teacher_id) {
-        throw new Error("No se pudo encontrar el profesor del curso seleccionado");
+      if (!selectedCourse) {
+        throw new Error("No se pudo encontrar el curso seleccionado");
+      }
+
+      // Si el destinatario es el profesor, usamos el teacher_id del curso
+      // Si es el coordinador, pasamos null como teacher_id
+      const teacherId = formData.recipient === "teacher" ? selectedCourse.teacher_id : null;
+      
+      if (formData.recipient === "teacher" && !teacherId) {
+        throw new Error("Este curso no tiene un profesor asignado");
       }
 
       await createPQR(
         studentId,
         formData.courseId,
-        selectedCourse.teacher_id,
+        teacherId, // Puede ser null si va dirigido al coordinador
         formData.subject,
-        formData.message
+        formData.message,
+        formData.recipient === "coordinator" // Nuevo parámetro para indicar si va al coordinador
       );
 
       // Resetear el formulario
@@ -99,6 +117,7 @@ export default function PQRForm({ studentId }: PQRFormProps) {
         courseId: "",
         subject: "",
         message: "",
+        recipient: "teacher",
       });
 
       // Recargar los PQRs
@@ -249,6 +268,25 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                 </Select>
               </div>
 
+              {/* Nuevo campo para seleccionar destinatario */}
+              <div className="space-y-2">
+                <Label>Dirigido a</Label>
+                <RadioGroup 
+                  value={formData.recipient} 
+                  onValueChange={handleRecipientChange}
+                  className="flex space-x-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="teacher" id="teacher" />
+                    <Label htmlFor="teacher">Profesor del curso</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="coordinator" id="coordinator" />
+                    <Label htmlFor="coordinator">Coordinador</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="subject">Asunto</Label>
                 <Input
@@ -359,7 +397,7 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <MessageSquare className="h-4 w-4" />
-                  <span>Curso: {selectedPqr.courses?.name}</span>
+                  <span>Curso: {selectedPqr.course?.name}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <MessageSquare className="h-4 w-4" />

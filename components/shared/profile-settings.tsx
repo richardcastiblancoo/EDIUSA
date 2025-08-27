@@ -101,7 +101,7 @@ export default function ProfileSettings({ user, onUserUpdate }: ProfileSettingsP
         document_number: profileForm.document_number || "" as unknown as string,
       })
 
-      if (updatedUser && Object.keys(updatedUser as object).length > 0) {
+      if (updatedUser !== null && updatedUser !== undefined && Object.keys(updatedUser as object).length > 0) {
         setMessage({ type: "success", text: currentLanguage === "es" ? "Perfil actualizado exitosamente" : "Profile updated successfully" })
         onUserUpdate(updatedUser)
         localStorage.setItem("user", JSON.stringify(updatedUser))
@@ -421,7 +421,7 @@ export default function ProfileSettings({ user, onUserUpdate }: ProfileSettingsP
       dark: "Oscuro",
       system: "Sistema",
       language: "Idioma",
-      security: "Seguridad",
+      securityTab: "Seguridad",
       manageSecurity: "Gestiona la seguridad de tu cuenta",
       currentPassword: "Contraseña Actual",
       newPassword: "Nueva Contraseña",
@@ -459,7 +459,7 @@ export default function ProfileSettings({ user, onUserUpdate }: ProfileSettingsP
       dark: "Dark",
       system: "System",
       language: "Language",
-      security: "Security",
+      securityTab: "Security",
       manageSecurity: "Manage your account security",
       currentPassword: "Current Password",
       newPassword: "New Password",

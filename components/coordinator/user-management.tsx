@@ -84,20 +84,6 @@ interface UserWithStatus {
   image_url?: string; // Añadir campo para la URL de la imagen
 }
 
-// Remove duplicate PAGE_SIZE declaration since it's already declared below
-
-// Componente de tabla de usuarios, optimizado para ser un componente separado
-// Modificar la interfaz UserWithStatus para incluir la imagen
-interface UserWithStatus {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  phone?: string;
-  document_number?: string;
-  image_url?: string; // Añadir campo para la URL de la imagen
-}
-
 const PAGE_SIZE = 10;
 
 // Componente de tabla de usuarios, optimizado para ser un componente separado
@@ -522,7 +508,7 @@ export default function UserManagement() {
                 Agregar Usuario
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
                 <DialogTitle>
                   {editingUser ? "Editar Usuario" : "Agregar Nuevo Usuario"}
@@ -532,7 +518,7 @@ export default function UserManagement() {
                     ? "Modifica los datos del usuario"
                     : "Completa los datos para crear un nuevo usuario"}
                 </DialogDescription>
-                </DialogHeader>
+              </DialogHeader>
                 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   {/* Componente de carga de imagen para usuarios nuevos y existentes */}

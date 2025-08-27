@@ -172,9 +172,12 @@ export default function CourseManagement() {
     setIsStudentSearchLoading(true);
     try {
       const results = await searchStudents(query);
-      setSearchResults(results.map(student => ({
-        ...student,
-        course_id: null // Add missing required course_id property
+      setSearchResults(results.map((value) => ({
+        id: value.id,
+        name: value.name,
+        documentId: value.documentId,
+        photoUrl: value.photoUrl,
+        course_id: (value as any).course_id || null
       })));
     } catch (error) {
       console.error("Error searching students:", error);
@@ -253,7 +256,7 @@ export default function CourseManagement() {
         level: formData.level,
         code: formData.name.substring(0, 10).toUpperCase().replace(/\s/g, ''),
         max_students: formData.max_students,
-// enrolled_count will be calculated automatically in the backend
+        // enrolled_count will be calculated automatically in the backend
         duration_weeks: formData.duration_weeks,
         hours_per_week: formData.hours_per_week,
         teacher_id: formData.teacher_id,
@@ -875,30 +878,30 @@ export default function CourseManagement() {
               </Select>
             </div>
             <div className="space-y-2">
-                <Label htmlFor="edit-teacher">Profesor *</Label>
-                <Select
-                  value={formData.teacher_id}
-                  onValueChange={(value) => setFormData({ ...formData, teacher_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un profesor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teachers.map((teacher) => (
-                      <SelectItem key={teacher.id} value={teacher.id}>
-                        <div className="flex items-center gap-2">
-                          <img 
-                            src={teacher.photoUrl || "https://api.dicebear.com/7.x/notionists/svg?seed=" + teacher.id} 
-                            alt={`Foto de ${teacher.name}`} 
-                            className="w-6 h-6 rounded-full" 
-                          />
-                          {teacher.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Label htmlFor="edit-teacher">Profesor *</Label>
+              <Select
+                value={formData.teacher_id}
+                onValueChange={(value) => setFormData({ ...formData, teacher_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un profesor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teachers.map((teacher) => (
+                    <SelectItem key={teacher.id} value={teacher.id}>
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={"https://api.dicebear.com/7.x/notionists/svg?seed=" + teacher.id}
+                          alt={`Foto de ${teacher.name}`}
+                          className="w-6 h-6 rounded-full"
+                        />
+                        {teacher.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="edit-max_students">Máximo Estudiantes</Label>
               <Input

@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, Calendar, Users, BookOpen, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { getStudentCourses } from "@/lib/courses";
-import { Course } from "@/lib/courses"; // Asegúrate de que el tipo Course esté importado
+import { Course } from "@/lib/courses";
+import { useAuth } from "@/lib/auth-context"; // Importar el hook de autenticación
 
 type CourseWithTeacher = Course & {
     teachers: {
@@ -17,6 +18,7 @@ type CourseWithTeacher = Course & {
 
 export default function StudentCoursesPage() {
     const { toast } = useToast();
+    const { user } = useAuth(); // Obtener el usuario autenticado
     const [courses, setCourses] = useState<CourseWithTeacher[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -24,11 +26,18 @@ export default function StudentCoursesPage() {
         const fetchCourses = async () => {
             setIsLoading(true);
             try {
-                // TODO: Reemplaza 'your-student-id' con el ID real del estudiante autenticado.
-                // Esto podría venir de un hook de autenticación o del lado del servidor.
-                const currentStudentId = 'your-student-id'; 
-                
-                const studentCourses = await getStudentCourses(currentStudentId);
+                if (!user) {
+                    toast({
+                        title: "Error",
+                        description: "Debes iniciar sesión para ver tus cursos.",
+                        variant: "destructive",
+                    });
+                    setIsLoading(false);
+                    return;
+                }
+
+                // Usar el ID del usuario autenticado
+                const studentCourses = await getStudentCourses(user.id);
                 setCourses(studentCourses);
             } catch (error) {
                 console.error("Error fetching courses:", error);
@@ -43,7 +52,7 @@ export default function StudentCoursesPage() {
         };
 
         fetchCourses();
-    }, [toast]);
+    }, [toast, user]); // Añadir user como dependencia
 
     const getLevelColor = (level: string) => {
         const colors = {
@@ -76,7 +85,7 @@ export default function StudentCoursesPage() {
                     <h2 className="text-3xl font-bold tracking-tight">Mis Cursos</h2>
                     <p className="text-muted-foreground">Cursos en los que estás inscrito</p>
                 </div>
-                
+
                 {isLoading ? (
                     <div className="flex justify-center items-center h-48">
                         <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
@@ -101,7 +110,7 @@ export default function StudentCoursesPage() {
                                     <CardContent>
                                         <div className="space-y-3">
                                             {course.description && <p className="text-sm text-gray-600 line-clamp-2">{course.description}</p>}
-                                            
+
                                             {/* Aquí se muestra el nombre del profesor */}
                                             <div className="text-sm text-gray-700">
                                                 <span className="font-semibold">Profesor:</span> {course.teachers?.name || 'No asignado'}
@@ -121,7 +130,7 @@ export default function StudentCoursesPage() {
                                                     {course.hours_per_week}h/sem
                                                 </div>
                                             </div>
-                                            
+
                                             {course.schedule && (
                                                 <div className="text-sm">
                                                     <span className="font-medium">Horario:</span> {course.schedule}

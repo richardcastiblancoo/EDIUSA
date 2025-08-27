@@ -20,17 +20,14 @@ export type Course = {
     end_date: string | null;
     room: string | null;
 };
-
 // Tipo para la creación de un curso, omitiendo los campos generados por la DB
 type CourseCreate = Omit<Course, "id" | "enrolled_count">;
-
 // Nuevo tipo para el curso con información del profesor
 export type CourseWithTeacher = Course & {
     teachers: {
         name: string;
     } | null;
 };
-
 /**
  * Obtiene todos los cursos de la base de datos.
  * @returns {Promise<Course[]>} Una lista de objetos de curso.
@@ -44,7 +41,6 @@ export async function getCourses(): Promise<Course[]> {
     }
     return data || [];
 }
-
 /**
  * Crea un nuevo curso en la base de datos.
  * @param courseData Los datos del nuevo curso.
@@ -63,7 +59,6 @@ export async function createCourse(courseData: CourseCreate): Promise<Course | n
     }
     return data;
 }
-
 /**
  * Actualiza un curso existente en la base de datos.
  * @param id El ID del curso a actualizar.
@@ -78,7 +73,6 @@ export async function updateCourse(id: string, courseData: Partial<Course>): Pro
         throw error;
     }
 }
-
 /**
  * Elimina un curso de la base de datos.
  *
@@ -105,7 +99,6 @@ export async function deleteCourse(id: string): Promise<void> {
         throw e;
     }
 }
-
 /**
  * Obtiene los cursos en los que un estudiante está inscrito, incluyendo el nombre del profesor.
  * @param studentId El ID del estudiante.

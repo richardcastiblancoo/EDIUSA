@@ -69,6 +69,8 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 
 import { supabase } from "@/lib/supabase";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { getUserImage } from "@/lib/images";
 
 type EnglishLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
 
@@ -90,6 +92,7 @@ interface User {
 interface Teacher extends Omit<User, "is_active" | "document_number"> {
   status: "active" | "inactive";
   document: string | null;
+  imageUrl?: string | null;
 }
 
 interface UserStats {
@@ -154,7 +157,7 @@ export default function TeachersManagement() {
       .from("users")
       .select("*")
       .eq("role", "teacher");
-
+  
     if (error) {
       console.error("Error fetching teachers:", error);
       toast({
@@ -164,18 +167,32 @@ export default function TeachersManagement() {
       });
       setTeachers([]);
     } else {
-      const mappedTeachers = data.map((dbUser: User) => ({
-        id: dbUser.id,
-        name: dbUser.name,
-        email: dbUser.email,
-        phone: dbUser.phone,
-        role: dbUser.role,
-        document: dbUser.document_number,
-        english_level: dbUser.english_level,
-        created_at: dbUser.created_at,
-        status: dbUser.is_active ? "active" : "inactive",
-      }));
-      setTeachers(mappedTeachers);
+      const mappedTeachers = await Promise.all(
+        data.map(async (dbUser: User) => {
+          // Obtener la URL de la imagen del profesor
+          const imageUrl = await getUserImage(dbUser.id, "avatar");
+          
+          return {
+            id: dbUser.id,
+            name: dbUser.name,
+            email: dbUser.email,
+            phone: dbUser.phone,
+            role: dbUser.role,
+            document: dbUser.document_number,
+            english_level: dbUser.english_level,
+            created_at: dbUser.created_at,
+            status: dbUser.is_active ? "active" : "inactive",
+            imageUrl: imageUrl,
+          };
+        })
+      );
+      setTeachers(mappedTeachers.map(teacher => ({
+        ...teacher,
+        status: teacher.status as "active" | "inactive", // Ensure status is correctly typed
+        avatar: null,
+        address: null,
+        updated_at: null
+      })));
     }
     setLoading(false);
   };
@@ -474,7 +491,13 @@ export default function TeachersManagement() {
                     currentTeachers.map((teacher) => (
                       <TableRow key={teacher.id}>
                         <TableCell className="font-medium">
-                          {teacher.name}
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={teacher.imageUrl || ""} alt={teacher.name} />
+                              <AvatarFallback>{teacher.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <span>{teacher.name}</span>
+                          </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           {teacher.document}
@@ -687,6 +710,12 @@ export default function TeachersManagement() {
           </DialogHeader>
           {teacherToPreview && (
             <div className="grid gap-4 py-4">
+              <div className="flex justify-center mb-4">
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src={teacherToPreview.imageUrl || ""} alt={teacherToPreview.name} />
+                  <AvatarFallback>{teacherToPreview.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+              </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Nombre:</Label>
                 <div className="col-span-3 font-semibold">

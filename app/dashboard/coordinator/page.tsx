@@ -6,7 +6,7 @@ import { useEffect, useState } from "react"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, BookOpen, Calendar, TrendingUp, UserCheck, ClipboardList, BarChart3 } from "lucide-react"
+import { Users, BookOpen, Calendar, TrendingUp, UserCheck, ClipboardList, BarChart3, MessageSquare } from "lucide-react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase";
 import { motion } from "framer-motion";
@@ -120,10 +120,10 @@ export default function CoordinatorDashboard() {
       color: "bg-green-500",
     },
     {
-      title: "Gestionar Horarios",
+      title: "Listado de PQR",
       description: "Configurar horarios de clases y aulas",
       href: "/dashboard/coordinator/schedules",
-      icon: Calendar,
+      icon: MessageSquare,
       color: "bg-purple-500",
     },
     {

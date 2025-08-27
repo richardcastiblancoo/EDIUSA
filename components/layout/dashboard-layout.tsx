@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -42,6 +42,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import Link from "next/link"
+import { getUserImage } from "@/lib/images"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -50,10 +51,24 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const { user, signOut } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const role = userRole ?? (user?.role as "coordinator" | "teacher" | "student" | undefined)
+
+  useEffect(() => {
+    if (user?.id) {
+      loadUserAvatar()
+    }
+  }, [user?.id])
+
+  const loadUserAvatar = async () => {
+    if (user?.id) {
+      const imageUrl = await getUserImage(user.id, "avatar")
+      setAvatarUrl(imageUrl)
+    }
+  }
 
   const handleSignOut = async () => {
     await signOut()
@@ -291,7 +306,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
         <div className="p-4 border-t border-gray-200 bg-white">
           <div className="flex items-center space-x-3">
             <Avatar className="h-8 w-8">
-             
+              <AvatarImage src={avatarUrl || ""} />
               <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
@@ -344,11 +359,12 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
                 </div>
               </div>
               {/* Perfil / menú */}
+              
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user?.avatar || "/placeholder.svg"} />
+                      <AvatarImage src={avatarUrl || "/ciusa.png"} />
                       <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
                     </Avatar>
                   </Button>
