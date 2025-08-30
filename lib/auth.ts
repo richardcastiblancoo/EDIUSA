@@ -86,9 +86,52 @@ export const updateUser = async (userId: string, updateData: UserUpdateData) => 
     }
 }
 
-export const deleteUser = async (userId: string) => {
+export async function deleteUser(userId: string): Promise<boolean> {
     try {
-        // Primero eliminar las referencias en la tabla user_images
+        // First, update any courses where this user is a teacher
+        const { error: courseError } = await supabase
+            .from("courses")
+            .update({ teacher_id: null })
+            .eq("teacher_id", userId)
+
+        if (courseError) {
+            console.error("Error al actualizar cursos del profesor:", courseError)
+            throw courseError
+        }
+
+        // Next, update any exams where this user is the creator
+        const { error: examError } = await supabase
+            .from("exams")
+            .update({ created_by: null })
+            .eq("created_by", userId)
+
+        if (examError) {
+            console.error("Error al actualizar exámenes creados por el usuario:", examError)
+            throw examError
+        }
+
+        // Update any PQRs where this user is the student or teacher
+        const { error: pqrStudentError } = await supabase
+            .from("pqrs")
+            .update({ student_id: null })
+            .eq("student_id", userId)
+
+        if (pqrStudentError) {
+            console.error("Error al actualizar PQRs del estudiante:", pqrStudentError)
+            throw pqrStudentError
+        }
+
+        const { error: pqrTeacherError } = await supabase
+            .from("pqrs")
+            .update({ teacher_id: null })
+            .eq("teacher_id", userId)
+
+        if (pqrTeacherError) {
+            console.error("Error al actualizar PQRs del profesor:", pqrTeacherError)
+            throw pqrTeacherError
+        }
+
+        // Then delete references in user_images table
         const { error: imageError } = await supabase
             .from("user_images")
             .delete()
@@ -99,7 +142,7 @@ export const deleteUser = async (userId: string) => {
             throw imageError
         }
 
-        // Luego eliminar el usuario
+        // Finally delete the user
         const { error } = await supabase.from("users").delete().eq("id", userId)
 
         if (error) {

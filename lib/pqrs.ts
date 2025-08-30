@@ -195,3 +195,29 @@ export async function updatePQRByCoordinator(
 
   return data;
 }
+
+/**
+ * Actualiza los PQRs asociados a un curso específico para eliminar la referencia al curso.
+ * Esta función se utiliza antes de eliminar un curso para evitar errores de restricción de clave foránea.
+ * @param courseId ID del curso
+ * @returns true si la operación fue exitosa, false en caso contrario
+ */
+export async function removePQRsForCourse(courseId: string): Promise<boolean> {
+  try {
+    // Actualizar todos los PQRs asociados al curso para establecer course_id a null
+    const { error } = await supabase
+      .from("pqrs")
+      .update({ course_id: null })
+      .eq("course_id", courseId);
+
+    if (error) {
+      console.error("Error removing PQRs for course:", error);
+      return false;
+    }
+
+    return true;
+  } catch (e) {
+    console.error("Error in removePQRsForCourse operation:", e);
+    return false;
+  }
+}

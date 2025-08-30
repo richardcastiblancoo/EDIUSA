@@ -258,15 +258,7 @@ export async function submitExamWithMonitoring(examSubmissionData: {
  */
 export async function deleteExam(id: string): Promise<boolean> {
   try {
-    // Primero eliminamos todas las preguntas asociadas al examen
-    const { error: questionsError } = await supabase
-      .from("questions")
-      .delete()
-      .eq("exam_id", id);
-    
-    if (questionsError) throw questionsError;
-    
-    // Luego eliminamos el examen
+    // Eliminamos directamente el examen sin intentar eliminar preguntas
     const { error } = await supabase
       .from("exams")
       .delete()
@@ -300,5 +292,45 @@ export async function getExamSubmissions(examId: string): Promise<any[]> {
   } catch (error) {
     console.error("Get exam submissions error:", error);
     return [];
+  }
+}
+
+/**
+ * Obtiene todos los exámenes asociados a un curso específico
+ * @param courseId El ID del curso
+ * @returns {Promise<Exam[]>} Lista de exámenes del curso
+ */
+export async function getExamsByCourse(courseId: string): Promise<Exam[]> {
+  try {
+    const { data, error } = await supabase
+      .from("exams")
+      .select("*")
+      .eq("course_id", courseId);
+    
+    if (error) throw error;
+    return data as Exam[];
+  } catch (error) {
+    console.error("Get exams by course error:", error);
+    return [];
+  }
+}
+
+/**
+ * Elimina todos los exámenes asociados a un curso específico
+ * @param courseId El ID del curso
+ * @returns {Promise<boolean>} True si la eliminación fue exitosa
+ */
+export async function removeExamsForCourse(courseId: string): Promise<boolean> {
+  try {
+    // Eliminamos directamente todos los exámenes asociados al curso
+    const { error } = await supabase
+      .from("exams")
+      .delete()
+      .eq("course_id", courseId);
+    
+    return !error;
+  } catch (error) {
+    console.error("Remove exams for course error:", error);
+    return false;
   }
 }

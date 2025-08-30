@@ -1,5 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
+// Añadir la importación al inicio del archivo
 import { removeEnrollmentsForCourse } from "./students";
+import { removeExamsForCourse } from "./exams";
+import { removePQRsForCourse } from "./pqrs";
 import { supabase } from "./supabase";
 
 // Tipos para los datos del curso
@@ -76,18 +79,30 @@ export async function updateCourse(id: string, courseData: Partial<Course>): Pro
 /**
  * Elimina un curso de la base de datos.
  *
- * NOTA: Esta función ahora elimina primero todas las inscripciones asociadas
- * para evitar el error de clave foránea.
+ * NOTA: Esta función ahora elimina primero todas las inscripciones y exámenes asociados
+ * para evitar errores de clave foránea.
  *
  * @param id El ID del curso a eliminar.
  * @returns {Promise<void>}
  */
 export async function deleteCourse(id: string): Promise<void> {
     try {
-        // Primero, elimina todas las inscripciones asociadas en la tabla 'enrollments'
+        // Primero, elimina todos los exámenes asociados al curso
+        const examsRemoved = await removeExamsForCourse(id);
+        if (!examsRemoved) {
+            throw new Error("Error al eliminar los exámenes asociados al curso");
+        }
+        
+        // Actualiza los PQRs asociados al curso para eliminar la referencia
+        const pqrsUpdated = await removePQRsForCourse(id);
+        if (!pqrsUpdated) {
+            throw new Error("Error al actualizar los PQRs asociados al curso");
+        }
+        
+        // Luego, elimina todas las inscripciones asociadas en la tabla 'enrollments'
         await removeEnrollmentsForCourse(id);
 
-        // Luego, procede a eliminar el curso
+        // Finalmente, procede a eliminar el curso
         const { error } = await supabase.from("courses").delete().eq("id", id);
 
         if (error) {
