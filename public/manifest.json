@@ -4,8 +4,8 @@
   "description": "Sistema de Gestión Académica del Centro de Idiomas",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#031c30",
-  "theme_color": "#031c30",
+  "background_color": "#f9efd4",
+  "theme_color": "#f9efd4",
   "orientation": "portrait-primary",
   "icons": [
     {
