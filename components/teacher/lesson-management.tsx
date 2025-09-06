@@ -31,9 +31,14 @@ interface Lesson {
   description: string
   course_id: string
   created_at: string
-  due_date: string | null
-  status: "active" | "draft" | "completed"
-  teacher_id: string
+  content?: string
+  order_index: number
+  media_url?: string
+  is_published: boolean
+  updated_at: string
+  due_date?: string | null
+  status?: "active" | "draft" | "completed"
+  teacher_id?: string
   course?: {
     name: string
   }
@@ -110,12 +115,16 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
 
   const handleCreateLesson = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!teacherId) {
+      setMessage({ type: "error", text: "ID del profesor no disponible" })
+      return
+    }
     setCreating(true)
     
     try {
       const newLesson = {
         ...lessonForm,
-        teacher_id: teacherId || "placeholder-id",
+        teacher_id: teacherId
       }
       
       const { error } = await supabase.from("lessons").insert([newLesson])
@@ -283,7 +292,7 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
                           <TableCell>
                             {lesson.due_date ? new Date(lesson.due_date).toLocaleDateString() : "Sin fecha"}
                           </TableCell>
-                          <TableCell>{getStatusBadge(lesson.status)}</TableCell>
+                          <TableCell>{lesson.status ? getStatusBadge(lesson.status) : getStatusBadge('draft')}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
                               <Button variant="outline" size="sm" onClick={() => handleEditLesson(lesson)}>

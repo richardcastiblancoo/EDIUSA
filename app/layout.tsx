@@ -5,8 +5,11 @@ import { AuthProvider } from "@/lib/auth-context";
 import { Toaster } from "@/components/ui/toaster";
 import PWAInstaller from "@/components/pwa-installer";
 import type { Metadata, Viewport } from "next";
+
 const inter = Inter({ subsets: ["latin"] });
 
+// Aquí se configura el Open Graph.
+// La imagen en la propiedad 'images' será usada como la vista previa.
 export const metadata: Metadata = {
   title: "Centro de Idiomas Universidad Sergio Arboleda",
   openGraph: {
@@ -17,7 +20,7 @@ export const metadata: Metadata = {
     siteName: "Centro de Idiomas Universidad Sergio Arboleda",
     images: [
       {
-        url: "/ciusa.png", // ✅ imagen 
+        url: "/ciusa.png", // ✅ Esta línea ya apunta a tu imagen.
         width: 1200,
         height: 630,
         alt: "Centro de Idiomas Universidad Sergio Arboleda",
@@ -45,7 +48,7 @@ export default function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="/ciusa.png" />
-        <meta name="theme-color" content="#2563eb" />
+        <meta name="theme-color" content="#f9efd4" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />

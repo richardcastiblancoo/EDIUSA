@@ -155,6 +155,16 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
           icon: Users,
         },
         {
+          name: "Registrar Asistencia",
+          href: "/dashboard/teacher/attendance",
+          icon: Calendar,
+        },
+        {
+          name: "Registrar Notas",
+          href: "/dashboard/teacher/grades",
+          icon: FileText,
+        },
+        {
           name: "PQR",
           href: "/dashboard/teacher/pqr",
           icon: MessageSquare,
@@ -207,7 +217,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
       ["Usuarios", "Estudiantes", "Profesores", "Cursos", "Listado de PQR"].includes(i.name)
     )
     const gestionTeacher = navigationItems.filter((i) =>
-      ["Mis Cursos", "Exámenes", "Mis Lecciones", "Estudiantes", "PQR"].includes(i.name)
+      ["Mis Cursos", "Exámenes", "Mis Lecciones", "Estudiantes", "Registrar Asistencia", "Registrar Notas", "PQR"].includes(i.name)
     )
     const gestionStudent = navigationItems.filter((i) =>
       ["Mis Cursos", "Exámenes", "Mis Lecciones", "Calificaciones", "PQR"].includes(i.name)

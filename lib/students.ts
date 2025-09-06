@@ -108,7 +108,7 @@ export async function getStudentsForTeacher(teacherId: string): Promise<Student[
     // 2. Obtener los estudiantes inscritos en esos cursos
     const { data: enrollments, error: enrollmentsError } = await supabase
       .from("enrollments")
-      .select("*, users!inner(id, name, email, document_number, photo)")
+      .select("id, users!inner(id, name, email, document_number, photo)")
       .in("course_id", courseIds);
 
     if (enrollmentsError) {
@@ -117,22 +117,23 @@ export async function getStudentsForTeacher(teacherId: string): Promise<Student[
 
     // 3. Eliminar duplicados (si un estudiante está en varios cursos)
     const studentsMap = new Map();
-    
+
     // Procesar cada inscripción y obtener la imagen del estudiante
     await Promise.all(
       enrollments.map(async (enrollment: any) => {
         if (!studentsMap.has(enrollment.users.id)) {
           // Obtener la imagen del usuario desde Supabase Storage
-          const photoUrl = await getUserImage(enrollment.users.id, "avatar") || 
-                          enrollment.users.photo || 
-                          "/placeholder-user.jpg";
-          
+          const photoUrl = await getUserImage(enrollment.users.id, "avatar") ||
+            enrollment.users.photo ||
+            "/placeholder-user.jpg";
+
           studentsMap.set(enrollment.users.id, {
             id: enrollment.users.id,
+            enrollmentId: enrollment.id,
             name: enrollment.users.name,
             email: enrollment.users.email,
             documentId: enrollment.users.document_number,
-            photoUrl: photoUrl,
+            photoUrl: photoUrl
           });
         }
       })
@@ -436,5 +437,65 @@ export async function addStudentsToCourse(courseId: string, studentIds: string[]
   } catch (error) {
     console.error("Error al añadir estudiantes al curso:", error);
     return false;
+  }
+}
+
+/**
+ * Obtiene las calificaciones de un estudiante para una lección específica o todas las lecciones.
+ * @param enrollmentId ID de la inscripción (relación estudiante-curso)
+ * @param lessonId ID de la lección (opcional)
+ * @returns Lista de registros de calificaciones
+ */
+export async function getStudentGrades(
+  enrollmentId: string,
+  lessonId?: string
+): Promise<GradeRecord[]> {
+  try {
+    let query = supabase
+      .from("grades")
+      .select("*")
+      .eq("enrollment_id", enrollmentId);
+
+    if (lessonId) {
+      query = query.eq("lesson_id", lessonId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error("Error al obtener calificaciones del estudiante:", error);
+    return [];
+  }
+}
+
+/**
+ * Obtiene los registros de asistencia de un estudiante.
+ * @param enrollmentId ID de la inscripción (relación estudiante-curso)
+ * @param lessonId ID de la lección (opcional)
+ * @returns Lista de registros de asistencia
+ */
+export async function getStudentAttendance(
+  enrollmentId: string,
+  lessonId?: string
+): Promise<AttendanceRecord[]> {
+  try {
+    let query = supabase
+      .from("attendance")
+      .select("*")
+      .eq("enrollment_id", enrollmentId);
+
+    if (lessonId) {
+      query = query.eq("lesson_id", lessonId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error("Error al obtener registros de asistencia del estudiante:", error);
+    return [];
   }
 }

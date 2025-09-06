@@ -236,3 +236,12 @@ CREATE TABLE exam_submissions (
   graded_by UUID REFERENCES users(id),
   graded_at TIMESTAMP WITH TIME ZONE
 );
+
+-----------
+ALTER TABLE lessons ADD COLUMN due_date TIMESTAMP WITH TIME ZONE;
+
+-- Agregar columna status con restricción de valores
+ALTER TABLE lessons ADD COLUMN status VARCHAR(50) CHECK (status IN ('active', 'draft', 'completed'));
+
+-- Agregar columna teacher_id con referencia a la tabla users
+ALTER TABLE lessons ADD COLUMN teacher_id UUID REFERENCES users(id);
