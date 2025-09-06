@@ -177,6 +177,11 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
           icon: ClipboardList,
         },
         {
+          name: "Mis Lecciones",
+          href: "/dashboard/student/lessons",
+          icon: Calendar,
+        },
+        {
           name: "Calificaciones",
           href: "/dashboard/student/grades",
           icon: FileText,
@@ -205,7 +210,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
       ["Mis Cursos", "Exámenes", "Mis Lecciones", "Estudiantes", "PQR"].includes(i.name)
     )
     const gestionStudent = navigationItems.filter((i) =>
-      ["Mis Cursos", "Exámenes", "Calificaciones"].includes(i.name)
+      ["Mis Cursos", "Exámenes", "Mis Lecciones", "Calificaciones", "PQR"].includes(i.name)
     )
     const reportes = navigationItems.filter((i) => ["Reportes"].includes(i.name))
     const cuenta = navigationItems.filter((i) => ["Perfil"].includes(i.name))

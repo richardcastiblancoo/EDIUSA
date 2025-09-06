@@ -1038,10 +1038,10 @@ export default function UserManagement() {
                 </div>
               </div>
               <div className="grid gap-2">
-                <p>
+                <div>
                   <span className="font-medium">Rol:</span>{" "}
                   {getRoleBadge(viewingUser.role)}
-                </p>
+                </div>
                 <p>
                   <span className="font-medium">Teléfono:</span>{" "}
                   {viewingUser.phone || "N/A"}

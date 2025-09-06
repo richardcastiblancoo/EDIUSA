@@ -418,7 +418,7 @@ export default function StudentManagement() {
               <div className="flex flex-col items-center gap-4">
                 <Avatar className="h-24 w-24">
                   {/* @ts-ignore */}
-                  <AvatarImage src={"/diverse-user-avatars.png"} alt={viewingStudent.name} />
+                  <AvatarImage src={viewingStudent.photo || "/placeholder-user.jpg"} alt={viewingStudent.name} />
                   <AvatarFallback>
                     <Users className="h-8 w-8 text-gray-400" />
                   </AvatarFallback>
@@ -460,8 +460,10 @@ export default function StudentManagement() {
               </div>
               <div className="space-y-2">
                 <Label>Estado</Label>
-                {/* @ts-ignore */}
-                <p>{getStatusBadge(viewingStudent.status || "active")}</p>
+                <div>
+                  {/* @ts-ignore */}
+                  {getStatusBadge(viewingStudent.status || "active")}
+                </div>
               </div>
             </div>
             <DialogFooter>
