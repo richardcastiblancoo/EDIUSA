@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,7 +22,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Edit, Trash2, FileText, Clock, Loader2, Save, ChevronLeft, ChevronRight } from "lucide-react"
-import { supabase } from "@/lib/supabase"
+import { supabase } from "../../lib/supabase"
 
 interface Lesson {
   id: string
@@ -34,6 +33,8 @@ interface Lesson {
   content?: string
   order_index: number
   media_url?: string
+  attachments?: string[]
+  audio_url?: string
   is_published: boolean
   updated_at: string
   due_date?: string | null
@@ -55,19 +56,22 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
-  const [courses, setCourses] = useState<{id: string, name: string}[]>([])
-  
+  const [courses, setCourses] = useState<{ id: string, name: string }[]>([])
+
   // Paginación
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(5)
   const [totalPages, setTotalPages] = useState(1)
-  
+
   const [lessonForm, setLessonForm] = useState({
     title: "",
     description: "",
     course_id: "",
     due_date: "",
     status: "draft" as "active" | "draft" | "completed",
+    is_published: false,
+    attachments: [] as string[],
+    audio_url: ""
   })
 
   useEffect(() => {
@@ -86,9 +90,9 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
       const { data, error } = await supabase
         .from("lessons")
         .select("*, course:courses(name)")
-      
+
       if (error) throw error
-      
+
       setLessons(data || [])
     } catch (error) {
       console.error("Error fetching lessons:", error)
@@ -104,9 +108,9 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
       const { data, error } = await supabase
         .from("courses")
         .select("id, name")
-      
+
       if (error) throw error
-      
+
       setCourses(data || [])
     } catch (error) {
       console.error("Error fetching courses:", error)
@@ -115,22 +119,34 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
 
   const handleCreateLesson = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!teacherId) {
-      setMessage({ type: "error", text: "ID del profesor no disponible" })
+    if (!teacherId || teacherId === "") {
+      setMessage({ type: "error", text: "Por favor, espera a que se cargue la información del profesor o inicia sesión nuevamente" })
       return
     }
     setCreating(true)
-    
+  
     try {
+      const { data: lastLesson } = await supabase
+        .from("lessons")
+        .select("order_index")
+        .order("order_index", { ascending: false })
+        .limit(1)
+  
+      const nextOrderIndex = lastLesson && lastLesson[0] ? lastLesson[0].order_index + 1 : 1
+  
       const newLesson = {
         ...lessonForm,
-        teacher_id: teacherId
+        teacher_id: teacherId,
+        order_index: nextOrderIndex,
+        is_published: lessonForm.is_published,
+        attachments: lessonForm.attachments,
+        audio_url: lessonForm.audio_url
       }
-      
+  
       const { error } = await supabase.from("lessons").insert([newLesson])
-      
+  
       if (error) throw error
-      
+  
       setMessage({ type: "success", text: "Lección creada exitosamente" })
       setDialogOpen(false)
       resetForm()
@@ -146,17 +162,17 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
   const handleUpdateLesson = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingLesson) return
-    
+
     setCreating(true)
-    
+
     try {
       const { error } = await supabase
         .from("lessons")
         .update(lessonForm)
         .eq("id", editingLesson.id)
-      
+
       if (error) throw error
-      
+
       setMessage({ type: "success", text: "Lección actualizada exitosamente" })
       setDialogOpen(false)
       resetForm()
@@ -171,12 +187,12 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
 
   const handleDeleteLesson = async (id: string) => {
     if (!confirm("¿Estás seguro de que deseas eliminar esta lección?")) return
-    
+
     try {
       const { error } = await supabase.from("lessons").delete().eq("id", id)
-      
+
       if (error) throw error
-      
+
       setMessage({ type: "success", text: "Lección eliminada exitosamente" })
       fetchLessons()
     } catch (error) {
@@ -192,7 +208,10 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
       description: lesson.description,
       course_id: lesson.course_id,
       due_date: lesson.due_date || "",
-      status: lesson.status,
+      status: lesson.status || "draft",
+      is_published: lesson.is_published || false,
+      attachments: lesson.attachments || [],
+      audio_url: lesson.audio_url || ""
     })
     setDialogOpen(true)
   }
@@ -205,6 +224,9 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
       course_id: "",
       due_date: "",
       status: "draft",
+      is_published: false,
+      attachments: [],
+      audio_url: ""
     })
   }
 
@@ -309,7 +331,7 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
                   </TableBody>
                 </Table>
               </div>
-              
+
               {/* Paginación */}
               {totalPages > 1 && (
                 <div className="flex justify-center items-center gap-4 mt-6">
@@ -351,61 +373,57 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
           </DialogHeader>
           <form onSubmit={editingLesson ? handleUpdateLesson : handleCreateLesson}>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="title" className="text-right">
-                  Título
-                </Label>
+              <div className="space-y-2">
+                <Label htmlFor="title">Título</Label>
                 <Input
                   id="title"
                   value={lessonForm.title}
                   onChange={(e) => setLessonForm({ ...lessonForm, title: e.target.value })}
-                  className="col-span-3"
                   required
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="course" className="text-right">
-                  Curso
-                </Label>
+              <div className="space-y-2">
+                <Label htmlFor="description">Descripción</Label>
+                <Textarea
+                  id="description"
+                  value={lessonForm.description}
+                  onChange={(e) => setLessonForm({ ...lessonForm, description: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="course">Curso</Label>
                 <Select
                   value={lessonForm.course_id}
                   onValueChange={(value) => setLessonForm({ ...lessonForm, course_id: value })}
+                  required
                 >
-                  <SelectTrigger className="col-span-3">
+                  <SelectTrigger>
                     <SelectValue placeholder="Selecciona un curso" />
                   </SelectTrigger>
                   <SelectContent>
-                    {courses.map((course) => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.name}
-                      </SelectItem>
+                    {courses.map(course => (
+                      <SelectItem key={course.id} value={course.id}>{course.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="due_date" className="text-right">
-                  Fecha Límite
-                </Label>
+              <div className="space-y-2">
+                <Label htmlFor="due_date">Fecha Límite (Opcional)</Label>
                 <Input
                   id="due_date"
                   type="date"
                   value={lessonForm.due_date}
                   onChange={(e) => setLessonForm({ ...lessonForm, due_date: e.target.value })}
-                  className="col-span-3"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="status" className="text-right">
-                  Estado
-                </Label>
+              <div className="space-y-2">
+                <Label htmlFor="status">Estado</Label>
                 <Select
                   value={lessonForm.status}
-                  onValueChange={(value: "active" | "draft" | "completed") =>
-                    setLessonForm({ ...lessonForm, status: value })
-                  }
+                  onValueChange={(value) => setLessonForm({ ...lessonForm, status: value as "active" | "draft" | "completed" })}
                 >
-                  <SelectTrigger className="col-span-3">
+                  <SelectTrigger>
                     <SelectValue placeholder="Selecciona un estado" />
                   </SelectTrigger>
                   <SelectContent>
@@ -415,27 +433,82 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-4 items-start gap-4">
-                <Label htmlFor="description" className="text-right pt-2">
-                  Descripción
-                </Label>
-                <Textarea
-                  id="description"
-                  value={lessonForm.description}
-                  onChange={(e) => setLessonForm({ ...lessonForm, description: e.target.value })}
-                  className="col-span-3"
-                  rows={5}
-                  required
+              {/* This is the corrected section for attachments and audio */}
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="attachments">Archivos Adjuntos</Label>
+                <Input
+                  id="attachments"
+                  type="file"
+                  multiple
+                  onChange={async (e) => {
+                    const files = Array.from(e.target.files || [])
+                    const uploadedUrls = await Promise.all(
+                      files.map(async (file) => {
+                        const fileExt = file.name.split(".").pop()
+                        const fileName = `lessons/${lessonForm.course_id}/${Date.now()}-${file.name}`
+                        const { data, error } = await supabase.storage
+                          .from("attachments")
+                          .upload(fileName, file)
+                        if (error) throw error
+                        const { data: { publicUrl } } = supabase.storage
+                          .from("attachments")
+                          .getPublicUrl(fileName)
+                        return publicUrl
+                      })
+                    )
+                    setLessonForm(prev => ({
+                      ...prev,
+                      attachments: [...(prev.attachments || []), ...uploadedUrls]
+                    }))
+                  }}
                 />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="audio">Audio</Label>
+                <Input
+                  id="audio"
+                  type="file"
+                  accept="audio/*"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      const fileExt = file.name.split(".").pop()
+                      const fileName = `lessons/${lessonForm.course_id}/${Date.now()}-${file.name}`
+                      const { data, error } = await supabase.storage
+                        .from("attachments") // Changed from "audio" to "attachments"
+                        .upload(fileName, file)
+                      if (error) throw error
+                      const { data: { publicUrl } } = supabase.storage
+                        .from("attachments") // Changed from "audio" to "attachments"
+                        .getPublicUrl(fileName)
+                      setLessonForm(prev => ({
+                        ...prev,
+                        audio_url: publicUrl
+                      }))
+                    }
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="is_published">Estado de publicación</Label>
+                <Select
+                  value={lessonForm.is_published ? "true" : "false"}
+                  onValueChange={(value) => setLessonForm(prev => ({ ...prev, is_published: value === "true" }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona el estado de publicación" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Publicado</SelectItem>
+                    <SelectItem value="false">No publicado</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancelar
-              </Button>
               <Button type="submit" disabled={creating}>
-                {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingLesson ? "Actualizar" : "Crear"}
+                {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {editingLesson ? "Actualizar Lección" : "Crear Lección"}
               </Button>
             </DialogFooter>
           </form>

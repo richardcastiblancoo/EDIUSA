@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Edit, Trash2, FileText, Clock, Loader2, Save, Users } from "lucide-react"
-import { Toaster, toast } from 'sonner' // Importación para las notificaciones flotantes
+import { Toaster, toast } from 'sonner'
 import {
   getExamsByTeacher,
   createExam,
@@ -32,6 +32,7 @@ import {
   createQuestion,
   deleteQuestion,
   getExamSubmissions,
+  updateSubmissionScore,
 } from "@/lib/exams"
 import type { Exam, Question } from "@/lib/exams"
 import { getCourseAssignmentsByTeacher } from "@/lib/assignments";
@@ -75,6 +76,9 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
     correct_answer: "",
     points: 1,
   })
+
+  const [viewSubmissionDialogOpen, setViewSubmissionDialogOpen] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
 
   useEffect(() => {
     loadExams()
@@ -128,32 +132,32 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
       const examData = {
         ...examForm,
         created_by: teacherId,
-        total_questions: 0, // Will be updated when questions are added
+        total_questions: 0,
         is_active: true,
       }
 
       if (editingExam) {
         const updated = await updateExam(editingExam.id, examData)
         if (updated) {
-          setMessage({ type: "success", text: "Examen actualizado exitosamente" })
+          toast.success("Examen actualizado exitosamente")
           loadExams()
         } else {
-          setMessage({ type: "error", text: "Error al actualizar examen" })
+          toast.error("Error al actualizar examen")
         }
       } else {
         const newExam = await createExam(examData)
         if (newExam) {
-          setMessage({ type: "success", text: "Examen creado exitosamente" })
+          toast.success("Examen creado exitosamente")
           loadExams()
         } else {
-          setMessage({ type: "error", text: "Error al crear examen" })
+          toast.error("Error al crear examen")
         }
       }
 
       setDialogOpen(false)
       resetExamForm()
     } catch (error) {
-      setMessage({ type: "error", text: "Error inesperado" })
+      toast.error("Error inesperado al procesar el formulario.")
     } finally {
       setCreating(false)
     }
@@ -179,14 +183,14 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
         options: questionData.options || undefined
       })
       if (newQuestion) {
-        setMessage({ type: "success", text: "Pregunta agregada exitosamente" })
+        toast.success("Pregunta agregada exitosamente")
         loadQuestions(selectedExam.id)
         resetQuestionForm()
       } else {
-        setMessage({ type: "error", text: "Error al agregar pregunta" })
+        toast.error("Error al agregar pregunta")
       }
     } catch (error) {
-      setMessage({ type: "error", text: "Error inesperado" })
+      toast.error("Error inesperado al agregar la pregunta.")
     }
   }
 
@@ -198,7 +202,7 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
       course_id: exam.course_id,
       duration_minutes: exam.duration_minutes,
       exam_type: exam.exam_type,
-      due_date: exam.due_date.split("T")[0], // Format for date input
+      due_date: exam.due_date,
       max_attempts: exam.max_attempts,
       instructions: exam.instructions || "",
       passing_score: exam.passing_score,
@@ -218,12 +222,12 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
     if (confirm("¿Estás seguro de eliminar esta pregunta?")) {
       const success = await deleteQuestion(questionId)
       if (success) {
-        setMessage({ type: "success", text: "Pregunta eliminada exitosamente" })
+        toast.success("Pregunta eliminada exitosamente")
         if (selectedExam) {
           loadQuestions(selectedExam.id)
         }
       } else {
-        setMessage({ type: "error", text: "Error al eliminar pregunta" })
+        toast.error("Error al eliminar pregunta")
       }
     }
   }
@@ -246,6 +250,30 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
     setReviewDialogOpen(true)
   }
 
+  const handleScoreChange = (submissionId: string, score: string) => {
+    setExamSubmissions(prevSubmissions => 
+      prevSubmissions.map(submission => 
+        submission.id === submissionId ? { ...submission, score: parseFloat(score) } : submission
+      )
+    );
+  };
+
+  const handleSaveScore = async (submissionId: string) => {
+    const submission = examSubmissions.find(sub => sub.id === submissionId);
+    if (submission) {
+      toast.promise(updateSubmissionScore(submissionId, submission.score), {
+        loading: "Guardando calificación...",
+        success: "Calificación guardada exitosamente.",
+        error: "Error al guardar la calificación."
+      });
+    }
+  };
+
+  const handleViewSubmission = (submission: any) => {
+    setSelectedSubmission(submission);
+    setViewSubmissionDialogOpen(true);
+  };
+
   const loadTeacherCourses = async () => {
     if (!teacherId) return
     try {
@@ -266,7 +294,7 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
 
   return (
     <div className="space-y-6">
-      <Toaster richColors position="top-right" /> {/* Componente para mostrar las notificaciones */}
+      <Toaster richColors position="top-right" />
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">Gestión de Exámenes</h2>
@@ -396,12 +424,12 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
                   required
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un curso" />
+                    <SelectValue placeholder="Selecciona un curso activo" />
                   </SelectTrigger>
                   <SelectContent>
                     {teacherCourses.map((course) => (
                       <SelectItem key={course.id} value={course.id}>
-                        {course.name}
+                        {course.name} - {course.code}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -631,7 +659,7 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
                       </SelectTrigger>
                       <SelectContent>
                         {questionForm.options
-                          .filter(option => option.trim() !== '') // Only include non-empty options
+                          .filter(option => option.trim() !== '')
                           .map((option, index) => (
                             <SelectItem key={index} value={option}>
                               {String.fromCharCode(65 + index)}. {option}
@@ -688,6 +716,7 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
                     <TableHead>Fecha de entrega</TableHead>
                     <TableHead>Tiempo usado</TableHead>
                     <TableHead>Advertencias</TableHead>
+                    <TableHead>Calificación</TableHead>
                     <TableHead>Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -695,7 +724,7 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
                   {examSubmissions.map((submission) => (
                     <TableRow key={submission.id}>
                       <TableCell>
-                        {submission.students?.first_name} {submission.students?.last_name}
+                        {submission.students?.name || `${submission.students?.first_name} ${submission.students?.last_name}`}
                       </TableCell>
                       <TableCell>
                         {new Date(submission.submitted_at).toLocaleString()}
@@ -711,9 +740,24 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Button variant="outline" size="sm">
-                          Ver detalles
-                        </Button>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={submission.score || ''}
+                          onChange={(e) => handleScoreChange(submission.id, e.target.value)}
+                          className="w-20"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleViewSubmission(submission)}>
+                            Ver detalles
+                          </Button>
+                          <Button variant="default" size="sm" onClick={() => handleSaveScore(submission.id)}>
+                            Guardar
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -721,6 +765,83 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
               </Table>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Dialogo para ver detalles de la entrega */}
+      <Dialog open={viewSubmissionDialogOpen} onOpenChange={setViewSubmissionDialogOpen}>
+        <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalles de la Entrega</DialogTitle>
+            <DialogDescription>
+              Revisión de las respuestas del estudiante para este examen.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedSubmission && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="font-semibold">Estudiante:</p>
+                  <p>{selectedSubmission.students?.name || `${selectedSubmission.students?.first_name} ${selectedSubmission.students?.last_name}`}</p>
+                </div>
+                <div>
+                  <p className="font-semibold">Calificación:</p>
+                  <p className="text-xl font-bold">{selectedSubmission.score !== null ? `${selectedSubmission.score}%` : 'Pendiente'}</p>
+                </div>
+                <div>
+                  <p className="font-semibold">Fecha de entrega:</p>
+                  <p>{new Date(selectedSubmission.submitted_at).toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="font-semibold">Tiempo usado:</p>
+                  <p>{Math.floor(selectedSubmission.time_spent / 60)} min {selectedSubmission.time_spent % 60} s</p>
+                </div>
+              </div>
+
+              {selectedSubmission.warnings?.length > 0 && (
+                <Alert variant="destructive">
+                  <p className="font-semibold">Advertencias:</p>
+                  <ul className="list-disc list-inside mt-2">
+                    {selectedSubmission.warnings.map((warning: any, index: number) => (
+                      <li key={index}>{warning.message} (Hora: {new Date(warning.timestamp).toLocaleTimeString()})</li>
+                    ))}
+                  </ul>
+                </Alert>
+              )}
+
+              <h3 className="text-lg font-bold">Respuestas del Estudiante</h3>
+              <div className="space-y-4">
+                {Array.isArray(selectedSubmission.answers) ? (
+                  selectedSubmission.answers.map((answer: any, index: number) => (
+                    <Card key={index} className="p-4">
+                      <p className="font-semibold">Pregunta {index + 1}:</p>
+                      <p>{answer.question_text}</p>
+                      <div className="mt-2 text-sm">
+                        <p className="font-medium">Respuesta del estudiante:</p>
+                        <p className="bg-gray-100 p-2 rounded italic">{answer.student_answer}</p>
+                        
+                        {answer.question_type === "multiple_choice" && (
+                          <p className="font-medium mt-2">Respuesta correcta: <span className="text-green-600">{answer.correct_answer}</span></p>
+                        )}
+                        
+                        <div className="mt-2 flex justify-between items-center">
+                          <Badge variant={answer.is_correct ? "default" : "destructive"}>
+                            {answer.is_correct ? "Correcta" : "Incorrecta"}
+                          </Badge>
+                          <Badge variant="secondary">Puntos: {answer.points_earned || 0}/{answer.points_possible}</Badge>
+                        </div>
+                      </div>
+                    </Card>
+                  ))
+                ) : (
+                  <Alert>
+                    <AlertDescription>No hay respuestas disponibles para esta entrega.</AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

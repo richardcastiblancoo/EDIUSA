@@ -368,7 +368,16 @@ export default function StudentManagement() {
                 {filteredStudents.map((student) => (
                   <TableRow key={student.id}>
                     <TableCell>
-                      <span className="font-medium">{student.name}</span>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          {/* @ts-ignore */}
+                          <AvatarImage src={student.photo || "/placeholder-user.jpg"} alt={student.name} />
+                          <AvatarFallback>
+                            <Users className="h-4 w-4 text-gray-400" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{student.name}</span>
+                      </div>
                     </TableCell>
                     {/* @ts-ignore */}
                     <TableCell>{student.document_number || "-"}</TableCell>
@@ -416,11 +425,11 @@ export default function StudentManagement() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="flex flex-col items-center gap-4">
-                <Avatar className="h-24 w-24">
+                <Avatar className="h-32 w-32">
                   {/* @ts-ignore */}
                   <AvatarImage src={viewingStudent.photo || "/placeholder-user.jpg"} alt={viewingStudent.name} />
                   <AvatarFallback>
-                    <Users className="h-8 w-8 text-gray-400" />
+                    <Users className="h-12 w-12 text-gray-400" />
                   </AvatarFallback>
                 </Avatar>
               </div>
@@ -566,7 +575,7 @@ export default function StudentManagement() {
               <Select
                 value={formData.status}
                 onValueChange={(value: "active" | "inactive" | "graduado" | "egresado") =>
-                  setFormData({ ...formData, status: value as "active" | "inactive" | "graduado" | "egresado" })
+                  setFormData(prev => ({ ...prev, status: value as "active" }))
                 }
               >
                 <SelectTrigger>

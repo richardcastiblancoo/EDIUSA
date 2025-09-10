@@ -58,7 +58,8 @@ export async function getCourseAssignmentsByTeacher(teacherId: string): Promise<
     const { data, error } = await supabase
       .from("courses")
       .select("*")
-      .eq("teacher_id", teacherId);
+      .eq("teacher_id", teacherId)
+      .eq("is_active", true); // Cambiado de status a is_active
 
     if (error) {
       console.error("Error fetching course assignments for teacher:", error);

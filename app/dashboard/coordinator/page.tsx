@@ -6,7 +6,7 @@ import { useEffect, useState } from "react"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, BookOpen, Calendar, TrendingUp, UserCheck, ClipboardList, BarChart3, MessageSquare } from "lucide-react"
+import { Users, BookOpen, TrendingUp, UserCheck, ClipboardList, BarChart3, MessageSquare } from "lucide-react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase";
 import { motion } from "framer-motion";
@@ -195,7 +195,7 @@ export default function CoordinatorDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats.totalCourses}</div>
-                <p className="text-xs text-muted-foreground">En 5 idiomas diferentes</p>
+                <p className="text-xs text-muted-foreground">En Ingles</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -231,7 +231,7 @@ export default function CoordinatorDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats.completionRate}%</div>
-                <p className="text-xs text-muted-foreground">+2.1% desde el semestre pasado</p>
+                <p className="text-xs text-muted-foreground">desde el cohorte</p>
               </CardContent>
             </Card>
           </motion.div>

@@ -173,45 +173,37 @@ export async function deleteQuestion(id: string): Promise<boolean> {
  */
 export async function getStudentExams(studentId: string): Promise<Exam[]> {
   try {
-    const { data, error } = await supabase
+    // Primero obtenemos las inscripciones del estudiante con los datos del curso
+    const { data: enrollments, error: enrollmentError } = await supabase
       .from("enrollments")
       .select(`
-        courses (id),
-        student_id
+        course_id,
+        courses:course_id (id, name, level, language)
       `)
       .eq("student_id", studentId)
 
-    if (error) throw error
+    if (enrollmentError) throw enrollmentError
+    if (!enrollments || enrollments.length === 0) return []
 
-    if (!data || data.length === 0) return []
+    // Extraemos los IDs de los cursos
+    const courseIds = enrollments.map(enrollment => enrollment.course_id)
 
-    // Extraer los IDs de los cursos en los que está inscrito el estudiante
-    const courseIds = data.map(enrollment => {
-      const course = enrollment.courses as unknown as { id: string };
-      if (!course || typeof course.id !== 'string') {
-        throw new Error('Invalid course data structure');
-      }
-      return course.id;
-    })
-
-    // Obtener los exámenes asociados a esos cursos que aún no han vencido
-    const currentDate = new Date().toISOString()
+    // Obtenemos los exámenes activos y sus calificaciones para estos cursos
     const { data: exams, error: examsError } = await supabase
       .from("exams")
       .select(`
         *,
-        courses:course_id (name, language, level)
+        courses:course_id (name, language, level),
+        exam_submissions(score)
       `)
       .in("course_id", courseIds)
-      .gt("due_date", currentDate) // Solo exámenes futuros
       .eq("is_active", true)
       .order("due_date", { ascending: true })
 
     if (examsError) throw examsError
-
     return exams || []
   } catch (error) {
-    console.error("Error fetching student exams:", error)
+    console.error("Error getting student exams:", error)
     return []
   }
 }
@@ -258,13 +250,31 @@ export async function submitExamWithMonitoring(examSubmissionData: {
  */
 export async function deleteExam(id: string): Promise<boolean> {
   try {
-    // Eliminamos directamente el examen sin intentar eliminar preguntas
-    const { error } = await supabase
+    // First delete all questions associated with the exam
+    const { error: questionsError } = await supabase
+      .from("questions")
+      .delete()
+      .eq("exam_id", id);
+    
+    if (questionsError) throw questionsError;
+
+    // Then delete all submissions associated with the exam
+    const { error: submissionsError } = await supabase
+      .from("exam_submissions")
+      .delete()
+      .eq("exam_id", id);
+    
+    if (submissionsError) throw submissionsError;
+
+    // Finally delete the exam itself
+    const { error: examError } = await supabase
       .from("exams")
       .delete()
       .eq("id", id);
     
-    return !error;
+    if (examError) throw examError;
+    
+    return true;
   } catch (error) {
     console.error("Delete exam error:", error);
     return false;
@@ -282,7 +292,7 @@ export async function getExamSubmissions(examId: string): Promise<any[]> {
       .from("exam_submissions")
       .select(`
         *,
-        students:student_id (id, first_name, last_name, email)
+        students:student_id (id, name, email)
       `)
       .eq("exam_id", examId)
       .order("submitted_at", { ascending: false });
@@ -331,6 +341,28 @@ export async function removeExamsForCourse(courseId: string): Promise<boolean> {
     return !error;
   } catch (error) {
     console.error("Remove exams for course error:", error);
+    return false;
+  }
+}
+
+// Add this function at the end of the file
+
+/**
+ * Actualiza la calificación de una entrega de examen
+ * @param submissionId El ID de la entrega
+ * @param score La calificación asignada
+ * @returns {Promise<boolean>} True si la actualización fue exitosa
+ */
+export async function updateSubmissionScore(submissionId: string, score: number): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("exam_submissions")
+      .update({ score })
+      .eq("id", submissionId);
+    
+    return !error;
+  } catch (error) {
+    console.error("Update submission score error:", error);
     return false;
   }
 }

@@ -18,6 +18,7 @@ export default function StudentDashboard() {
   const [courses, setCourses] = useState([])
   const [exams, setExams] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [averageScore, setAverageScore] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -40,6 +41,16 @@ export default function StudentDashboard() {
         // Obtener exámenes del estudiante
         const studentExams = await getStudentExams(user.id)
         setExams((studentExams as Exam[]) ?? [])
+
+        // Calcular promedio de calificaciones
+        const scores = studentExams
+          .filter(exam => exam.exam_submissions?.[0]?.score !== null)
+          .map(exam => exam.exam_submissions[0].score);
+        
+        if (scores.length > 0) {
+          const average = scores.reduce((a, b) => a + b, 0) / scores.length;
+          setAverageScore(Number(average.toFixed(2)));
+        }
       } catch (error) {
         console.error("Error fetching student data:", error)
         toast({
@@ -82,7 +93,7 @@ export default function StudentDashboard() {
         ) : (
           <>
             {/* Quick Stats */}
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-3">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Cursos Activos</CardTitle>
@@ -91,17 +102,6 @@ export default function StudentDashboard() {
                 <CardContent>
                   <div className="text-2xl font-bold">{courses.length}</div>
                   <p className="text-xs text-muted-foreground">En progreso</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Próxima Clase</CardTitle>
-                  <Calendar className="h-4 w-4 text-green-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{courses.length > 0 ? "Programada" : "N/A"}</div>
-                  <p className="text-xs text-muted-foreground">{courses.length > 0 ? "Ver horario" : "Sin clases"}</p>
                 </CardContent>
               </Card>
 
@@ -122,8 +122,10 @@ export default function StudentDashboard() {
                   <Award className="h-4 w-4 text-orange-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">--</div>
-                  <p className="text-xs text-muted-foreground">Sobre 5.0</p>
+                  <div className="text-2xl font-bold">
+                    {averageScore !== null ? `${averageScore}%` : '--'}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Sobre 100%</p>
                 </CardContent>
               </Card>
             </div>
@@ -166,7 +168,6 @@ export default function StudentDashboard() {
                             <h4 className="font-semibold">{(course as any).name}</h4>
                             <span className="text-sm text-muted-foreground">En progreso</span>
                           </div>
-                          <Progress value={75} className="mb-2" />
                           <p className="text-sm text-muted-foreground">{(course as any).teachers?.name || 'Profesor no asignado'}</p>
                           {(course as any).schedule && (
                             <p className="text-sm font-medium text-blue-600">Horario: {(course as any).schedule}</p>
@@ -207,9 +208,11 @@ export default function StudentDashboard() {
                           <p className="text-sm text-muted-foreground">
                             Curso: {(exam as any).courses?.name || 'No especificado'}
                           </p>
-                          <Button size="sm" className="mt-2">
-                            Iniciar Examen
-                          </Button>
+                          <Link href="/dashboard/student/exams">
+                            <Button size="sm" className="mt-2">
+                              Iniciar Examen
+                            </Button>
+                          </Link>
                         </div>
                       ))
                     ) : (

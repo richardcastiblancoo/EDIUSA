@@ -245,3 +245,41 @@ ALTER TABLE lessons ADD COLUMN status VARCHAR(50) CHECK (status IN ('active', 'd
 
 -- Agregar columna teacher_id con referencia a la tabla users
 ALTER TABLE lessons ADD COLUMN teacher_id UUID REFERENCES users(id);
+
+
+-- Create questions table
+CREATE TABLE IF NOT EXISTS questions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  exam_id UUID REFERENCES exams(id),
+  question_text TEXT NOT NULL,
+  question_type VARCHAR(50) NOT NULL,
+  options JSONB,
+  correct_answer TEXT,
+  points INTEGER DEFAULT 1,
+  order_number INTEGER NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index for better performance
+CREATE INDEX IF NOT EXISTS idx_questions_exam ON questions(exam_id);
+
+----------
+ALTER TABLE lessons
+ADD COLUMN attachments TEXT[],
+ADD COLUMN audio_url TEXT;
+
+-- Política para permitir lectura pública
+CREATE POLICY "Archivos accesibles públicamente" 
+ON storage.objects FOR SELECT 
+USING (bucket_id IN ('attachments', 'audio'));
+
+-- Política para permitir subida de archivos a usuarios autenticados
+CREATE POLICY "Usuarios autenticados pueden subir archivos" 
+ON storage.objects FOR INSERT 
+TO authenticated 
+WITH CHECK (bucket_id IN ('attachments', 'audio'));
+
+-- Ejecutar en el SQL Editor de Supabase
+INSERT INTO storage.buckets (id, name, public) VALUES ('attachments', 'attachments', true);
+INSERT INTO storage.buckets (id, name, public) VALUES ('audio', 'audio', true);

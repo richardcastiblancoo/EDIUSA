@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react" 
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -14,7 +14,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts"
-import { FileText, Calendar, TrendingUp, CheckCircle, XCircle, Loader2 } from "lucide-react"
+import { FileText, Calendar, TrendingUp, CheckCircle, Loader2, ListX, RefreshCw } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
   Table,
@@ -35,12 +35,12 @@ import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
 import { toast } from "@/components/ui/use-toast"
 
-// Define las interfaces para los datos del reporte de estudiante
+// --- Interfaces y datos de ejemplo ---
 interface LessonReport {
   lessonName: string
-  date: string // Fecha obligatoria para cada lección
+  date: string
   attendance: "Presente" | "Ausente" | "Tarde"
-  notes: number // Notas del estudiante, 0 por defecto si no tiene
+  notes: number
 }
 
 interface CourseReport {
@@ -52,118 +52,142 @@ interface CourseReport {
 interface StudentReportData {
   studentName: string
   studentId: string
-  overallAvgNotes: number // Promedio general, 0 si no tiene notas
-  overallAttendanceRate: number // Tasa de asistencia general, 0 si no tiene registros
+  overallAvgNotes: number
+  overallAttendanceRate: number
   courses: CourseReport[]
 }
 
-// Datos de ejemplo para el reporte
 const mockStudentData: StudentReportData = {
   studentName: "Juan Pérez",
   studentId: "STU001",
-  overallAvgNotes: 85,
-  overallAttendanceRate: 92,
+  overallAvgNotes: 0,
+  overallAttendanceRate: 0,
   courses: [
     {
       courseId: "ENG101",
       courseName: "Inglés - Nivel B1",
       lessons: [
-        { lessonName: "Introducción", date: "2025-08-01", attendance: "Presente", notes: 80 },
-        { lessonName: "Gramática I", date: "2025-08-03", attendance: "Presente", notes: 75 },
-        { lessonName: "Conversación", date: "2025-08-05", attendance: "Presente", notes: 90 },
-        { lessonName: "Vocabulario", date: "2025-08-08", attendance: "Presente", notes: 85 },
-        { lessonName: "Evaluación I", date: "2025-08-10", attendance: "Presente", notes: 95 },
+        { lessonName: "Introducción", date: "2025-08-01", attendance: "Ausente", notes: 0 },
+        { lessonName: "Gramática I", date: "2025-08-03", attendance: "Ausente", notes: 0 },
+        { lessonName: "Conversación", date: "2025-08-05", attendance: "Ausente", notes: 0 },
+        { lessonName: "Vocabulario", date: "2025-08-08", attendance: "Ausente", notes: 0 },
+        { lessonName: "Evaluación I", date: "2025-08-10", attendance: "Ausente", notes: 0 },
       ],
     },
     {
       courseId: "FRE201",
       courseName: "Francés - Nivel A2",
       lessons: [
-        { lessonName: "Salud", date: "2025-08-02", attendance: "Presente", notes: 88 },
-        { lessonName: "La familia", date: "2025-08-04", attendance: "Presente", notes: 82 },
-        { lessonName: "Ausente", date: "2025-08-06", attendance: "Ausente", notes: 0 },
+        { lessonName: "Salud", date: "2025-08-02", attendance: "Ausente", notes: 0 },
+        { lessonName: "La familia", date: "2025-08-04", attendance: "Ausente", notes: 0 },
+        { lessonName: "Evaluación I", date: "2025-08-06", attendance: "Ausente", notes: 0 },
       ],
+    },
+    {
+      courseId: "ESP301",
+      courseName: "Español - Nivel C1",
+      lessons: [],
     },
   ],
 }
 
+// --- Componente principal ---
 export default function StudentReportDashboard() {
   const [reportData, setReportData] = useState<StudentReportData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [exporting, setExporting] = useState(false); // NUEVOS CAMBIOS: estado de carga para exportar
+  const [exporting, setExporting] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [selectedCourseId, setSelectedCourseId] = useState<string>("")
-  const reportRef = useRef<HTMLDivElement>(null); // NUEVOS CAMBIOS: crear una referencia para el div del reporte
+  const [activeTab, setActiveTab] = useState("summary")
+  const reportRef = useRef<HTMLDivElement>(null)
 
+  const fetchReportData = async () => {
+    setLoading(true)
+    setTimeout(() => {
+      setReportData(mockStudentData)
+      if (mockStudentData.courses.length > 0) {
+        setSelectedCourseId(mockStudentData.courses[0].courseId)
+      }
+      setLoading(false)
+      setRefreshing(false)
+      toast({
+        title: "Reporte actualizado",
+        description: "Los datos del reporte han sido cargados nuevamente.",
+      })
+    }, 1000)
+  }
 
-  // Simular la carga de datos del estudiante
   useEffect(() => {
-    const fetchReportData = async () => {
-      setLoading(true)
-      // Simular una llamada a la API con un retardo
-      setTimeout(() => {
-        setReportData(mockStudentData)
-        // Selecciona el primer curso por defecto
-        if (mockStudentData.courses.length > 0) {
-          setSelectedCourseId(mockStudentData.courses[0].courseId)
-        }
-        setLoading(false)
-      }, 1000)
-    }
-
     fetchReportData()
   }, [])
 
+  const handleRefresh = () => {
+    setRefreshing(true)
+    fetchReportData()
+  }
+
+  const calculateAverage = (lessons: LessonReport[]): number => {
+    if (!lessons || lessons.length === 0) return 0
+    const totalNotes = lessons.reduce((acc, curr) => acc + curr.notes, 0)
+    return totalNotes / lessons.length
+  }
+
+  const calculateAttendanceRate = (lessons: LessonReport[]): number => {
+    if (!lessons || lessons.length === 0) return 0
+    const presentCount = lessons.filter((l) => l.attendance === "Presente").length
+    return (presentCount / lessons.length) * 100
+  }
+
   const handleExportPdf = async () => {
-    setExporting(true);
+    setExporting(true)
     if (reportRef.current) {
       try {
-        const canvas = await html2canvas(reportRef.current, { scale: 2 });
-        const imgData = canvas.toDataURL("image/png");
-        const pdf = new jsPDF("p", "mm", "a4");
-        const imgWidth = 210;
-        const pageHeight = 297;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        let heightLeft = imgHeight;
-        let position = 0;
+        const canvas = await html2canvas(reportRef.current, { scale: 2 })
+        const imgData = canvas.toDataURL("image/png")
+        const pdf = new jsPDF("p", "mm", "a4")
+        const imgWidth = 210
+        const pageHeight = 297
+        const imgHeight = (canvas.height * imgWidth) / canvas.width
+        let heightLeft = imgHeight
+        let position = 0
 
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
 
-        while (heightLeft >= 0) {
-          position = heightLeft - imgHeight;
-          pdf.addPage();
-          pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-          heightLeft -= pageHeight;
+        while (heightLeft > 0) {
+          position = -heightLeft
+          pdf.addPage()
+          pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+          heightLeft -= pageHeight
         }
 
-        pdf.save(`reporte-${reportData?.studentName || "estudiante"}.pdf`);
+        pdf.save(`reporte-${reportData?.studentName || "estudiante"}.pdf`)
         toast({
           title: "Éxito",
           description: "Reporte PDF generado exitosamente.",
-        });
+        })
       } catch (error) {
-        console.error("Error al generar el PDF:", error);
+        console.error("Error al generar el PDF:", error)
         toast({
           title: "Error",
           description: "No se pudo generar el reporte PDF. Inténtalo de nuevo.",
-          variant: "destructive"
-        });
+          variant: "destructive",
+        })
       }
     } else {
       toast({
         title: "Error",
         description: "No se encontró el contenido para generar el PDF.",
-        variant: "destructive"
-      });
+        variant: "destructive",
+      })
     }
-    setExporting(false);
-  };
-
+    setExporting(false)
+  }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center p-8 text-center text-gray-500">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
         <span className="ml-2">Cargando reporte...</span>
       </div>
     )
@@ -173,7 +197,7 @@ export default function StudentReportDashboard() {
     return (
       <div className="text-center p-8">
         <p className="text-muted-foreground mb-4">No se pudo cargar el reporte del estudiante.</p>
-        <Button onClick={() => window.location.reload()}>Reintentar</Button>
+        <Button onClick={handleRefresh}>Reintentar</Button>
       </div>
     )
   }
@@ -181,100 +205,138 @@ export default function StudentReportDashboard() {
   const selectedCourse = reportData.courses.find(
     (course) => course.courseId === selectedCourseId
   )
-
   const lessonNotesData = selectedCourse?.lessons.map((lesson) => ({
     name: lesson.lessonName,
     notes: lesson.notes,
-  }))
+  })) ?? []
+
+  const courseAvgNotes = calculateAverage(selectedCourse?.lessons ?? [])
+  const courseAttendanceRate = calculateAttendanceRate(selectedCourse?.lessons ?? [])
 
   const getAttendanceBadge = (attendance: string) => {
     switch (attendance) {
       case "Presente":
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Presente</Badge>
+        return (
+          <Badge className="bg-green-100 text-green-700 hover:bg-green-200">
+            Presente
+          </Badge>
+        )
       case "Ausente":
-        return <Badge className="bg-red-100 text-red-800 hover:bg-red-200">Ausente</Badge>
+        return (
+          <Badge className="bg-red-100 text-red-700 hover:bg-red-200">
+            Ausente
+          </Badge>
+        )
       case "Tarde":
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200">Tarde</Badge>
+        return (
+          <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-200">
+            Tarde
+          </Badge>
+        )
       default:
         return <Badge variant="secondary">N/A</Badge>
     }
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-8">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-2xl font-bold">Reporte de {reportData.studentName}</h2>
-          <p className="text-muted-foreground">Análisis de rendimiento y asistencia</p>
+          <h2 className="text-3xl font-bold tracking-tight">Reporte de {reportData.studentName}</h2>
+          <p className="text-muted-foreground mt-1">Análisis de rendimiento y asistencia</p>
         </div>
-        <Button onClick={handleExportPdf} disabled={exporting}>
-          {exporting ? (
-            <>
+        <div className="flex gap-2">
+          <Button onClick={handleRefresh} disabled={refreshing}>
+            {refreshing ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Generando...
-            </>
-          ) : (
-            <>
-              <FileText className="mr-2 h-4 w-4" />
-              Exportar PDF
-            </>
-          )}
-        </Button>
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" />
+            )}
+            Actualizar
+          </Button>
+          <Button onClick={handleExportPdf} disabled={exporting}>
+            {exporting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generando...
+              </>
+            ) : (
+              <>
+                <FileText className="mr-2 h-4 w-4" />
+                Exportar PDF
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
-      {/* NUEVOS CAMBIOS: el ref para capturar el contenido */}
-      <div ref={reportRef} className="space-y-4 p-4 bg-white rounded-md shadow-sm">
-        <Tabs defaultValue="summary" className="space-y-4">
+      <div ref={reportRef} className="space-y-6 bg-white rounded-xl shadow-lg p-4 md:p-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="summary">Resumen del Estudiante</TabsTrigger>
             <TabsTrigger value="details">Detalle de Cursos</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="summary" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <Card>
+          <TabsContent value="summary" className="space-y-6">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <Card
+                className="border-l-4 border-blue-600 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => setActiveTab("details")}
+              >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Promedio de Notas</CardTitle>
+                  <CardTitle className="text-sm font-medium text-gray-500">
+                    Promedio General de Notas
+                  </CardTitle>
                   <TrendingUp className="h-4 w-4 text-blue-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{reportData.overallAvgNotes.toFixed(1)}%</div>
-                  <Progress value={reportData.overallAvgNotes} className="mt-2" />
+                  <div className="text-3xl font-bold">{reportData.overallAvgNotes.toFixed(1)}%</div>
+                  <Progress value={reportData.overallAvgNotes} className="mt-2 h-2 bg-blue-100" />
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card
+                className="border-l-4 border-green-600 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => setActiveTab("details")}
+              >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Tasa de Asistencia</CardTitle>
+                  <CardTitle className="text-sm font-medium text-gray-500">
+                    Tasa de Asistencia
+                  </CardTitle>
                   <CheckCircle className="h-4 w-4 text-green-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{reportData.overallAttendanceRate.toFixed(1)}%</div>
-                  <Progress value={reportData.overallAttendanceRate} className="mt-2" />
+                  <div className="text-3xl font-bold">{reportData.overallAttendanceRate.toFixed(1)}%</div>
+                  <Progress value={reportData.overallAttendanceRate} className="mt-2 h-2 bg-green-100" />
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card
+                className="border-l-4 border-purple-600 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => setActiveTab("details")}
+              >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Cursos Activos</CardTitle>
+                  <CardTitle className="text-sm font-medium text-gray-500">
+                    Cursos Activos
+                  </CardTitle>
                   <Calendar className="h-4 w-4 text-purple-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{reportData.courses.length}</div>
-                  <p className="text-xs text-muted-foreground">Cursos registrados</p>
+                  <div className="text-3xl font-bold">{reportData.courses.length}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Cursos registrados</p>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
-          <TabsContent value="details" className="space-y-4">
+          <TabsContent value="details" className="space-y-6">
             <Card>
-              <CardHeader className="flex items-center justify-between flex-row">
+              <CardHeader className="flex items-center justify-between flex-row flex-wrap gap-4">
                 <div>
                   <CardTitle>Detalle de Curso</CardTitle>
-                  <CardDescription>Selecciona un curso para ver el desglose</CardDescription>
+                  <CardDescription>Selecciona un curso para ver el desglose detallado</CardDescription>
                 </div>
-                <div className="w-[200px]">
+                <div className="w-[250px]">
                   <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar Curso" />
@@ -292,75 +354,89 @@ export default function StudentReportDashboard() {
               <CardContent>
                 {selectedCourse ? (
                   <div className="space-y-6">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <Card>
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <Card className="border-l-4 border-slate-600">
                         <CardHeader>
-                          <CardTitle>Notas por Lección</CardTitle>
+                          <CardTitle>Promedio de Notas por Lección</CardTitle>
+                          <CardDescription>Progreso visual de las calificaciones.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                          <ResponsiveContainer width="100%" height={250}>
-                            <BarChart data={lessonNotesData}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" />
-                              <YAxis />
-                              <Tooltip />
-                              <Bar dataKey="notes" fill="#8884d8" />
-                            </BarChart>
-                          </ResponsiveContainer>
+                          {lessonNotesData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={250}>
+                              <BarChart data={lessonNotesData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" />
+                                <YAxis domain={[0, 100]} />
+                                <Tooltip />
+                                <Bar dataKey="notes" fill="#475569" />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
+                              <ListX size={48} className="mb-2" />
+                              <p>No hay datos de notas para este curso.</p>
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
 
-                      <Card>
+                      <Card className="border-l-4 border-slate-600">
                         <CardHeader>
                           <CardTitle>Resumen del Curso</CardTitle>
+                          <CardDescription>Estadísticas clave del curso.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                          <div className="space-y-2">
+                          <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                              <span className="font-medium">Promedio del Curso:</span>
-                              <Badge variant="secondary">
-                                {(
-                                  selectedCourse.lessons.reduce((acc, curr) => acc + curr.notes, 0) /
-                                  selectedCourse.lessons.length
-                                ).toFixed(1)}
-                                %
+                              <span className="font-medium text-gray-600">Promedio del Curso:</span>
+                              <Badge variant="secondary" className="text-base">
+                                {courseAvgNotes.toFixed(1)}%
                               </Badge>
                             </div>
                             <div className="flex items-center justify-between">
-                              <span className="font-medium">Asistencia del Curso:</span>
-                              <Badge variant="secondary">
-                                {(
-                                  (selectedCourse.lessons.filter((l) => l.attendance === "Presente").length /
-                                    selectedCourse.lessons.length) *
-                                  100
-                                ).toFixed(1)}
-                                %
+                              <span className="font-medium text-gray-600">Tasa de Asistencia:</span>
+                              <Badge variant="secondary" className="text-base">
+                                {courseAttendanceRate.toFixed(1)}%
                               </Badge>
                             </div>
                           </div>
                         </CardContent>
                       </Card>
                     </div>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Lección</TableHead>
-                          <TableHead>Fecha</TableHead>
-                          <TableHead>Asistencia</TableHead>
-                          <TableHead className="text-right">Notas</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {selectedCourse.lessons.map((lesson, index) => (
-                          <TableRow key={index}>
-                            <TableCell>{lesson.lessonName}</TableCell>
-                            <TableCell>{lesson.date}</TableCell>
-                            <TableCell>{getAttendanceBadge(lesson.attendance)}</TableCell>
-                            <TableCell className="text-right">{lesson.notes}%</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+
+                    <h3 className="text-xl font-semibold mt-8">Registro de Lecciones</h3>
+                    {selectedCourse.lessons.length > 0 ? (
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader className="bg-gray-50">
+                            <TableRow>
+                              <TableHead>Lección</TableHead>
+                              <TableHead>Fecha</TableHead>
+                              <TableHead>Asistencia</TableHead>
+                              <TableHead className="text-right">Notas</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {selectedCourse.lessons.map((lesson, index) => (
+                              <TableRow key={index}>
+                                <TableCell>{lesson.lessonName}</TableCell>
+                                <TableCell className="text-muted-foreground">{lesson.date}</TableCell>
+                                <TableCell>{getAttendanceBadge(lesson.attendance)}</TableCell>
+                                <TableCell className="text-right font-medium">{lesson.notes}%</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-12 text-center text-gray-400">
+                        <ListX size={64} className="mb-4" />
+                        <p className="text-lg font-medium">No se encontraron lecciones para este curso.</p>
+                        <p className="text-sm mt-1">
+                          Por favor, selecciona otro curso o verifica los datos.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">

@@ -10,8 +10,17 @@ import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Camera, Mic, Monitor, Clock, AlertTriangle, CheckCircle, ArrowLeft, ArrowRight } from "lucide-react"
-import { submitExamWithMonitoring } from "@/lib/exams"
-import { useAuth } from "@/lib/auth-context" // Asumiendo que tienes un contexto de autenticación
+import { submitExamWithMonitoring, getExamQuestions } from "@/lib/exams"
+import { useAuth } from "@/lib/auth-context"
+import { supabase } from "@/lib/supabase"
+
+interface Question {
+  id: number
+  type: "multiple-choice" | "essay"
+  question: string
+  options?: string[]
+  correctAnswer?: string
+}
 
 interface ExamInterfaceProps {
   exam: any
@@ -19,9 +28,11 @@ interface ExamInterfaceProps {
 }
 
 export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) {
+  const [questions, setQuestions] = useState<Question[]>([])
+  const [loading, setLoading] = useState(true)
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answers, setAnswers] = useState<Record<number, string>>({})
-  const [timeLeft, setTimeLeft] = useState(exam.duration * 60) // Convert to seconds
+  const [timeLeft, setTimeLeft] = useState(exam.duration_minutes * 60)
   const [mediaPermissions, setMediaPermissions] = useState({
     camera: false,
     microphone: false,
@@ -35,40 +46,30 @@ export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) 
   const [warnings, setWarnings] = useState<string[]>([])
   const [recordedChunks, setRecordedChunks] = useState<Blob[]>([])
   const [screenCaptures, setScreenCaptures] = useState<string[]>([])
-  const { user } = useAuth() // Para obtener el ID del estudiante
+  const { user } = useAuth()
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
 
-  // Mock questions
-  const questions = [
-    {
-      id: 1,
-      type: "multiple-choice",
-      question: '¿Cuál es la forma correcta del presente perfecto de "go"?',
-      options: ["have went", "have gone", "has go", "have go"],
-      correctAnswer: "have gone",
-    },
-    {
-      id: 2,
-      type: "multiple-choice",
-      question: 'Choose the correct preposition: "I am interested ___ learning English"',
-      options: ["in", "on", "at", "for"],
-      correctAnswer: "in",
-    },
-    {
-      id: 3,
-      type: "essay",
-      question: "Describe your daily routine using present simple tense (minimum 100 words)",
-      correctAnswer: "",
-    },
-  ]
+  // Cargar preguntas desde la BD
+  useEffect(() => {
+    const loadQuestions = async () => {
+      try {
+        const examQuestions = await getExamQuestions(exam.id)
+        setQuestions(examQuestions)
+      } catch (error) {
+        console.error("Error cargando preguntas:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadQuestions()
+  }, [exam.id])
 
-  // Request media permissions and start monitoring
+  // Pedir permisos de cámara, micro y pantalla
   useEffect(() => {
     const requestPermissions = async () => {
       try {
-        // Request camera and microphone
         const cameraStream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: true,
@@ -78,7 +79,6 @@ export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) 
           videoRef.current.srcObject = cameraStream
         }
 
-        // Request screen capture
         const screenStream = await navigator.mediaDevices.getDisplayMedia({
           video: true,
           audio: true,
@@ -95,15 +95,13 @@ export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) 
           screen: true,
         })
 
-        // Start recording
+        // Iniciar grabación
         const combinedStream = new MediaStream([...cameraStream.getTracks(), ...screenStream.getTracks()])
-
         const mediaRecorder = new MediaRecorder(combinedStream, {
-          mimeType: 'video/webm;codecs=vp9'
+          mimeType: "video/webm;codecs=vp9",
         })
         mediaRecorderRef.current = mediaRecorder
-        
-        // Guardar los chunks de grabación
+
         const chunks: Blob[] = []
         mediaRecorder.ondataavailable = (e) => {
           if (e.data.size > 0) {
@@ -111,29 +109,31 @@ export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) 
             setRecordedChunks([...chunks])
           }
         }
-        
-        // Configurar para guardar datos cada 10 segundos
+
         mediaRecorder.start(10000)
         setExamStarted(true)
-        
-        // Capturar pantalla cada 30 segundos
-        const captureInterval = setInterval(() => {
-          const videoTrack = screenStream.getVideoTracks()[0];
-          const imageCapture = new (window as any).ImageCapture(videoTrack);
-          imageCapture.grabFrame().then((bitmap: ImageBitmap) => {
-            const canvas = document.createElement('canvas');
-            canvas.width = bitmap.width;
-            canvas.height = bitmap.height;
-            const context = canvas.getContext('2d');
-            context?.drawImage(bitmap, 0, 0);
-            const screenshot = canvas.toDataURL('image/jpeg');
-            setScreenCaptures(prev => [...prev, screenshot]);
-          }).catch((error: Error) => {
-            console.error('Error capturing screen:', error);
-          });
+
+        // Capturar pantalla cada 30s
+        setInterval(() => {
+          const videoTrack = screenStream.getVideoTracks()[0]
+          const imageCapture = new (window as any).ImageCapture(videoTrack)
+          imageCapture
+            .grabFrame()
+            .then((bitmap: ImageBitmap) => {
+              const canvas = document.createElement("canvas")
+              canvas.width = bitmap.width
+              canvas.height = bitmap.height
+              const context = canvas.getContext("2d")
+              context?.drawImage(bitmap, 0, 0)
+              const screenshot = canvas.toDataURL("image/jpeg")
+              setScreenCaptures((prev) => [...prev, screenshot])
+            })
+            .catch((error: Error) => {
+              console.error("Error capturing screen:", error)
+            })
         }, 30000)
-        
-        // Monitor for tab changes, window focus, etc.
+
+        // Detectar cambios de pestaña/ventana
         const handleVisibilityChange = () => {
           if (document.hidden) {
             setWarnings((prev) => [
@@ -166,17 +166,15 @@ export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) 
     requestPermissions()
 
     return () => {
-      // Cleanup media streams
       Object.values(mediaStreams).forEach((stream) => {
         stream?.getTracks().forEach((track) => track.stop())
       })
     }
   }, [])
 
-  // Timer countdown
+  // Timer
   useEffect(() => {
     if (!examStarted) return
-
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -186,7 +184,6 @@ export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) 
         return prev - 1
       })
     }, 1000)
-
     return () => clearInterval(timer)
   }, [examStarted])
 
@@ -205,64 +202,71 @@ export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) 
   }
 
   const handleSubmitExam = async () => {
-    // Stop all recordings
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop()
-    }
-  
-    // Stop all media streams
-    Object.values(mediaStreams).forEach((stream) => {
-      stream?.getTracks().forEach((track) => track.stop())
-    })
-    
-    // Crear un blob con todos los chunks grabados
-    const recordingBlob = new Blob(recordedChunks, { type: 'video/webm' })
-    
-    // Subir la grabación a Supabase Storage (asumiendo que tienes configurado el bucket)
-    const recordingFile = new File([recordingBlob], `exam_${exam.id}_${user.id}_${Date.now()}.webm`, {
-      type: 'video/webm'
-    })
-    
-    // Subir el archivo a Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('exam-recordings')
-      .upload(`recordings/${recordingFile.name}`, recordingFile)
-    
-    if (uploadError) {
-      console.error("Error uploading recording:", uploadError)
-      alert("Error al subir la grabación. Por favor, contacta al soporte.")
-      return
-    }
-    
-    // Obtener la URL pública
-    const { data: publicUrlData } = supabase.storage
-      .from('exam-recordings')
-      .getPublicUrl(`recordings/${recordingFile.name}`)
-    
-    const recordingUrl = publicUrlData?.publicUrl
-    
-    // Submit exam data
-    const examData = {
-      exam_id: exam.id,
-      student_id: user.id,
-      answers,
-      time_spent: exam.duration * 60 - timeLeft,
-      warnings,
-      recording_url: recordingUrl,
-      screen_captures: screenCaptures
-    }
-  
-    const submitted = await submitExamWithMonitoring(examData)
-    
-    if (submitted) {
-      alert("Examen enviado exitosamente")
-      onComplete()
-    } else {
-      alert("Error al enviar el examen. Por favor, intenta nuevamente.")
+    try {
+      // Stop all recordings
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.stop()
+      }
+
+      // Stop all media streams
+      Object.values(mediaStreams).forEach((stream) => {
+        stream?.getTracks().forEach((track) => track.stop())
+      })
+
+      let recordingUrl = null
+
+      // Solo intentar subir la grabación si hay chunks grabados
+      if (recordedChunks.length > 0) {
+        // Crear un blob con todos los chunks grabados
+        const recordingBlob = new Blob(recordedChunks, { type: 'video/webm' })
+        
+        const recordingFile = new File([recordingBlob], `exam_${exam.id}_${user.id}_${Date.now()}.webm`, {
+          type: 'video/webm'
+        })
+        
+        // Subir el archivo a Supabase Storage
+        const { error: uploadError } = await supabase.storage
+          .from('exam-recordings')
+          .upload(`recordings/${recordingFile.name}`, recordingFile)
+        
+        if (uploadError) throw uploadError
+        
+        // Obtener la URL pública solo si la subida fue exitosa
+        const { data: publicUrlData } = supabase.storage
+          .from('exam-recordings')
+          .getPublicUrl(`recordings/${recordingFile.name}`)
+        
+        recordingUrl = publicUrlData?.publicUrl
+      }
+
+      // Submit exam data
+      const examData = {
+        exam_id: exam.id,
+        student_id: user.id,
+        answers,
+        time_spent: exam.duration_minutes * 60 - timeLeft, // Corregido a duration_minutes
+        warnings,
+        recording_url: recordingUrl,
+        screen_captures: screenCaptures
+      }
+
+      const submitted = await submitExamWithMonitoring(examData)
+      if (submitted) {
+        onComplete()
+      } else {
+        throw new Error("Error al enviar el examen")
+      }
+    } catch (error) {
+      console.error("Error al enviar el examen:", error)
+      alert("Hubo un error al enviar el examen. Por favor, contacta al soporte técnico.")
     }
   }
 
-  const progress = ((currentQuestion + 1) / questions.length) * 100
+  const progress = questions.length ? ((currentQuestion + 1) / questions.length) * 100 : 0
+
+  if (loading) {
+    return <div>Cargando preguntas...</div>
+  }
 
   if (!examStarted) {
     return (
@@ -296,9 +300,11 @@ export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) 
     )
   }
 
+  const currentQuestionData = questions[currentQuestion]
+
   return (
     <div className="space-y-6">
-      {/* Exam Header */}
+      {/* Encabezado */}
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">{exam.title}</h2>
@@ -316,32 +322,19 @@ export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) 
         </div>
       </div>
 
-      {/* Monitoring Panel */}
+      {/* Panel */}
       <div className="grid gap-4 md:grid-cols-4">
+        {/* Monitor */}
         <Card className="md:col-span-1">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Monitor</CardTitle>
           </CardHeader>
           <CardContent>
             <video ref={videoRef} autoPlay muted className="w-full h-24 bg-gray-100 rounded object-cover" />
-            <div className="mt-2 space-y-1">
-              <div className="flex items-center gap-2 text-xs">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>Cámara activa</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>Audio grabando</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>Pantalla capturada</span>
-              </div>
-            </div>
           </CardContent>
         </Card>
 
-        {/* Question Panel */}
+        {/* Preguntas */}
         <Card className="md:col-span-3">
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -353,14 +346,14 @@ export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) 
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              <div className="text-lg font-medium">{questions[currentQuestion].question}</div>
+              <div className="text-lg font-medium">{currentQuestionData.question}</div>
 
-              {questions[currentQuestion].type === "multiple-choice" ? (
+              {currentQuestionData.type === "multiple-choice" ? (
                 <RadioGroup
                   value={answers[currentQuestion] || ""}
                   onValueChange={(value) => handleAnswerChange(currentQuestion, value)}
                 >
-                  {questions[currentQuestion].options?.map((option, index) => (
+                  {currentQuestionData.options?.map((option, index) => (
                     <div key={index} className="flex items-center space-x-2">
                       <RadioGroupItem value={option} id={`option-${index}`} />
                       <Label htmlFor={`option-${index}`}>{option}</Label>
@@ -402,7 +395,7 @@ export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) 
         </Card>
       </div>
 
-      {/* Warnings */}
+      {/* Advertencias */}
       {warnings.length > 0 && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />

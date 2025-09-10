@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useAuth } from "@/lib/auth-context"
+import { getStudentExams } from "@/lib/exams"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,48 +12,21 @@ import { Camera, Mic, Monitor, Clock, FileText, CheckCircle } from "lucide-react
 import ExamInterface from "@/components/exam/exam-interface"
 
 export default function StudentExamsPage() {
+  const { user } = useAuth()
   const [selectedExam, setSelectedExam] = useState<any>(null)
   const [examStarted, setExamStarted] = useState(false)
+  const [availableExams, setAvailableExams] = useState([])
 
-  const availableExams = [
-    {
-      id: 1,
-      subject: "Inglés Intermedio",
-      title: "Examen Final - Unidad 5",
-      duration: 90,
-      questions: 25,
-      type: "Mixto",
-      status: "available",
-      dueDate: "25 Enero 2024",
-      attempts: 0,
-      maxAttempts: 2,
-    },
-    {
-      id: 2,
-      subject: "Francés Básico",
-      title: "Quiz - Vocabulario",
-      duration: 30,
-      questions: 15,
-      type: "Opción Múltiple",
-      status: "available",
-      dueDate: "28 Enero 2024",
-      attempts: 1,
-      maxAttempts: 3,
-    },
-    {
-      id: 3,
-      subject: "Inglés Intermedio",
-      title: "Examen Parcial - Unidad 4",
-      duration: 60,
-      questions: 20,
-      type: "Mixto",
-      status: "completed",
-      dueDate: "15 Enero 2024",
-      attempts: 1,
-      maxAttempts: 1,
-      score: 85,
-    },
-  ]
+  useEffect(() => {
+    if (user) {
+      loadExams()
+    }
+  }, [user])
+
+  const loadExams = async () => {
+    const exams = user ? await getStudentExams(user.id) : []
+    setAvailableExams(exams as any[])
+  }
 
   const handleStartExam = (exam: any) => {
     setSelectedExam(exam)
@@ -61,7 +36,7 @@ export default function StudentExamsPage() {
   const handleExamComplete = () => {
     setExamStarted(false)
     setSelectedExam(null)
-    // Refresh exams list
+    loadExams() // Recargar la lista de exámenes
   }
 
   if (examStarted && selectedExam) {
@@ -127,76 +102,71 @@ export default function StudentExamsPage() {
 
         {/* Exams List */}
         <div className="grid gap-4">
-          {availableExams.map((exam) => (
-            <Card key={exam.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      {exam.title}
-                    </CardTitle>
-                    <CardDescription>{exam.subject}</CardDescription>
-                  </div>
-                  <Badge
-                    variant={
-                      exam.status === "available"
-                        ? "default"
-                        : exam.status === "completed"
-                          ? "secondary"
-                          : "destructive"
-                    }
-                  >
-                    {exam.status === "available"
-                      ? "Disponible"
-                      : exam.status === "completed"
-                        ? "Completado"
-                        : "Vencido"}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-4">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{exam.duration} minutos</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{exam.questions} preguntas</span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Tipo: </span>
-                    {exam.type}
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Vence: </span>
-                    {exam.dueDate}
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div className="text-sm text-muted-foreground">
-                    Intentos: {exam.attempts}/{exam.maxAttempts}
-                    {exam.status === "completed" && exam.score && (
-                      <span className="ml-4 font-medium text-green-600">Calificación: {exam.score}/100</span>
-                    )}
-                  </div>
-
-                  {exam.status === "available" && exam.attempts < exam.maxAttempts && (
-                    <Button onClick={() => handleStartExam(exam)}>Iniciar Examen</Button>
-                  )}
-
-                  {exam.status === "completed" && (
-                    <Button variant="outline" disabled>
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Completado
-                    </Button>
-                  )}
-                </div>
+          {availableExams.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-10">
+                <p>No tienes exámenes asignados en este momento.</p>
               </CardContent>
             </Card>
-          ))}
+          ) : (
+            availableExams.map((exam) => (
+              <Card key={(exam as { id: string }).id}>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        {(exam as { title: string }).title}
+                      </CardTitle>
+                      <CardDescription>
+                        {(exam as any).courses?.name} - {(exam as any).courses?.level}
+                      </CardDescription>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <Badge variant={(exam as { is_active: boolean }).is_active ? "default" : "secondary"}>
+                        {(exam as { is_active: boolean }).is_active ? "Disponible" : "No disponible"}
+                      </Badge>
+                      {(exam as any).exam_submissions && (exam as any).exam_submissions.length > 0 && (exam as any).exam_submissions[0]?.score !== null && (
+                        <Badge variant="outline" className="font-semibold">
+                          Calificación: {(exam as any).exam_submissions[0].score}%
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{(exam as any).duration_minutes} minutos</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{(exam as any).total_questions} preguntas</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Tipo: </span>
+                      {(exam as any).exam_type}
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Vence: </span>
+                      {new Date((exam as any).due_date).toLocaleDateString()}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-muted-foreground">
+                      Intentos máximos: {(exam as any).max_attempts}
+                    </div>
+
+                    {(exam as { is_active: boolean }).is_active && (
+                      <Button onClick={() => handleStartExam(exam)}>Iniciar Examen</Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       </div>
     </DashboardLayout>

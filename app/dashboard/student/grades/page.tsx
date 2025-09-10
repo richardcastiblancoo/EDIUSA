@@ -36,35 +36,30 @@ export default function StudentGradesPage() {
           return
         }
         
-        // Obtener las calificaciones para cada inscripción
-        const enrollmentIds = enrollments.map(e => e.id)
-        
-        const { data: gradesData, error: gradesError } = await supabase
-          .from('grades')
+        // Obtener los exámenes y sus calificaciones
+        const { data: examSubmissions, error: submissionsError } = await supabase
+          .from('exam_submissions')
           .select(`
-            id, 
-            score, 
-            created_at, 
-            enrollment_id, 
-            lesson_id
+            id,
+            score,
+            submitted_at,
+            exam:exams(id, title, course_id)
           `)
-          .in('enrollment_id', enrollmentIds)
-          .order('created_at', { ascending: false })
+          .eq('student_id', user.id)
+          .order('submitted_at', { ascending: false })
         
-        if (gradesError) throw gradesError
-        
-        // Obtener los nombres de las lecciones desde localStorage
-        const lessonMap = JSON.parse(localStorage.getItem('lessonMap') || '{}')
+        if (submissionsError) throw submissionsError
         
         // Formatear los datos para mostrarlos
-        const formattedGrades = gradesData.map(grade => {
-          const enrollment = enrollments.find(e => e.id === grade.enrollment_id)
+        const formattedGrades = examSubmissions.map(submission => {
+          const course = enrollments.find(e => e.course.id === submission.exam.course_id)
           return {
-            id: grade.id,
-            lesson_name: lessonMap[grade.lesson_id] || 'Lección sin nombre',
-            course_name: enrollment?.course?.name || 'Curso sin nombre',
-            score: grade.score,
-            created_at: new Date(grade.created_at).toLocaleDateString()
+            id: submission.id,
+            exam_name: submission.exam.title,
+            course_name: course?.course?.name || 'Curso sin nombre',
+            score: submission.score,
+            created_at: new Date(submission.submitted_at).toLocaleDateString(),
+            time: new Date(submission.submitted_at).toLocaleTimeString()
           }
         })
         
@@ -96,13 +91,13 @@ export default function StudentGradesPage() {
       <div className="space-y-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Calificaciones</h2>
-          <p className="text-muted-foreground">Consulta tus notas por examen y curso</p>
+          <p className="text-muted-foreground">Consulta tus calificaciones por examen y curso</p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle>Resumen de calificaciones</CardTitle>
-            <CardDescription>Tus calificaciones por lección y curso</CardDescription>
+            <CardDescription>Tus calificaciones por examen y curso</CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -113,23 +108,25 @@ export default function StudentGradesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Lección</TableHead>
+                    <TableHead>Examen</TableHead>
                     <TableHead>Curso</TableHead>
                     <TableHead>Calificación</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Fecha</TableHead>
+                    <TableHead>Hora</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {grades.map((grade) => (
                     <TableRow key={grade.id}>
-                      <TableCell>{grade.lesson_name}</TableCell>
+                      <TableCell>{grade.exam_name}</TableCell>
                       <TableCell>{grade.course_name}</TableCell>
                       <TableCell>{grade.score}</TableCell>
                       <TableCell>{getScoreBadge(grade.score)}</TableCell>
                       <TableCell>{grade.created_at}</TableCell>
+                      <TableCell>{grade.time}</TableCell>
                     </TableRow>
-                  ))}
+                  ))}                  
                 </TableBody>
               </Table>
             )}

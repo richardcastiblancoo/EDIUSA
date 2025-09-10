@@ -146,78 +146,14 @@ export default function ProfileSettings({ user, onUserUpdate }: ProfileSettingsP
     if (currentLanguage === "es") {
       switch (user.role) {
         case "student":
-          return (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="student_id">Código Estudiantil</Label>
-                <Input
-                  id="student_id"
-                  placeholder="2024001234"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="academic_level">Nivel Académico</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona tu nivel académico" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pregrado">Pregrado</SelectItem>
-                    <SelectItem value="posgrado">Posgrado</SelectItem>
-                    <SelectItem value="maestria">Maestría</SelectItem>
-                    <SelectItem value="doctorado">Doctorado</SelectItem>
-                    <SelectItem value="otro">Otro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="emergency_contact">Contacto de Emergencia</Label>
-                <Input
-                  id="emergency_contact"
-                  placeholder="Nombre y teléfono"
-                />
-              </div>
-            </>
-          )
+          return null
         default:
           return null
       }
     } else {
       switch (user.role) {
         case "student":
-          return (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="student_id">Student ID</Label>
-                <Input
-                  id="student_id"
-                  placeholder="2024001234"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="academic_level">Academic Level</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your academic level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="undergraduate">Undergraduate</SelectItem>
-                    <SelectItem value="postgraduate">Postgraduate</SelectItem>
-                    <SelectItem value="master">Master</SelectItem>
-                    <SelectItem value="doctorate">Doctorate</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="emergency_contact">Emergency Contact</Label>
-                <Input
-                  id="emergency_contact"
-                  placeholder="Name and phone"
-                />
-              </div>
-            </>
-          )
+          return null
         default:
           return null
       }

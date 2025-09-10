@@ -88,7 +88,7 @@ export default function PWAInstaller() {
             </Button>
           </div>
           <CardDescription>
-            Instala Centro de Idiomas USA para un acceso más rápido y funciones offline.
+            Instala Centro de Idiomas para un acceso más rápido y funciones offline.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
