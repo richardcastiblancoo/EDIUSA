@@ -61,10 +61,8 @@ export async function getStudentsForCourse(courseId: string): Promise<Student[]>
     return [];
   }
 
-  // Crear un array para almacenar las promesas de obtención de imágenes
   const studentsWithImages = await Promise.all(
     data.map(async (enrollment: any) => {
-      // Obtener la imagen del usuario desde Supabase Storage
       const photoUrl = await getUserImage(enrollment.users.id, "avatar") ||
         enrollment.users.photo ||
         "/placeholder-user.jpg";
@@ -83,57 +81,43 @@ export async function getStudentsForCourse(courseId: string): Promise<Student[]>
 }
 
 /**
- * Obtiene todos los estudiantes asignados a un profesor.
+ * Obtiene todos los estudiantes asignados a un profesor, incluyendo enrollmentId y courseId.
  * @param teacherId El ID del profesor.
  * @returns Una lista de estudiantes con sus cursos.
  */
-export async function getStudentsForTeacher(teacherId: string): Promise<Student[]> {
+export async function getStudentsForTeacher(teacherId: string): Promise<any[]> {
   try {
-    // 1. Obtener los cursos asignados al profesor
-    const { data: courses, error: coursesError } = await supabase
-      .from("courses")
-      .select("id")
-      .eq("teacher_id", teacherId);
-
-    if (coursesError) {
-      throw coursesError;
-    }
-
-    if (!courses || courses.length === 0) {
-      return [];
-    }
-
-    const courseIds = courses.map(course => course.id);
-
-    // 2. Obtener los estudiantes inscritos en esos cursos
-    const { data: enrollments, error: enrollmentsError } = await supabase
+    const { data: enrollments, error } = await supabase
       .from("enrollments")
-      .select("id, users!inner(id, name, email, document_number, photo)")
-      .in("course_id", courseIds);
+      .select(`
+        id,
+        course_id,
+        users!inner(id, name, email, document_number, photo),
+        courses!inner(teacher_id)
+      `)
+      .eq("courses.teacher_id", teacherId);
 
-    if (enrollmentsError) {
-      throw enrollmentsError;
-    }
+    if (error) throw error;
 
-    // 3. Eliminar duplicados (si un estudiante está en varios cursos)
+    // Eliminar duplicados y enriquecer con photoUrl
     const studentsMap = new Map();
 
-    // Procesar cada inscripción y obtener la imagen del estudiante
     await Promise.all(
       enrollments.map(async (enrollment: any) => {
-        if (!studentsMap.has(enrollment.users.id)) {
-          // Obtener la imagen del usuario desde Supabase Storage
-          const photoUrl = await getUserImage(enrollment.users.id, "avatar") ||
+        const studentId = enrollment.users.id;
+        if (!studentsMap.has(studentId)) {
+          const photoUrl = await getUserImage(studentId, "avatar") ||
             enrollment.users.photo ||
             "/placeholder-user.jpg";
 
-          studentsMap.set(enrollment.users.id, {
-            id: enrollment.users.id,
+          studentsMap.set(studentId, {
+            id: studentId,
             enrollmentId: enrollment.id,
             name: enrollment.users.name,
             email: enrollment.users.email,
             documentId: enrollment.users.document_number,
-            photoUrl: photoUrl
+            photoUrl: photoUrl,
+            courseId: enrollment.course_id,
           });
         }
       })
@@ -159,22 +143,16 @@ export async function registerAttendance(
   status: AttendanceStatus
 ): Promise<AttendanceRecord | null> {
   try {
-    // Verificar si ya existe un registro de asistencia
-    const { data: existingRecord, error: checkError } = await supabase
+    const { data: existingRecord } = await supabase
       .from("attendance")
       .select("*")
       .eq("enrollment_id", enrollmentId)
       .eq("lesson_id", lessonId)
-      .single();
-
-    if (checkError && checkError.code !== "PGRST116") { // PGRST116 = no se encontró registro
-      throw checkError;
-    }
+      .maybeSingle(); // Cambiado a maybeSingle()
 
     let result;
 
     if (existingRecord) {
-      // Actualizar registro existente
       const { data, error } = await supabase
         .from("attendance")
         .update({ status })
@@ -185,7 +163,6 @@ export async function registerAttendance(
       if (error) throw error;
       result = data;
     } else {
-      // Crear nuevo registro
       const { data, error } = await supabase
         .from("attendance")
         .insert({
@@ -221,27 +198,22 @@ export async function registerGrade(
   score: number
 ): Promise<GradeRecord | null> {
   try {
-    // Validar que la nota esté en el rango correcto
     if (score < 0 || score > 100) {
       throw new Error("La calificación debe estar entre 0 y 100");
     }
 
-    // Verificar si ya existe un registro de nota
-    const { data: existingRecord, error: checkError } = await supabase
+    // Usamos maybeSingle() para evitar el error 406 si no existe el registro
+    const { data: existingRecord } = await supabase
       .from("grades")
       .select("*")
       .eq("enrollment_id", enrollmentId)
       .eq("lesson_id", lessonId)
-      .single();
-
-    if (checkError && checkError.code !== "PGRST116") { // PGRST116 = no se encontró registro
-      throw checkError;
-    }
+      .maybeSingle();
 
     let result;
 
     if (existingRecord) {
-      // Actualizar registro existente
+      // Si existe, actualiza la nota
       const { data, error } = await supabase
         .from("grades")
         .update({
@@ -255,7 +227,7 @@ export async function registerGrade(
       if (error) throw error;
       result = data;
     } else {
-      // Crear nuevo registro
+      // Si no existe, inserta una nueva nota
       const { data, error } = await supabase
         .from("grades")
         .insert({
@@ -314,7 +286,9 @@ export async function getStudentDetailsWithTeacher(studentId: string): Promise<S
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') return null;
+      if (error.code === 'PGRST116') {
+        return null;
+      }
       throw error;
     }
 
@@ -348,7 +322,6 @@ export async function searchStudents(query: string): Promise<Student[]> {
   const searchTerm = query.toLowerCase().trim();
 
   try {
-    // Primero intentamos buscar por documento exacto (prioridad)
     let { data: documentMatch, error: documentError } = await supabase
       .from("users")
       .select("id, name, email, document_number, photo")
@@ -358,7 +331,6 @@ export async function searchStudents(query: string): Promise<Student[]> {
 
     if (documentError) throw documentError;
 
-    // Si no encontramos por documento exacto, buscamos por coincidencia parcial
     if (!documentMatch || documentMatch.length === 0) {
       const { data, error } = await supabase
         .from("users")
@@ -394,7 +366,6 @@ export async function addStudentsToCourse(courseId: string, studentIds: string[]
   try {
     if (!studentIds.length) return true;
 
-    // Verificar si alguno de los estudiantes ya está inscrito en el curso
     const { data: existingEnrollments, error: checkError } = await supabase
       .from("enrollments")
       .select("student_id")
@@ -406,16 +377,13 @@ export async function addStudentsToCourse(courseId: string, studentIds: string[]
       return false;
     }
 
-    // Filtrar los estudiantes que ya están inscritos
     const existingStudentIds = existingEnrollments.map(e => e.student_id);
     const newStudentIds = studentIds.filter(id => !existingStudentIds.includes(id));
 
     if (newStudentIds.length === 0) {
-      // Todos los estudiantes ya están inscritos
       return true;
     }
 
-    // Crear nuevas inscripciones para los estudiantes no inscritos
     const enrollments = newStudentIds.map(studentId => ({
       id: crypto.randomUUID(),
       course_id: courseId,
@@ -497,5 +465,66 @@ export async function getStudentAttendance(
   } catch (error) {
     console.error("Error al obtener registros de asistencia del estudiante:", error);
     return [];
+  }
+}
+
+/**
+ * Obtiene todas las lecciones para un curso dado.
+ * @param courseId ID del curso.
+ * @returns Lista de lecciones.
+ */
+export async function getLessonsForCourse(courseId: string): Promise<any[]> {
+  try {
+    const { data, error } = await supabase
+      .from("lessons")
+      .select("id, title") // Changed 'name' to 'title'
+      .eq("course_id", courseId)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error("Error fetching lessons for course:", error);
+    return [];
+  }
+}
+
+/**
+ * Elimina la calificación de un estudiante
+ * @param gradeId ID de la calificación a eliminar
+ * @returns true si se eliminó correctamente, false si hubo un error
+ */
+export async function deleteGrade(gradeId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("grades")
+      .delete()
+      .eq("id", gradeId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error("Error al eliminar la calificación:", error);
+    return false;
+  }
+}
+
+/**
+ * Elimina un registro de asistencia
+ * @param attendanceId ID del registro de asistencia a eliminar
+ * @returns true si se eliminó correctamente, false si hubo un error
+ */
+export async function deleteAttendance(attendanceId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("attendance")
+      .delete()
+      .eq("id", attendanceId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error("Error al eliminar el registro de asistencia:", error);
+    return false;
   }
 }

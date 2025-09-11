@@ -32,3 +32,20 @@ export async function getStudentLessons(studentId: string) {
     return [];
   }
 }
+
+export async function getLessonsForCourse(courseId: string) {
+  try {
+    const { data: lessons, error } = await supabase
+      .from("lessons")
+      .select("*")
+      .eq("course_id", courseId)
+      .eq("is_published", true)
+      .order("order_index", { ascending: true });
+
+    if (error) throw error;
+    return lessons || [];
+  } catch (error) {
+    console.error("Error obteniendo lecciones del curso:", error);
+    return [];
+  }
+}

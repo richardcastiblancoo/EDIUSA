@@ -50,7 +50,8 @@ export default function RootLayout({
         <link rel="icon" href="/ciusa.png" />
         <meta name="description" content="Sistema de gestión académica para el Centro de Idiomas de la Universidad Sergio Arboleda. Plataforma integral para la gestión académica y administrativa del Centro de Idiomas de la Universidad Sergio Arboleda. Gestión de estudiantes y profesores Administración de cursos y exámenes Seguimiento académico integral." />
         <meta name="author" content="Ciusa" />
-        <meta name="robots" content="index, follow"/>
+        <meta name="robots" content="index, follow" />
+        <meta name="publisher" content="Centro de Idiomas Universidad Sergio Arboleda" />
         <meta name="keywords" content="Centro de Idiomas Universidad Sergio Arboleda, Centro de Idiomas, Universidad Sergio Arboleda, Gestión académica, Gestión administrativa, Gestión de estudiantes, Gestión de profesores, Gestión de cursos, Gestión de exámenes, Seguimiento académico, Plataforma de gestión académica, Centro de Idiomas Universidad Sergio Arboleda" />
         <meta name="theme-color" content="#f9efd4" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

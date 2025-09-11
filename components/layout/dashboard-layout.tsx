@@ -154,16 +154,16 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
           href: "/dashboard/teacher/students",
           icon: Users,
         },
-        {
-          name: "Registrar Asistencia",
-          href: "/dashboard/teacher/attendance",
-          icon: Calendar,
-        },
-        {
-          name: "Registrar Notas",
-          href: "/dashboard/teacher/grades",
-          icon: FileText,
-        },
+       // {
+       //   name: "Registrar Asistencia",
+       //   href: "/dashboard/teacher/attendance",
+       //   icon: Calendar,
+       // },
+       // {
+       //   name: "Registrar Notas",
+        //  href: "/dashboard/teacher/grades",
+        //  icon: FileText,
+       // },
         {
           name: "PQR",
           href: "/dashboard/teacher/pqr",
