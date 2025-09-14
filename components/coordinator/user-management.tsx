@@ -259,7 +259,7 @@ export default function UserManagement() {
       if (editingUser) {
         const dataToSend = { ...formData };
         if (!dataToSend.password) {
-          dataToSend.password = undefined;
+          delete dataToSend.password;
         }
         newOrUpdatedUser = await updateUser(editingUser.id, dataToSend);
         success = newOrUpdatedUser !== null && newOrUpdatedUser !== undefined;

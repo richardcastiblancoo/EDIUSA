@@ -3,7 +3,7 @@
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { BookOpen, Users, ChevronRight } from "lucide-react"
+import { BookOpen, Users } from "lucide-react"
 import { motion } from "framer-motion"
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
@@ -148,14 +148,6 @@ export default function TeacherDashboard() {
                       <CardTitle>Mis Cursos</CardTitle>
                       <CardDescription>Cursos que estás enseñando actualmente</CardDescription>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => router.push('/dashboard/teacher/courses')}
-                      className="flex items-center gap-1"
-                    >
-                      Ver más <ChevronRight className="h-4 w-4" />
-                    </Button>
                   </CardHeader>
                   <CardContent>
                     {myCourses.length > 0 ? (

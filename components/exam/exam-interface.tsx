@@ -56,7 +56,13 @@ export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) 
     const loadQuestions = async () => {
       try {
         const examQuestions = await getExamQuestions(exam.id)
-        setQuestions(examQuestions)
+        setQuestions(examQuestions.map(q => ({
+          id: Number(q.id), // Convert string id to number
+          type: (q.type as string) && ["multiple-choice", "essay"].includes(q.type as string) ? (q.type as "multiple-choice" | "essay") : "multiple-choice",
+          question: q.question || '',
+          options: q.options,
+          correct_answer: q.correct_answer
+        })))
       } catch (error) {
         console.error("Error cargando preguntas:", error)
       } finally {
@@ -219,30 +225,30 @@ export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) 
       if (recordedChunks.length > 0) {
         // Crear un blob con todos los chunks grabados
         const recordingBlob = new Blob(recordedChunks, { type: 'video/webm' })
-        
-        const recordingFile = new File([recordingBlob], `exam_${exam.id}_${user.id}_${Date.now()}.webm`, {
+
+        const recordingFile = new File([recordingBlob], `exam_${exam.id}_${user?.id || 'unknown'}_${Date.now()}.webm`, {
           type: 'video/webm'
         })
-        
+
         // Subir el archivo a Supabase Storage
         const { error: uploadError } = await supabase.storage
           .from('exam-recordings')
           .upload(`recordings/${recordingFile.name}`, recordingFile)
-        
+
         if (uploadError) throw uploadError
-        
+
         // Obtener la URL pública solo si la subida fue exitosa
         const { data: publicUrlData } = supabase.storage
           .from('exam-recordings')
           .getPublicUrl(`recordings/${recordingFile.name}`)
-        
+
         recordingUrl = publicUrlData?.publicUrl
       }
 
       // Submit exam data
       const examData = {
         exam_id: exam.id,
-        student_id: user.id,
+        student_id: user?.id || '',
         answers,
         time_spent: exam.duration_minutes * 60 - timeLeft, // Corregido a duration_minutes
         warnings,
@@ -250,7 +256,11 @@ export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) 
         screen_captures: screenCaptures
       }
 
-      const submitted = await submitExamWithMonitoring(examData)
+      const submitted = await submitExamWithMonitoring({
+        ...examData,
+        exam_id: String(exam.id), // Convert to string to match expected type
+        recording_url: recordingUrl || undefined // Convert null to undefined
+      })
       if (submitted) {
         onComplete()
       } else {
