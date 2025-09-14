@@ -138,7 +138,7 @@ export default function TeacherStudentsPage() {
     setModalLoading(true);
     try {
       const grades = await getStudentGrades(student.enrollmentId);
-      setStudentGrades(grades);
+      setStudentGrades(grades.filter((grade) => grade.id !== undefined) as GradeRecord[]);
 
       const attendance = await getStudentAttendance(student.enrollmentId);
       setStudentAttendance(attendance);
@@ -249,7 +249,7 @@ export default function TeacherStudentsPage() {
         setGradeScore("");
         setSelectedLessonId("");
         const updatedGrades = await getStudentGrades(selectedStudent.enrollmentId);
-        setStudentGrades(updatedGrades);
+        setStudentGrades(updatedGrades.filter((grade) => grade.id !== undefined) as GradeRecord[]);
       }
     } catch (error) {
       console.error("Error registrando nota:", error);
@@ -279,7 +279,7 @@ export default function TeacherStudentsPage() {
         });
         if (selectedStudent?.enrollmentId) {
           const updatedGrades = await getStudentGrades(selectedStudent.enrollmentId);
-          setStudentGrades(updatedGrades);
+          setStudentGrades(updatedGrades.filter((grade) => grade.id !== undefined) as GradeRecord[]);
         }
       } else {
         toast({
