@@ -33,7 +33,7 @@ Para configurar el proyecto localmente, sigue estos pasos:
 
 1.  **Clona el repositorio:**
     ```bash
-    git clone https://github.com/richardcastiblancoo/Centro-de-Idiomas-Universidad-Sergio-Arboleda.git
+    git clone https://github.com/richardcastiblancoo/Ciusa.git
     cd Centro-de-Idiomas-Universidad-Sergio-Arboleda
     ```
 
