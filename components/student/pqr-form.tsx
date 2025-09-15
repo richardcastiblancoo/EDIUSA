@@ -2,6 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+
+import { deletePQR, createPQR, getPQRsByStudent } from "@/lib/pqrs";
+import { getStudentCourses } from "@/lib/courses";
+import type { PQR } from "@/lib/supabase";
+import type { CourseWithTeacher } from "@/lib/courses";
+
 import {
   Card,
   CardContent,
@@ -16,6 +22,17 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   AlertCircle,
   CheckCircle2,
   CircleDashed,
@@ -26,15 +43,12 @@ import {
   XCircle,
   CheckCircle,
   Terminal,
-  ArrowLeft, // New icon for pagination
-  ArrowRight, // New icon for pagination
+  ArrowLeft,
+  ArrowRight,
+  Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { createPQR, getPQRsByStudent } from "@/lib/pqrs";
-import { getStudentCourses } from "@/lib/courses";
-import type { PQR } from "@/lib/supabase";
-import type { CourseWithTeacher } from "@/lib/courses";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import DashboardLayout from "@/components/layout/dashboard-layout";
 
@@ -67,6 +81,7 @@ export default function PQRForm({ studentId }: PQRFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [selectedPqr, setSelectedPqr] = useState<PQR | null>(null);
   const [alert, setAlert] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
 
   // New state for pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -91,6 +106,10 @@ export default function PQRForm({ studentId }: PQRFormProps) {
     };
 
     fetchData();
+
+    if ("Notification" in window) {
+      Notification.requestPermission();
+    }
   }, [studentId]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -154,8 +173,14 @@ export default function PQRForm({ studentId }: PQRFormProps) {
 
       const updatedPqrs = await getPQRsByStudent(studentId);
       setPqrs(updatedPqrs);
-
       setAlert({ message: "¡PQR enviado exitosamente!", type: "success" });
+
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("Nuevo PQR", {
+          body: `Se ha enviado un nuevo PQR: ${formData.subject}`,
+          icon: "/placeholder-logo.png"
+        });
+      }
     } catch (error) {
       console.error("Error al enviar PQR:", error);
       setAlert({ message: "Error al enviar el PQR. Inténtalo de nuevo.", type: "error" });
@@ -166,6 +191,27 @@ export default function PQRForm({ studentId }: PQRFormProps) {
 
   const handleSelectPqr = (pqr: PQR) => {
     setSelectedPqr(pqr);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedPqr) return;
+
+    try {
+      const success = await deletePQR(selectedPqr.id);
+      if (success) {
+        const updatedPqrs = await getPQRsByStudent(studentId);
+        setPqrs(updatedPqrs);
+        setSelectedPqr(null);
+        setAlert({ message: "PQR eliminado exitosamente", type: "success" });
+      } else {
+        setAlert({ message: "Error al eliminar el PQR", type: "error" });
+      }
+    } catch (error) {
+      console.error("Error al eliminar PQR:", error);
+      setAlert({ message: "Error al eliminar el PQR", type: "error" });
+    } finally {
+      setIsDeleteAlertOpen(false);
+    }
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -211,8 +257,6 @@ export default function PQRForm({ studentId }: PQRFormProps) {
   const indexOfLastPqr = currentPage * pqrsPerPage;
   const indexOfFirstPqr = indexOfLastPqr - pqrsPerPage;
   const currentPqrs = pqrs.slice(indexOfFirstPqr, indexOfLastPqr);
-
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   const nextPage = () => {
     if (currentPage < totalPages) {
@@ -438,7 +482,6 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {/* Use currentPqrs for pagination */}
                         {currentPqrs.map((pqr) => (
                           <TableRow
                             key={pqr.id}
@@ -532,7 +575,9 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MessageSquare className="h-4 w-4" />
-                      <span>Profesor: {selectedPqr.teachers?.name}</span>
+                      <span>
+                        Profesor: {selectedPqr.teacher_id ? (selectedPqr.teachers?.name || "No asignado") : "Coordinador"}
+                      </span>
                     </div>
                     <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md text-sm">
                       {selectedPqr.message}
@@ -541,15 +586,40 @@ export default function PQRForm({ studentId }: PQRFormProps) {
 
                   {selectedPqr.teacher_response && (
                     <div className="space-y-2">
-                      <h4 className="font-semibold">Respuesta del profesor:</h4>
+                      <h4 className="font-semibold">Respuesta:</h4>
                       <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md text-sm">
                         {selectedPqr.teacher_response}
                       </div>
                     </div>
                   )}
 
-                  <div className="flex justify-end">
-                    <Button variant="outline" onClick={() => setSelectedPqr(null)}>Cerrar</Button>
+                  <div className="flex justify-end gap-2 mt-4">
+                    {selectedPqr.status !== 'closed' && (
+                      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Esta acción no se puede deshacer. Esto eliminará permanentemente
+                              tu PQR de nuestros servidores.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDelete}>Continuar</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                    <Button variant="outline" onClick={() => setSelectedPqr(null)}>
+                      Cerrar
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

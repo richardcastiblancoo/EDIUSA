@@ -189,7 +189,19 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
     if (!confirm("¿Estás seguro de que deseas eliminar esta lección?")) return
 
     try {
-      const { error } = await supabase.from("lessons").delete().eq("id", id)
+      // First delete associated grades
+      const { error: gradesError } = await supabase
+        .from("grades")
+        .delete()
+        .eq("lesson_id", id)
+
+      if (gradesError) throw gradesError
+
+      // Then delete the lesson
+      const { error } = await supabase
+        .from("lessons")
+        .delete()
+        .eq("id", id)
 
       if (error) throw error
 

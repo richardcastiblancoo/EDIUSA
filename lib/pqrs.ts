@@ -221,3 +221,27 @@ export async function removePQRsForCourse(courseId: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Elimina un PQR específico.
+ * @param pqrId ID del PQR a eliminar
+ * @returns true si la eliminación fue exitosa, false en caso contrario
+ */
+export async function deletePQR(pqrId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("pqrs")
+      .delete()
+      .eq("id", pqrId);
+
+    if (error) {
+      console.error("Error deleting PQR:", error);
+      return false;
+    }
+
+    return true;
+  } catch (e) {
+    console.error("Error in deletePQR operation:", e);
+    return false;
+  }
+}

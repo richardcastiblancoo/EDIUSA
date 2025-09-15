@@ -168,22 +168,29 @@ export default function ImageUpload({
             </div>
           )}
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          {/* Se han ajustado los botones aquí */}
+          <div className="flex flex-col gap-2">
             <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} variant="outline">
               <Upload className="mr-2 h-4 w-4" />
               Seleccionar Imagen
             </Button>
-            {/* This button triggers the hidden camera input */}
-            <Button onClick={() => cameraInputRef.current?.click()} disabled={uploading} variant="outline">
-              <Camera className="mr-2 h-4 w-4" />
-              Tomar Foto
-            </Button>
+            {(imageUrl || selectedFile) && (
+              <Button
+                onClick={handleRemoveImage}
+                variant="outline"
+                className="text-red-600 hover:text-red-700"
+                disabled={uploading}
+              >
+                <X className="mr-2 h-4 w-4" />
+                Eliminar
+              </Button>
+            )}
           </div>
         </div>
 
-        {/* Botones de guardar cambios y eliminar - SOLO ESTA SECCIÓN */}
+        {/* Botón de Guardar Cambios movido al final, como en el original, para coherencia */}
         <div className="flex justify-end space-x-2 mt-4">
-          {selectedFile && ( // Only show save button if a new file is selected
+          {selectedFile && (
             <Button
               onClick={handleSaveImage}
               disabled={uploading}
@@ -202,23 +209,10 @@ export default function ImageUpload({
               )}
             </Button>
           )}
-          {(imageUrl || selectedFile) && ( // Show delete if there's an existing image OR a selected new image (for discarding)
-            <Button
-              onClick={handleRemoveImage}
-              variant="outline"
-              className="text-red-600 hover:text-red-700"
-              disabled={uploading} // Disable delete during upload
-            >
-              <X className="mr-2 h-4 w-4" />
-              Eliminar
-            </Button>
-          )}
         </div>
 
         {/* Hidden input for file selection */}
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
-        {/* Hidden input for camera capture - this is the magic line */}
-        <input ref={cameraInputRef} type="file" accept="image/*" capture="user" onChange={handleFileSelect} className="hidden" />
 
         <div className="text-xs text-muted-foreground">
           <p>Formatos soportados: JPG, PNG, GIF</p>

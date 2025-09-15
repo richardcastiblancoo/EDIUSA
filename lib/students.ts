@@ -243,6 +243,27 @@ export async function registerGrade(
       result = data;
     }
 
+    // Obtener información del estudiante y la lección para la notificación
+    const { data: enrollment } = await supabase
+      .from("enrollments")
+      .select("student_id, courses(name)")
+      .eq("id", enrollmentId)
+      .single();
+
+    const { data: lesson } = await supabase
+      .from("lessons")
+      .select("title")
+      .eq("id", lessonId)
+      .single();
+
+    // Enviar notificación si el navegador lo soporta
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification("Nueva Calificación", {
+        body: `Has recibido una calificación de ${score} en ${lesson?.title} del curso ${enrollment?.courses?.name}`,
+        icon: "/placeholder-logo.png"
+      });
+    }
+
     return result;
   } catch (error) {
     console.error("Error al registrar nota:", error);

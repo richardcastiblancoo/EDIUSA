@@ -9,12 +9,16 @@ import { useAuth } from "@/lib/auth-context"
 import { useToast } from "@/components/ui/use-toast"
 import { getStudentGrades } from "@/lib/students"
 import { supabase } from "@/lib/supabase"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function StudentGradesPage() {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [grades, setGrades] = useState<any[]>([])
+  const [examGrades, setExamGrades] = useState<any[]>([])
+  const [lessonGrades, setLessonGrades] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [lastGrade, setLastGrade] = useState<any>(null)
 
   useEffect(() => {
     const fetchGrades = async () => {
@@ -22,6 +26,7 @@ export default function StudentGradesPage() {
 
       try {
         setLoading(true)
+        setLessonGrades([]) // Reiniciar las calificaciones al inicio
         
         // Obtener las inscripciones del estudiante
         const { data: enrollments, error: enrollmentsError } = await supabase
@@ -32,9 +37,33 @@ export default function StudentGradesPage() {
         if (enrollmentsError) throw enrollmentsError
         
         if (!enrollments || enrollments.length === 0) {
-          setGrades([])
+          setExamGrades([])
+          setLessonGrades([])
           return
         }
+
+        // Obtener todas las calificaciones de lecciones de una vez
+        const allLessonGrades = []
+        for (const enrollment of enrollments) {
+          const grades = await getStudentGrades(enrollment.id)
+          const formattedLessonGrades = grades.map(grade => ({
+            id: grade.id,
+            score: grade.score,
+            course_name: enrollment.course.name,
+            created_at: new Date(grade.created_at).toLocaleDateString(),
+            time: new Date(grade.created_at).toLocaleTimeString()
+          }))
+          allLessonGrades.push(...formattedLessonGrades)
+        }
+        
+        // Ordenar por fecha más reciente y eliminar duplicados por ID
+        const uniqueLessonGrades = allLessonGrades
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .filter((grade, index, self) => 
+            index === self.findIndex((g) => g.id === grade.id)
+          )
+        
+        setLessonGrades(uniqueLessonGrades)
         
         // Obtener los exámenes y sus calificaciones
         const { data: examSubmissions, error: submissionsError } = await supabase
@@ -50,8 +79,8 @@ export default function StudentGradesPage() {
         
         if (submissionsError) throw submissionsError
         
-        // Formatear los datos para mostrarlos
-        const formattedGrades = examSubmissions.map(submission => {
+        // Formatear los datos de exámenes
+        const formattedExamGrades = examSubmissions.map(submission => {
           const course = enrollments.find(e => e.course.id === submission.exam.course_id)
           return {
             id: submission.id,
@@ -63,7 +92,17 @@ export default function StudentGradesPage() {
           }
         })
         
-        setGrades(formattedGrades)
+        setExamGrades(formattedExamGrades)
+        
+        // Establecer la última calificación
+        if (formattedExamGrades.length > 0) {
+          setLastGrade(formattedExamGrades[0])
+          toast({
+            title: 'Nueva calificación disponible',
+            description: `Has obtenido ${formattedExamGrades[0].score} en ${formattedExamGrades[0].exam_name}`,
+            variant: formattedExamGrades[0].score >= 70 ? 'default' : 'destructive'
+          })
+        }
       } catch (error) {
         console.error('Error al cargar calificaciones:', error)
         toast({
@@ -94,6 +133,15 @@ export default function StudentGradesPage() {
           <p className="text-muted-foreground">Consulta tus calificaciones por examen y curso</p>
         </div>
 
+        {lastGrade && (
+          <Alert className={lastGrade.score >= 70 ? "bg-green-50" : "bg-red-50"}>
+            <AlertTitle>Última calificación</AlertTitle>
+            <AlertDescription>
+              Obtuviste {lastGrade.score} en el examen {lastGrade.exam_name} del curso {lastGrade.course_name}
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle>Resumen de calificaciones</CardTitle>
@@ -102,33 +150,71 @@ export default function StudentGradesPage() {
           <CardContent>
             {loading ? (
               <p className="text-sm text-muted-foreground">Cargando calificaciones...</p>
-            ) : grades.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No tienes calificaciones registradas.</p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Examen</TableHead>
-                    <TableHead>Curso</TableHead>
-                    <TableHead>Calificación</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Hora</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {grades.map((grade) => (
-                    <TableRow key={grade.id}>
-                      <TableCell>{grade.exam_name}</TableCell>
-                      <TableCell>{grade.course_name}</TableCell>
-                      <TableCell>{grade.score}</TableCell>
-                      <TableCell>{getScoreBadge(grade.score)}</TableCell>
-                      <TableCell>{grade.created_at}</TableCell>
-                      <TableCell>{grade.time}</TableCell>
-                    </TableRow>
-                  ))}                  
-                </TableBody>
-              </Table>
+              <Tabs defaultValue="exams">
+                <TabsList>
+                  <TabsTrigger value="exams">Exámenes</TabsTrigger>
+                  <TabsTrigger value="lessons">Lecciones</TabsTrigger>
+                </TabsList>
+                <TabsContent value="exams">
+                  {examGrades.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No tienes calificaciones de exámenes registradas.</p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Examen</TableHead>
+                          <TableHead>Curso</TableHead>
+                          <TableHead>Calificación</TableHead>
+                          <TableHead>Estado</TableHead>
+                          <TableHead>Fecha</TableHead>
+                          <TableHead>Hora</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {examGrades.map((grade) => (
+                          <TableRow key={grade.id}>
+                            <TableCell>{grade.exam_name}</TableCell>
+                            <TableCell>{grade.course_name}</TableCell>
+                            <TableCell>{grade.score}</TableCell>
+                            <TableCell>{getScoreBadge(grade.score)}</TableCell>
+                            <TableCell>{grade.created_at}</TableCell>
+                            <TableCell>{grade.time}</TableCell>
+                          </TableRow>
+                        ))}                  
+                      </TableBody>
+                    </Table>
+                  )}
+                </TabsContent>
+                <TabsContent value="lessons">
+                  {lessonGrades.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No tienes calificaciones de lecciones registradas.</p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Curso</TableHead>
+                          <TableHead>Calificación</TableHead>
+                          <TableHead>Estado</TableHead>
+                          <TableHead>Fecha</TableHead>
+                          <TableHead>Hora</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {lessonGrades.map((grade) => (
+                          <TableRow key={grade.id}>
+                            <TableCell>{grade.course_name}</TableCell>
+                            <TableCell>{grade.score}</TableCell>
+                            <TableCell>{getScoreBadge(grade.score)}</TableCell>
+                            <TableCell>{grade.created_at}</TableCell>
+                            <TableCell>{grade.time}</TableCell>
+                          </TableRow>
+                        ))}                  
+                      </TableBody>
+                    </Table>
+                  )}
+                </TabsContent>
+              </Tabs>
             )}
           </CardContent>
         </Card>
