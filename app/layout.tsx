@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     title: "Centro de Idiomas Universidad Sergio Arboleda",
     description:
       "Sistema de gestión académica para el Centro de Idiomas de la Universidad Sergio Arboleda. Plataforma integral para la gestión académica y administrativa del Centro de Idiomas de la Universidad Sergio Arboleda. Gestión de estudiantes y profesores Administración de cursos y exámenes Seguimiento académico integral",
-    url: "https://centro-de-idiomas-universidad-sergi.vercel.app/",
+    url: "https://ciusa.vercel.app/",
     siteName: "Centro de Idiomas Universidad Sergio Arboleda",
     images: [
       {

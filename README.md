@@ -1,12 +1,15 @@
 # Centro de Idiomas Universidad Sergio Arboleda
 
-
-¡Bienvenido al proyecto [**Centro de Idiomas Universidad Sergio Arboleda
-**]!
-
 ## 📜 Descripción
 
-Este proyecto es una aplicación web construida con el framework Next.js. Utiliza tecnologías modernas para ofrecer una experiencia de usuario robusta, escalable y con animaciones fluidas, con Supabase como backend principal.
+Sistema de gestión académica desarrollado para el **Centro de Idiomas de la Universidad Sergio Arboleda**.  
+Es una **plataforma integral** diseñada para optimizar los procesos académicos y administrativos del Centro de Idiomas, ofreciendo una experiencia moderna y eficiente tanto para estudiantes como para docentes y administradores.
+
+### Funcionalidades principales:
+- 📚 **Gestión de estudiantes y profesores**: Registro, actualización y control de la información académica.  
+- 📝 **Administración de cursos y exámenes**: Creación, asignación y seguimiento de actividades académicas.  
+- 📊 **Seguimiento académico integral**: Visualización de calificaciones, asistencia y progreso académico.  
+- ⚙️ **Plataforma escalable y segura**: Construida con tecnologías modernas para garantizar rendimiento y confiabilidad.
 
 ## 🚀 Tecnologías Utilizadas
 
@@ -19,6 +22,10 @@ Este proyecto está construido con la siguiente pila de tecnologías:
 -   **Supabase**: Backend como servicio (BaaS) que proporciona una base de datos, autenticación y más.
 -   **Framer Motion**: Librería de animaciones de producción para React.
 -   **AI SDK (Vercel)**: Para la integración de modelos de IA, como se indica en el `package.json`.
+-   **React Icons**: Librería de íconos lista para usar con React.
+-   **jspdf**: Generación de documentos PDF en el cliente.
+-   **html2canvas**: Conversión de elementos HTML en imágenes.
+-   **uuid**: Generación de identificadores únicos universales (UUID).
 
 ## 🛠️ Instalación
 
@@ -26,8 +33,8 @@ Para configurar el proyecto localmente, sigue estos pasos:
 
 1.  **Clona el repositorio:**
     ```bash
-    git clone [https://github.com/richardcastiblancoo/Centro-de-Idiomas-Universidad-Sergio-Arboleda.git]
-    cd [Centro-de-Idiomas-Universidad-Sergio-Arboleda]
+    git clone https://github.com/richardcastiblancoo/Ciusa.git
+    cd Centro-de-Idiomas-Universidad-Sergio-Arboleda
     ```
 
 2.  **Instala las dependencias:**
@@ -35,20 +42,25 @@ Para configurar el proyecto localmente, sigue estos pasos:
     ```bash
     npm install
     ```
-    Si aún no tienes `framer-motion` instalado, puedes agregarlo con:
+
+    Si necesitas instalar dependencias específicas:
     ```bash
-    npm add framer-motion
+    npm install framer-motion
+    npm install react-icons
+    npm install jspdf html2canvas
+    npm install uuid
     ```
 
 3.  **Configura las variables de entorno:**
     Crea un archivo `.env.local` en la raíz de tu proyecto. El archivo `.gitignore` ya está configurado para no subir `.env` o `.env.local` al repositorio, lo cual es una buena práctica.
 
-    Añade las siguientes variables de Supabase, que he extraído de tu archivo `.env`:
+    Añade las siguientes variables de Supabase:
 
     ```env
     NEXT_PUBLIC_SUPABASE_URL=
     NEXT_PUBLIC_SUPABASE_ANON_KEY=
     ```
+
     **¡Importante!** Si estos valores son de producción, asegúrate de reemplazarlos por las claves de tu proyecto de Supabase local o de desarrollo.
 
 4.  **Ejecuta el servidor de desarrollo:**
@@ -60,7 +72,7 @@ Para configurar el proyecto localmente, sigue estos pasos:
 
 ## 📁 Estructura de Archivos
 
-Este es un resumen de la estructura del proyecto, basado en los archivos que me proporcionaste:
+Este es un resumen de la estructura del proyecto:
 
 -   `app/`: Directorio principal de las páginas de Next.js.
 -   `components/`: Componentes reutilizables de React.
@@ -75,7 +87,8 @@ Este es un resumen de la estructura del proyecto, basado en los archivos que me 
 
 En el directorio del proyecto, puedes ejecutar:
 
--   `npm dev`: Inicia la aplicación en modo de desarrollo.
--   `npm build`: Crea la aplicación optimizada para producción.
--   `npm start`: Inicia el servidor de producción.
--   `npm lint`: Ejecuta el linter de Next.js para revisar el código.
+-   `npm run dev`: Inicia la aplicación en modo de desarrollo.
+-   `npm run build`: Crea la aplicación optimizada para producción.
+-   `npm run start`: Inicia el servidor de producción.
+-   `npm run lint`: Ejecuta el linter de Next.js para revisar el código.
+
