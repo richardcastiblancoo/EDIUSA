@@ -34,6 +34,7 @@ import {
 import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
 import { toast } from "@/components/ui/use-toast"
+import { supabase } from "@/lib/supabase" // Agregamos la importación de supabase
 
 // --- Interfaces y datos de ejemplo ---
 interface LessonReport {
@@ -55,6 +56,14 @@ interface StudentReportData {
   overallAvgNotes: number
   overallAttendanceRate: number
   courses: CourseReport[]
+}
+
+interface Coordinator {
+  id: string
+  name: string
+  email: string
+  role: "coordinator"
+  created_at: string
 }
 
 const mockStudentData: StudentReportData = {
@@ -100,24 +109,159 @@ export default function StudentReportDashboard() {
   const [selectedCourseId, setSelectedCourseId] = useState<string>("")
   const [activeTab, setActiveTab] = useState("summary")
   const reportRef = useRef<HTMLDivElement>(null)
+  const [coordinator, setCoordinator] = useState<Coordinator | null>(null)
+
+  // Función para obtener los datos del coordinador
+  const fetchCoordinatorData = async () => {
+    try {
+      const { data: coordinatorData, error } = await supabase
+        .from('users')
+        .select('id, name, email, role, created_at')
+        .eq('role', 'coordinator')
+        .single()
+
+      if (error) throw error
+
+      if (coordinatorData) {
+        setCoordinator(coordinatorData as Coordinator)
+      }
+    } catch (error) {
+      console.error('Error al obtener datos del coordinador:', error)
+      toast({
+        title: "Error",
+        description: "No se pudo cargar la información del coordinador.",
+        variant: "destructive",
+      })
+    }
+  }
 
   const fetchReportData = async () => {
     setLoading(true)
-    setTimeout(() => {
+    try {
+      // Obtener datos del estudiante y sus matrículas
+      const { data: enrollmentData, error: enrollmentError } = await supabase
+        .from('enrollments')
+        .select(`
+          student:users!student_id(id, name),
+          course:courses(
+            id,
+            name,
+            lessons(
+              id,
+              title,
+              due_date
+            )
+          )
+        `)
+        .eq('status', 'active')
+
+      if (enrollmentError) throw enrollmentError
+
+      if (enrollmentData && enrollmentData.length > 0) {
+        // Obtener asistencia y notas para cada lección
+        const coursesData = await Promise.all(
+          enrollmentData.map(async (enrollment) => {
+            const lessons = enrollment.course.lessons || []
+            const lessonReports = await Promise.all(
+              lessons.map(async (lesson: any) => {
+                // Obtener asistencia
+                const { data: attendanceData } = await supabase
+                  .from('attendance')
+                  .select('status')
+                  .eq('enrollment_id', enrollment.id)
+                  .eq('lesson_id', lesson.id)
+                  .single()
+
+                // Obtener notas
+                const { data: gradeData } = await supabase
+                  .from('grades')
+                  .select('score')
+                  .eq('enrollment_id', enrollment.id)
+                  .eq('lesson_id', lesson.id)
+                  .single()
+
+                return {
+                  lessonName: lesson.title,
+                  date: lesson.due_date,
+                  attendance: attendanceData?.status || "Ausente",
+                  notes: gradeData?.score || 0
+                }
+              })
+            )
+
+            return {
+              courseId: enrollment.course.id,
+              courseName: enrollment.course.name,
+              lessons: lessonReports
+            }
+          })
+        )
+
+        const formattedData: StudentReportData = {
+          studentName: enrollmentData[0].student.name,
+          studentId: enrollmentData[0].student.id,
+          overallAvgNotes: calculateOverallAverage(coursesData),
+          overallAttendanceRate: calculateOverallAttendance(coursesData),
+          courses: coursesData
+        }
+
+        setReportData(formattedData)
+        if (coursesData.length > 0) {
+          setSelectedCourseId(coursesData[0].courseId)
+        }
+      } else {
+        // Si no hay datos, usar los datos de ejemplo
+        setReportData(mockStudentData)
+        if (mockStudentData.courses.length > 0) {
+          setSelectedCourseId(mockStudentData.courses[0].courseId)
+        }
+      }
+    } catch (error) {
+      console.error('Error al obtener datos del reporte:', error)
+      // En caso de error, usar los datos de ejemplo
       setReportData(mockStudentData)
       if (mockStudentData.courses.length > 0) {
         setSelectedCourseId(mockStudentData.courses[0].courseId)
       }
+      toast({
+        title: "Error",
+        description: "Error al cargar los datos del reporte. Usando datos de ejemplo.",
+        variant: "destructive",
+      })
+    } finally {
       setLoading(false)
       setRefreshing(false)
       toast({
         title: "Reporte actualizado",
-        description: "Los datos del reporte han sido cargados nuevamente.",
+        description: "Los datos del reporte han sido cargados.",
       })
-    }, 1000)
+    }
+  }
+
+  // Función auxiliar para calcular el promedio general
+  const calculateOverallAverage = (courses: any[]): number => {
+    if (!courses || courses.length === 0) return 0
+    const allNotes = courses.flatMap(course => 
+      course.lessons?.map((lesson: any) => lesson.notes) || []
+    )
+    return allNotes.length > 0 
+      ? allNotes.reduce((acc: number, curr: number) => acc + curr, 0) / allNotes.length 
+      : 0
+  }
+
+  // Función auxiliar para calcular la asistencia general
+  const calculateOverallAttendance = (courses: any[]): number => {
+    if (!courses || courses.length === 0) return 0
+    const allLessons = courses.flatMap(course => course.lessons || [])
+    if (allLessons.length === 0) return 0
+    const presentCount = allLessons.filter((lesson: any) => 
+      lesson.attendance === "Presente"
+    ).length
+    return (presentCount / allLessons.length) * 100
   }
 
   useEffect(() => {
+    fetchCoordinatorData()
     fetchReportData()
   }, [])
 
@@ -242,8 +386,18 @@ export default function StudentReportDashboard() {
     <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-8">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Reporte de {reportData.studentName}</h2>
-          <p className="text-muted-foreground mt-1">Análisis de rendimiento y asistencia</p>
+          <div className="text-sm text-muted-foreground mb-2">
+            Coordinador: {coordinator?.name || 'Cargando...'}
+            <span className="ml-2 text-xs text-gray-400">
+              ({coordinator?.email || ''})
+            </span>
+          </div>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Reporte de {reportData.studentName}
+          </h2>
+          <p className="text-muted-foreground mt-1">
+            Análisis de rendimiento y asistencia
+          </p>
         </div>
         <div className="flex gap-2">
           <Button onClick={handleRefresh} disabled={refreshing}>

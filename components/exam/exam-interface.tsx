@@ -213,54 +213,67 @@ export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) 
       if (mediaRecorderRef.current) {
         mediaRecorderRef.current.stop()
       }
-
+  
       // Stop all media streams
       Object.values(mediaStreams).forEach((stream) => {
         stream?.getTracks().forEach((track) => track.stop())
       })
-
+  
       let recordingUrl = null
-
+  
       // Solo intentar subir la grabación si hay chunks grabados
       if (recordedChunks.length > 0) {
         // Crear un blob con todos los chunks grabados
         const recordingBlob = new Blob(recordedChunks, { type: 'video/webm' })
-
-        const recordingFile = new File([recordingBlob], `exam_${exam.id}_${user?.id || 'unknown'}_${Date.now()}.webm`, {
+  
+        // Create a more sanitized filename
+        const timestamp = Date.now()
+        const safeUserId = user?.id?.replace(/[^a-zA-Z0-9]/g, '') || 'unknown'
+        const safeExamId = exam.id.toString().replace(/[^a-zA-Z0-9]/g, '')
+        const filename = `exam_${safeExamId}_${safeUserId}_${timestamp}.webm`
+  
+        const recordingFile = new File([recordingBlob], filename, {
           type: 'video/webm'
         })
-
+  
         // Subir el archivo a Supabase Storage
-        const { error: uploadError } = await supabase.storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
           .from('exam-recordings')
-          .upload(`recordings/${recordingFile.name}`, recordingFile)
-
-        if (uploadError) throw uploadError
-
+          .upload(filename, recordingFile, {
+            cacheControl: '3600',
+            upsert: false
+          })
+  
+        if (uploadError) {
+          console.error('Error uploading recording:', uploadError)
+          throw new Error(`Error al subir la grabación: ${uploadError.message}`)
+        }
+  
         // Obtener la URL pública solo si la subida fue exitosa
         const { data: publicUrlData } = supabase.storage
           .from('exam-recordings')
-          .getPublicUrl(`recordings/${recordingFile.name}`)
-
+          .getPublicUrl(filename)
+  
         recordingUrl = publicUrlData?.publicUrl
       }
-
+  
       // Submit exam data
       const examData = {
         exam_id: exam.id,
         student_id: user?.id || '',
         answers,
-        time_spent: exam.duration_minutes * 60 - timeLeft, // Corregido a duration_minutes
+        time_spent: exam.duration_minutes * 60 - timeLeft,
         warnings,
         recording_url: recordingUrl,
         screen_captures: screenCaptures
       }
-
+  
       const submitted = await submitExamWithMonitoring({
         ...examData,
-        exam_id: String(exam.id), // Convert to string to match expected type
-        recording_url: recordingUrl || undefined // Convert null to undefined
+        exam_id: String(exam.id),
+        recording_url: recordingUrl || undefined
       })
+      
       if (submitted) {
         onComplete()
       } else {
@@ -268,7 +281,7 @@ export default function ExamInterface({ exam, onComplete }: ExamInterfaceProps) 
       }
     } catch (error) {
       console.error("Error al enviar el examen:", error)
-      alert("Hubo un error al enviar el examen. Por favor, contacta al soporte técnico.")
+      alert(`Error al enviar el examen: ${error instanceof Error ? error.message : 'Error desconocido'}. Por favor, contacta al soporte técnico.`)
     }
   }
 
