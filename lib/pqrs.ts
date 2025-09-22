@@ -122,7 +122,8 @@ export async function getPQRsByStudent(studentId: string): Promise<PQR[]> {
     .select(`
       *,
       courses:course_id (name),
-      teachers:teacher_id (name)
+      teachers:teacher_id (name),
+      students:student_id (name)
     `)
     .eq("student_id", studentId);
 

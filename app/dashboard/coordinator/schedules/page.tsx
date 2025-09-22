@@ -14,10 +14,24 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, CheckCircle2, CircleDashed, MailQuestion, MessageSquare, Clock, ArrowRight, XCircle } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  CircleDashed,
+  MailQuestion,
+  MessageSquare,
+  Clock,
+  ArrowRight,
+  XCircle,
+  Loader2,
+  // ADDED: Imported missing icons
+  User,
+  GraduationCap,
+} from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getPQRsForCoordinator, updatePQRByCoordinator } from "@/lib/pqrs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Tipos para PQR
 type PQRStatusType = "pending" | "in_progress" | "resolved" | "closed";
@@ -48,7 +62,7 @@ const getStatusBadgeVariant = (status: PQRStatusType) => {
     case "resolved":
       return "default";
     case "closed":
-        return "outline";
+      return "outline";
     default:
       return "outline";
   }
@@ -77,6 +91,8 @@ export default function CoordinatorPQRPage() {
   const [selectedPqr, setSelectedPqr] = useState<PQR | null>(null);
   const [response, setResponse] = useState("");
   const [newStatus, setNewStatus] = useState<PQRStatusType>("in_progress");
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [alert, setAlert] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   useEffect(() => {
     const fetchPQRs = async () => {
@@ -98,14 +114,16 @@ export default function CoordinatorPQRPage() {
     setSelectedPqr(pqr);
     setResponse(pqr.coordinator_response || "");
     setNewStatus(pqr.status as PQRStatusType);
+    setAlert(null); // Limpiar alerta al seleccionar nuevo PQR
   };
 
   const handleUpdatePqr = async () => {
     if (!selectedPqr) return;
+    setIsUpdating(true);
 
     try {
       await updatePQRByCoordinator(selectedPqr.id, newStatus, response);
-      
+
       // Actualizar la lista local
       const updatedPqrs = pqrs.map((pqr) =>
         pqr.id === selectedPqr.id
@@ -117,13 +135,16 @@ export default function CoordinatorPQRPage() {
             }
           : pqr
       );
-      
+
       setPqrs(updatedPqrs);
-      alert("PQR actualizado exitosamente.");
+      setAlert({ message: "PQR actualizado exitosamente.", type: "success" });
       setSelectedPqr(null);
     } catch (error) {
       console.error("Error updating PQR:", error);
-      alert("Error al actualizar el PQR. Inténtalo de nuevo.");
+      setAlert({ message: "Error al actualizar el PQR. Inténtalo de nuevo.", type: "error" });
+    } finally {
+      setIsUpdating(false);
+      setTimeout(() => setAlert(null), 5000); // Ocultar la alerta después de 5 segundos
     }
   };
 
@@ -143,7 +164,7 @@ export default function CoordinatorPQRPage() {
 
   return (
     <DashboardLayout userRole="coordinator">
-      <div className="space-y-6">
+      <div className="space-y-6 transition-opacity duration-500 animate-in fade-in">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Gestión de PQR</h2>
           <p className="text-muted-foreground">
@@ -151,9 +172,25 @@ export default function CoordinatorPQRPage() {
           </p>
         </div>
 
+        {/* Alerta de éxito/error */}
+        {alert && (
+          <div className="animate-in fade-in slide-in-from-top-4">
+            <Alert variant={alert.type === "success" ? "default" : "destructive"}>
+              {/* FIXED: The icon should be conditionally rendered based on alert type */}
+              {alert.type === "success" ? (
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+              ) : (
+                <XCircle className="h-4 w-4 text-red-500" />
+              )}
+              <AlertTitle>{alert.type === "success" ? "Éxito" : "Error"}</AlertTitle>
+              <AlertDescription>{alert.message}</AlertDescription>
+            </Alert>
+          </div>
+        )}
+
         {/* Status Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
+          <Card className="transition-transform duration-300 hover:scale-105 hover:shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
               <AlertCircle className="h-4 w-4 text-orange-500" />
@@ -163,7 +200,7 @@ export default function CoordinatorPQRPage() {
               <p className="text-xs text-muted-foreground">PQR sin respuesta</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="transition-transform duration-300 hover:scale-105 hover:shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">En Proceso</CardTitle>
               <CircleDashed className="h-4 w-4 text-blue-500" />
@@ -173,7 +210,7 @@ export default function CoordinatorPQRPage() {
               <p className="text-xs text-muted-foreground">Siendo gestionadas</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="transition-transform duration-300 hover:scale-105 hover:shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Resueltas</CardTitle>
               <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -183,7 +220,7 @@ export default function CoordinatorPQRPage() {
               <p className="text-xs text-muted-foreground">Con respuesta del coordinador</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="transition-transform duration-300 hover:scale-105 hover:shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Cerradas</CardTitle>
               <XCircle className="h-4 w-4 text-gray-500" />
@@ -216,6 +253,7 @@ export default function CoordinatorPQRPage() {
                       <TableHead>Asunto</TableHead>
                       <TableHead>Curso</TableHead>
                       <TableHead>Estudiante</TableHead>
+                      <TableHead>Destinatario</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead className="text-right">Fecha</TableHead>
                     </TableRow>
@@ -225,11 +263,21 @@ export default function CoordinatorPQRPage() {
                       <TableRow
                         key={pqr.id}
                         onClick={() => handleSelectPqr(pqr)}
-                        className={`cursor-pointer ${selectedPqr?.id === pqr.id ? "bg-accent" : ""}`}
+                        className={`
+                          cursor-pointer
+                          transition-colors duration-200
+                          hover:bg-accent/50
+                          ${selectedPqr?.id === pqr.id ? "bg-accent scale-[1.01] shadow-lg" : ""}
+                        `}
                       >
                         <TableCell className="font-medium">{pqr.subject}</TableCell>
                         <TableCell>{pqr.courseName}</TableCell>
                         <TableCell>{pqr.studentName}</TableCell>
+                        <TableCell>
+                          <Badge variant={pqr.teacher_id ? "secondary" : "default"} className="w-fit">
+                            {pqr.teacher_id ? "Profesor" : "Coordinador"}
+                          </Badge>
+                        </TableCell>
                         <TableCell>
                           <Badge variant={getStatusBadgeVariant(pqr.status)} className="flex items-center gap-1 w-fit">
                             {getStatusIcon(pqr.status)}
@@ -247,7 +295,7 @@ export default function CoordinatorPQRPage() {
 
           {/* PQR Detail Card */}
           {selectedPqr ? (
-            <Card className="lg:col-span-1">
+            <Card className="lg:col-span-1 animate-in fade-in slide-in-from-right-1">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MailQuestion className="h-5 w-5" />
@@ -260,17 +308,26 @@ export default function CoordinatorPQRPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <h4 className="font-semibold text-lg">{selectedPqr.subject}</h4>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    <span>Creado: {new Date(selectedPqr.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MessageSquare className="h-4 w-4" />
-                    <span>Curso: {selectedPqr.courseName}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MessageSquare className="h-4 w-4" />
-                    <span>Estudiante: {selectedPqr.studentName}</span>
+                  <div className="flex flex-col gap-2 mb-4">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      {/* FIXED: Added User and GraduationCap components */}
+                      <User className="h-4 w-4" />
+                      <span className="font-medium">Enviado por: {selectedPqr.studentName}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      <span>Creado: {new Date(selectedPqr.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <GraduationCap className="h-4 w-4" />
+                      <span>Curso: {selectedPqr.courseName}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Badge variant={selectedPqr.teacher_id ? "secondary" : "default"}>
+                        <MessageSquare className="h-4 w-4 mr-1" />
+                        {selectedPqr.teacher_id ? "Enviado al Profesor" : "Enviado al Coordinador"}
+                      </Badge>
+                    </div>
                   </div>
                   <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md text-sm">
                     {selectedPqr.message}
@@ -304,16 +361,27 @@ export default function CoordinatorPQRPage() {
                 </div>
 
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setSelectedPqr(null)}>Cancelar</Button>
-                  <Button onClick={handleUpdatePqr}>
-                    <ArrowRight className="mr-2 h-4 w-4" />
-                    Enviar Respuesta
+                  <Button variant="outline" onClick={() => setSelectedPqr(null)} disabled={isUpdating}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleUpdatePqr} disabled={isUpdating}>
+                    {isUpdating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <ArrowRight className="mr-2 h-4 w-4" />
+                        Enviar Respuesta
+                      </>
+                    )}
                   </Button>
                 </div>
               </CardContent>
             </Card>
           ) : (
-            <Card className="lg:col-span-1 flex items-center justify-center p-8 text-center">
+            <Card className="lg:col-span-1 flex items-center justify-center p-8 text-center animate-in fade-in slide-in-from-right-1">
               <div className="space-y-2">
                 <MailQuestion className="h-12 w-12 text-muted-foreground mx-auto" />
                 <h3 className="text-lg font-semibold">Selecciona un PQR</h3>

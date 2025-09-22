@@ -477,6 +477,7 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                         <TableRow>
                           <TableHead>Asunto</TableHead>
                           <TableHead>Curso</TableHead>
+                          <TableHead>Estudiante</TableHead>
                           <TableHead>Estado</TableHead>
                           <TableHead className="text-right">Fecha</TableHead>
                         </TableRow>
@@ -490,6 +491,7 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                           >
                             <TableCell className="font-medium">{pqr.subject}</TableCell>
                             <TableCell>{pqr.courses?.name}</TableCell>
+                            <TableCell>{pqr.students?.name}</TableCell>
                             <TableCell>
                               <Badge variant={getStatusBadgeVariant(pqr.status)} className="flex items-center gap-1 w-fit">
                                 {getStatusIcon(pqr.status)}
@@ -572,6 +574,10 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MessageSquare className="h-4 w-4" />
                       <span>Curso: {selectedPqr.courses?.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <MessageSquare className="h-4 w-4" />
+                      <span>Estudiante: {selectedPqr.students?.name}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MessageSquare className="h-4 w-4" />

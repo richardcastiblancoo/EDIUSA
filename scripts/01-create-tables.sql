@@ -283,3 +283,42 @@ WITH CHECK (bucket_id IN ('attachments', 'audio'));
 -- Ejecutar en el SQL Editor de Supabase
 INSERT INTO storage.buckets (id, name, public) VALUES ('attachments', 'attachments', true);
 INSERT INTO storage.buckets (id, name, public) VALUES ('audio', 'audio', true);
+
+
+
+---examen pantalla
+-- Create the exam-recordings bucket if it doesn't exist
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('exam-recordings', 'exam-recordings', false)
+ON CONFLICT (id) DO NOTHING;
+
+-- Policy to allow authenticated users to upload exam recordings
+CREATE POLICY "Usuarios autenticados pueden subir grabaciones de exámenes" 
+ON storage.objects FOR INSERT 
+TO authenticated 
+WITH CHECK (
+  bucket_id = 'exam-recordings' AND 
+  auth.uid() = (SPLIT_PART(name, '_', 3))::uuid
+);
+
+-- Policy to allow authenticated users to read their own recordings
+CREATE POLICY "Usuarios pueden ver sus propias grabaciones" 
+ON storage.objects FOR SELECT 
+TO authenticated 
+USING (
+  bucket_id = 'exam-recordings' AND 
+  auth.uid() = (SPLIT_PART(name, '_', 3))::uuid
+);
+
+-- Policy to allow teachers and coordinators to access all recordings
+CREATE POLICY "Profesores y coordinadores pueden acceder a todas las grabaciones" 
+ON storage.objects FOR SELECT 
+TO authenticated 
+USING (
+  bucket_id = 'exam-recordings' AND 
+  EXISTS (
+    SELECT 1 FROM users 
+    WHERE id = auth.uid() 
+    AND role IN ('teacher', 'coordinator')
+  )
+);

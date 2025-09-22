@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { toast } from "@/components/ui/use-toast"
-import { Plus, Edit, Trash2, Search, Users, GraduationCap, Mail, Phone, Calendar, Eye } from "lucide-react"
+import { Plus, Edit, Trash2, Search, Users, GraduationCap, Mail, Phone, Calendar, Eye, Image } from "lucide-react"
 import { getAllUsers, createUser, updateUser, deleteUser, type User } from "@/lib/auth"
 
 export default function StudentManagement() {
@@ -50,12 +50,12 @@ export default function StudentManagement() {
     status: "active" as const,
     photo: ""
   })
-
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [studentToDeleteId, setStudentToDeleteId] = useState<string | null>(null)
-
   const [newThisMonth, setNewThisMonth] = useState(0)
   const [retentionRate, setRetentionRate] = useState("0%")
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
 
   useEffect(() => {
     loadStudents()
@@ -93,12 +93,31 @@ export default function StudentManagement() {
     }
   }
 
+  // Simulación de una función para subir la imagen a un servicio
+  const uploadImage = async (file: File): Promise<string> => {
+    // Aquí iría la lógica para subir la imagen a un servicio como Cloudinary, AWS S3, etc.
+    // Por ahora, solo devolvemos una URL de previsualización.
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        resolve(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   const handleCreateStudent = async () => {
     try {
+      let photoUrl = ""
+      if (photoFile) {
+        photoUrl = await uploadImage(photoFile)
+      }
+
       await createUser({
         ...formData,
+        photo: photoUrl,
         role: "student",
-        password: "student123",
+        password: "student123", // Considera generar una contraseña segura o enviarla por correo
       })
       toast({
         title: "Éxito",
@@ -121,7 +140,15 @@ export default function StudentManagement() {
     if (!editingStudent) return
 
     try {
-      await updateUser(editingStudent.id, formData)
+      let photoUrl = formData.photo
+      if (photoFile) {
+        photoUrl = await uploadImage(photoFile)
+      }
+
+      await updateUser(editingStudent.id, {
+        ...formData,
+        photo: photoUrl,
+      })
       toast({
         title: "Éxito",
         description: "Estudiante actualizado exitosamente",
@@ -179,6 +206,8 @@ export default function StudentManagement() {
       status: "active",
       photo: ""
     })
+    setPhotoFile(null)
+    setPhotoPreview(null)
   }
 
   const openEditDialog = (student: User) => {
@@ -196,14 +225,31 @@ export default function StudentManagement() {
       cohort: student.cohort || "",
       // @ts-ignore
       status: student.status || "active",
-      photo: ""
+      photo: student.photo || ""
     })
+    setPhotoPreview(student.photo || null)
+    setPhotoFile(null)
     setIsEditDialogOpen(true)
   }
 
   const openViewDialog = (student: User) => {
     setViewingStudent(student)
     setIsViewDialogOpen(true)
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setPhotoFile(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    } else {
+      setPhotoFile(null)
+      setPhotoPreview(null)
+    }
   }
 
   const filteredStudents = students.filter((student) => {
@@ -416,6 +462,122 @@ export default function StudentManagement() {
         </CardContent>
       </Card>
 
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Crear Nuevo Estudiante</DialogTitle>
+            <DialogDescription>Completa la información para crear un nuevo estudiante.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="flex flex-col items-center gap-4">
+              <Avatar className="h-32 w-32">
+                <AvatarImage src={photoPreview || "/placeholder-user.jpg"} alt="Foto de Perfil" />
+                <AvatarFallback>
+                  <Image className="h-12 w-12 text-gray-400" />
+                </AvatarFallback>
+              </Avatar>
+              <Label htmlFor="photo" className="cursor-pointer font-medium text-blue-600 hover:underline">
+                {photoPreview ? "Cambiar foto" : "Subir foto"}
+              </Label>
+              <Input
+                id="photo"
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={handleFileChange}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nombre Completo</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Juan Pérez"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="document">Documento</Label>
+                <Input
+                  id="document"
+                  value={formData.document_number}
+                  onChange={(e) => setFormData({ ...formData, document_number: e.target.value })}
+                  placeholder="123456789"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="juan@ejemplo.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Teléfono</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="+57 300 123 4567"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="academic_level">Situación Académica</Label>
+                <Select
+                  value={formData.academic_level}
+                  onValueChange={(value) => setFormData({ ...formData, academic_level: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar situación" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A1">A1</SelectItem>
+                    <SelectItem value="A2">A2</SelectItem>
+                    <SelectItem value="B1">B1</SelectItem>
+                    <SelectItem value="B2">B2</SelectItem>
+                    <SelectItem value="C1">C1</SelectItem>
+                    <SelectItem value="C2">C2</SelectItem>
+                    <SelectItem value="7">7</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cohort">Cohorte</Label>
+                <Select
+                  value={formData.cohort}
+                  onValueChange={(value) => setFormData({ ...formData, cohort: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar cohorte" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2025-Q1">2025-Q1</SelectItem>
+                    <SelectItem value="2025-Q2">2025-Q2</SelectItem>
+                    <SelectItem value="2024-Q4">2024-Q4</SelectItem>
+                    <SelectItem value="2024-Q3">2024-Q3</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateStudent}>Crear Estudiante</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         {viewingStudent && (
           <DialogContent>
@@ -490,6 +652,24 @@ export default function StudentManagement() {
             <DialogDescription>Modifica la información del estudiante</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <div className="flex flex-col items-center gap-4">
+              <Avatar className="h-32 w-32">
+                <AvatarImage src={photoPreview || "/placeholder-user.jpg"} alt="Foto de Perfil" />
+                <AvatarFallback>
+                  <Image className="h-12 w-12 text-gray-400" />
+                </AvatarFallback>
+              </Avatar>
+              <Label htmlFor="edit-photo" className="cursor-pointer font-medium text-blue-600 hover:underline">
+                {photoPreview ? "Cambiar foto" : "Subir foto"}
+              </Label>
+              <Input
+                id="edit-photo"
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={handleFileChange}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-name">Nombre Completo</Label>
