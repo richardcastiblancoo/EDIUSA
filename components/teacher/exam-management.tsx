@@ -204,10 +204,10 @@ export default function ExamManagement({ teacherId }: ExamManagementProps) {
       exam_type: exam.exam_type,
       due_date: exam.due_date,
       max_attempts: exam.max_attempts,
-      instructions: exam.instructions || "",
-      passing_score: exam.passing_score,
-      show_results: exam.show_results,
-      randomize_questions: exam.randomize_questions,
+      instructions: (exam as any).instructions || "",
+      passing_score: (exam as any).passing_score || 70,
+      show_results: (exam as any).show_results ?? true,
+      randomize_questions: (exam as any).randomize_questions ?? false,
     })
     setDialogOpen(true)
   }

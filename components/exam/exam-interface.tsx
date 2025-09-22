@@ -13,6 +13,7 @@ import { Camera, Mic, Monitor, Clock, AlertTriangle, CheckCircle, ArrowLeft, Arr
 import { submitExamWithMonitoring, getExamQuestions } from "@/lib/exams"
 import { useAuth } from "@/lib/auth-context"
 import { supabase } from "@/lib/supabase"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
 interface Question {
   id: number
@@ -60,39 +61,38 @@ export default function ExamInterface({ exam, student, onComplete }: ExamInterfa
   const [screenCaptures, setScreenCaptures] = useState<string[]>([])
   const [examSubmitted, setExamSubmitted] = useState(false)
   const [examScore, setExamScore] = useState<number | null>(null)
-  const [alreadyCompleted, setAlreadyCompleted] = useState(false) // Nuevo estado
-  
+  const [alreadyCompleted, setAlreadyCompleted] = useState(false)
+  const [permissionError, setPermissionError] = useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false) // Added this line
+
   const { user } = useAuth()
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const screenVideoRef = useRef<HTMLVideoElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
 
-  // Cargar preguntas y solicitar permisos.
   useEffect(() => {
     const setupExam = async () => {
-      // 1. Verificar si el examen ya se ha completado
       if (!user?.id) {
         setLoading(false);
         return;
       }
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('exam_submissions')
         .select('score')
         .eq('exam_id', exam.id)
         .eq('student_id', user.id)
         .limit(1)
-        .single();
-      
+        .maybeSingle();
+
       if (data) {
         setAlreadyCompleted(true);
-        setExamScore(data.score); // Si ya se completó, muestra la nota
+        setExamScore(data.score);
         setLoading(false);
-        return; // Salir de la función si ya se completó
+        return;
       }
 
-      // 2. Si no se ha completado, cargar preguntas
       try {
         const examQuestions = await getExamQuestions(exam.id)
         setQuestions(examQuestions.map(q => ({
@@ -106,54 +106,10 @@ export default function ExamInterface({ exam, student, onComplete }: ExamInterfa
       } finally {
         setLoading(false)
       }
-
-      // 3. Pedir permisos y empezar a grabar
-      try {
-        const cameraStream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        })
-        const screenStream = await navigator.mediaDevices.getDisplayMedia({
-          video: true,
-          audio: true,
-        })
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = cameraStream
-        }
-        if (screenVideoRef.current) {
-          screenVideoRef.current.srcObject = screenStream
-        }
-
-        setMediaStreams({ camera: cameraStream, screen: screenStream })
-        setMediaPermissions({ camera: true, microphone: true, screen: true })
-
-        const combinedStream = new MediaStream([...cameraStream.getTracks(), ...screenStream.getTracks()])
-        const mediaRecorder = new MediaRecorder(combinedStream, {
-          mimeType: "video/webm;codecs=vp9",
-        })
-        mediaRecorderRef.current = mediaRecorder
-
-        const chunks: Blob[] = []
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) {
-            chunks.push(e.data)
-          }
-        }
-
-        mediaRecorder.start(10000)
-        setExamStarted(true)
-        setRecordedChunks(chunks);
-
-      } catch (error) {
-        console.error("Error requesting permissions:", error)
-        alert("Se requieren permisos de cámara, micrófono y pantalla para realizar el examen.")
-      }
     }
 
     setupExam()
 
-    // 4. Configurar eventos de monitoreo (visibilidad y foco)
     const handleVisibilityChange = () => {
       if (document.hidden) {
         setWarnings((prev) => [
@@ -173,7 +129,6 @@ export default function ExamInterface({ exam, student, onComplete }: ExamInterfa
     document.addEventListener("visibilitychange", handleVisibilityChange)
     window.addEventListener("blur", handleBlur)
 
-    // 5. Limpieza de streams y eventos
     return () => {
       Object.values(mediaStreams).forEach((stream) => {
         stream?.getTracks().forEach((track) => track.stop())
@@ -181,9 +136,93 @@ export default function ExamInterface({ exam, student, onComplete }: ExamInterfa
       document.removeEventListener("visibilitychange", handleVisibilityChange)
       window.removeEventListener("blur", handleBlur)
     }
-  }, [exam.id, mediaStreams, user]) // Añadir `user` a las dependencias
+  }, [exam.id, mediaStreams, user])
 
-  // Timer
+  const startMonitoring = async () => {
+    setPermissionError(null)
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices()
+      const hasCamera = devices.some(d => d.kind === 'videoinput')
+      const hasMic = devices.some(d => d.kind === 'audioinput')
+      
+      let cameraStream: MediaStream | null = null;
+      let screenStream: MediaStream | null = null;
+
+      if (hasCamera && hasMic) {
+        try {
+          cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 640 },
+              height: { ideal: 480 },
+              frameRate: { ideal: 15 }
+            },
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true
+            }
+          })
+          setMediaPermissions(prev => ({ ...prev, camera: true, microphone: true }));
+        } catch (error) {
+          console.error("Error al obtener la cámara/micrófono:", error);
+          setPermissionError("No se pudo iniciar la cámara o el micrófono. El examen continuará sin el monitoreo de video/audio.");
+          setMediaPermissions(prev => ({ ...prev, camera: false, microphone: false }));
+        }
+      } else {
+        setPermissionError("No se detectaron dispositivos de cámara o micrófono. El examen continuará sin el monitoreo de video/audio.");
+        setMediaPermissions(prev => ({ ...prev, camera: false, microphone: false }));
+      }
+
+      try {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: false
+        })
+        setMediaPermissions(prev => ({ ...prev, screen: true }));
+      } catch (error) {
+        console.error("Error al obtener la captura de pantalla:", error);
+        setPermissionError(prev => prev ? `${prev} También hubo un problema con la captura de pantalla.` : "No se pudo iniciar la captura de pantalla. El examen continuará sin esta función.");
+        setMediaPermissions(prev => ({ ...prev, screen: false }));
+      }
+
+      if (cameraStream || screenStream) {
+        if (videoRef.current && cameraStream) {
+          videoRef.current.srcObject = cameraStream
+        }
+        if (screenVideoRef.current && screenStream) {
+          screenVideoRef.current.srcObject = screenStream
+        }
+
+        const tracks = [];
+        if (cameraStream) tracks.push(...cameraStream.getTracks());
+        if (screenStream) tracks.push(...screenStream.getTracks());
+
+        const combinedStream = new MediaStream(tracks);
+        const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+          ? "video/webm;codecs=vp9"
+          : "video/webm"
+        const mediaRecorder = new MediaRecorder(combinedStream, { mimeType: mime })
+        mediaRecorderRef.current = mediaRecorder
+
+        const chunks: Blob[] = []
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunks.push(e.data)
+        }
+
+        mediaRecorder.start(10000)
+        setRecordedChunks(chunks)
+      } else {
+        console.error("No se pudo iniciar ningún tipo de monitoreo.");
+      }
+
+      setExamStarted(true);
+
+    } catch (error: any) {
+      console.error("Error al iniciar el monitoreo:", error);
+      setPermissionError(`Error inesperado al iniciar el monitoreo: ${error?.message || "desconocido"}. El examen continuará.`);
+      setExamStarted(true);
+    }
+  }
+
   useEffect(() => {
     if (!examStarted) return
     const timer = setInterval(() => {
@@ -221,7 +260,7 @@ export default function ExamInterface({ exam, student, onComplete }: ExamInterfa
       Object.values(mediaStreams).forEach((stream) => {
         stream?.getTracks().forEach((track) => track.stop())
       })
-      
+
       let recordingUrl = null
 
       if (recordedChunks.length > 0) {
@@ -273,7 +312,7 @@ export default function ExamInterface({ exam, student, onComplete }: ExamInterfa
         exam_id: String(exam.id),
         recording_url: recordingUrl || undefined
       })
-      
+
       if (submitted) {
         const { data: submissionData } = await supabase
           .from('exam_submissions')
@@ -282,7 +321,7 @@ export default function ExamInterface({ exam, student, onComplete }: ExamInterfa
           .eq('student_id', user?.id)
           .order('submitted_at', { ascending: false })
           .limit(1)
-          .single()
+          .maybeSingle();
 
         if (submissionData?.score !== undefined) {
           setExamScore(submissionData.score)
@@ -297,7 +336,6 @@ export default function ExamInterface({ exam, student, onComplete }: ExamInterfa
     }
   }
 
-  // Lógica de renderizado condicional
   if (alreadyCompleted) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-6">
@@ -335,8 +373,8 @@ export default function ExamInterface({ exam, student, onComplete }: ExamInterfa
             <CardDescription>
               Has finalizado el examen {exam.title}
               <div className="mt-2">
-                <p>Curso: {exam.course.name}</p>
-                <p>Estudiante: {student.name}</p>
+                <p>Curso: {exam.course?.name}</p>
+                <p>Estudiante: {student?.name}</p>
               </div>
             </CardDescription>
           </CardHeader>
@@ -345,38 +383,6 @@ export default function ExamInterface({ exam, student, onComplete }: ExamInterfa
               <h3 className="text-2xl font-bold mb-2">Tu calificación:</h3>
               <div className="text-4xl font-bold text-primary">
                 {examScore !== null ? `${examScore}%` : 'Calculando...'}
-              </div>
-            </div>
-            <div className="flex justify-center">
-              <Button onClick={onComplete}>
-                Volver a mis exámenes
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (alreadyCompleted) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-6">
-        <Card className="w-full max-w-md text-center">
-          <CardHeader>
-            <CardTitle>Examen ya completado</CardTitle>
-            <CardDescription>
-              Ya has realizado el examen {exam.title}
-              <div className="mt-2">
-                <p>Curso: {exam.course.name}</p>
-                <p>Estudiante: {student.name}</p>
-              </div>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-center">
-              <h3 className="text-2xl font-bold mb-2">Tu calificación:</h3>
-              <div className="text-4xl font-bold text-primary">
-                {examScore !== null ? `${examScore}%` : 'No disponible'}
               </div>
             </div>
             <div className="flex justify-center">
@@ -399,8 +405,8 @@ export default function ExamInterface({ exam, student, onComplete }: ExamInterfa
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Configurando Sistema de Monitoreo</CardTitle>
-            <CardDescription>Verificando permisos y configurando grabación...</CardDescription>
+            <CardTitle>Permisos requeridos</CardTitle>
+            <CardDescription>Antes de iniciar, otorga permisos para cámara, micrófono y pantalla.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -419,6 +425,23 @@ export default function ExamInterface({ exam, student, onComplete }: ExamInterfa
                 <span>Captura de Pantalla</span>
                 {mediaPermissions.screen ? <CheckCircle className="h-4 w-4 text-green-600" /> : <XCircle className="h-4 w-4 text-red-600" />}
               </div>
+
+              {permissionError && (
+                <Alert variant="destructive" className="mt-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Problema con los permisos</AlertTitle>
+                  <AlertDescription>{permissionError}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="pt-2">
+                <Button onClick={startMonitoring} className="w-full">
+                  Iniciar examen
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Consejo: cierra otras aplicaciones que podrían estar usando la cámara o el micrófono (Zoom, Teams, Meet, OBS, etc.).
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -459,12 +482,11 @@ export default function ExamInterface({ exam, student, onComplete }: ExamInterfa
         </div>
       </div>
 
-      // En la sección donde se muestra el título del examen
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">{exam.title}</h2>
-          <p className="text-muted-foreground">Curso: {exam.course.name}</p>
-          <p className="text-muted-foreground">Estudiante: {student.name}</p>
+          <p className="text-muted-foreground">Curso: {exam.course?.name}</p>
+          <p className="text-muted-foreground">Estudiante: {student?.name}</p>
         </div>
         <div className="flex items-center gap-4">
           <Badge variant="outline" className="flex items-center gap-2">
@@ -524,7 +546,7 @@ export default function ExamInterface({ exam, student, onComplete }: ExamInterfa
                 </Button>
 
                 {currentQuestion === questions.length - 1 ? (
-                  <Button onClick={handleSubmitExam} className="bg-green-600 hover:bg-green-700">
+                  <Button onClick={() => setConfirmOpen(true)} className="bg-green-600 hover:bg-green-700">
                     Enviar Examen
                   </Button>
                 ) : (
@@ -552,6 +574,30 @@ export default function ExamInterface({ exam, student, onComplete }: ExamInterfa
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Diálogo de confirmación antes de enviar */}
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Enviar el examen ahora?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Asegúrate de haber revisado todas tus respuestas. Una vez enviado, no podrás modificarlo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Seguir revisando</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmOpen(false)
+                handleSubmitExam()
+              }}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Sí, enviar ahora
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

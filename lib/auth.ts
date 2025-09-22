@@ -88,7 +88,18 @@ export const updateUser = async (userId: string, updateData: UserUpdateData) => 
 
 export async function deleteUser(userId: string): Promise<boolean> {
     try {
-        // First, update any courses where this user is a teacher
+        // First, delete all enrollments for this user
+        const { error: enrollmentError } = await supabase
+            .from("enrollments")
+            .delete()
+            .eq("student_id", userId)
+
+        if (enrollmentError) {
+            console.error("Error al eliminar inscripciones del estudiante:", enrollmentError)
+            throw enrollmentError
+        }
+
+        // Update any courses where this user is a teacher
         const { error: courseError } = await supabase
             .from("courses")
             .update({ teacher_id: null })

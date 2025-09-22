@@ -225,9 +225,9 @@ export default function StudentManagement() {
       cohort: student.cohort || "",
       // @ts-ignore
       status: student.status || "active",
-      photo: student.photo || ""
+      photo: (student as any).photo || ""
     })
-    setPhotoPreview(student.photo || null)
+    setPhotoPreview((student as any).photo || null)
     setPhotoFile(null)
     setIsEditDialogOpen(true)
   }

@@ -126,7 +126,7 @@ export default function TeachersManagement() {
     phone: "",
     document: "",
     status: "active" as "active" | "inactive",
-    english_level: "A1" as EnglishLevel,
+    english_certificate: "A1" as EnglishLevel,
   });
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -157,7 +157,7 @@ export default function TeachersManagement() {
       .from("users")
       .select("*")
       .eq("role", "teacher");
-  
+
     if (error) {
       console.error("Error fetching teachers:", error);
       toast({
@@ -169,9 +169,8 @@ export default function TeachersManagement() {
     } else {
       const mappedTeachers = await Promise.all(
         data.map(async (dbUser: User) => {
-          // Obtener la URL de la imagen del profesor
           const imageUrl = await getUserImage(dbUser.id, "avatar");
-          
+
           return {
             id: dbUser.id,
             name: dbUser.name,
@@ -186,13 +185,15 @@ export default function TeachersManagement() {
           };
         })
       );
-      setTeachers(mappedTeachers.map(teacher => ({
-        ...teacher,
-        status: teacher.status as "active" | "inactive", // Ensure status is correctly typed
-        avatar: null,
-        address: null,
-        updated_at: null
-      })));
+      setTeachers(
+        mappedTeachers.map((teacher) => ({
+          ...teacher,
+          status: teacher.status as "active" | "inactive",
+          avatar: null,
+          address: null,
+          updated_at: null,
+        }))
+      );
     }
     setLoading(false);
   };
@@ -249,7 +250,7 @@ export default function TeachersManagement() {
         phone: teacher.phone ?? "",
         document: teacher.document ?? "",
         status: teacher.status,
-        english_level: teacher.english_level ?? "A1",
+        english_certificate: teacher.english_level ?? "A1",
       });
     } else {
       setCurrentTeacher(null);
@@ -259,7 +260,7 @@ export default function TeachersManagement() {
         phone: "",
         document: "",
         status: "active",
-        english_level: "A1",
+        english_certificate: "A1",
       });
     }
     setIsDialogOpen(true);
@@ -267,14 +268,19 @@ export default function TeachersManagement() {
 
   const handleSaveTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { document, status, english_level, ...dataToSave } = formData;
+    const { document, status, english_certificate, ...dataToSave } = formData;
     const is_active = status === "active";
     const document_number = document;
 
     if (currentTeacher) {
       const { error } = await supabase
         .from("users")
-        .update({ ...dataToSave, is_active, document_number, english_level })
+        .update({
+          ...dataToSave,
+          is_active,
+          document_number,
+          english_level: english_certificate,
+        })
         .eq("id", currentTeacher.id);
       if (error) {
         console.error("Error updating user:", error);
@@ -296,7 +302,7 @@ export default function TeachersManagement() {
         ...dataToSave,
         is_active,
         document_number,
-        english_level,
+        english_level: english_certificate,
         role: "teacher",
       };
       const { error } = await supabase.from("users").insert([newTeacherData]);
@@ -381,7 +387,6 @@ export default function TeachersManagement() {
           </p>
         </div>
       </div>
-
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="hover:scale-105 transition-transform duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -436,7 +441,6 @@ export default function TeachersManagement() {
           </CardContent>
         </Card>
       </div>
-
       <Card>
         <CardHeader>
           <CardTitle>Listado de Profesores</CardTitle>
@@ -448,7 +452,7 @@ export default function TeachersManagement() {
           <div className="mb-4 flex flex-col sm:flex-row gap-4">
             <Input
               type="text"
-              placeholder="Filtrar por documento..."
+              placeholder="Filtrar por cédula..."
               value={filterDocument}
               onChange={(e) => setFilterDocument(e.target.value)}
               className="max-w-xs"
@@ -471,7 +475,7 @@ export default function TeachersManagement() {
                     <TableHead className="hidden lg:table-cell">
                       Teléfono
                     </TableHead>
-                    <TableHead>Nivel</TableHead>
+                    <TableHead>Certificado</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Acciones</TableHead>
                   </TableRow>
@@ -493,8 +497,13 @@ export default function TeachersManagement() {
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             <Avatar className="h-8 w-8">
-                              <AvatarImage src={teacher.imageUrl || ""} alt={teacher.name} />
-                              <AvatarFallback>{teacher.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                              <AvatarImage
+                                src={teacher.imageUrl || ""}
+                                alt={teacher.name}
+                              />
+                              <AvatarFallback>
+                                {teacher.name.substring(0, 2).toUpperCase()}
+                              </AvatarFallback>
                             </Avatar>
                             <span>{teacher.name}</span>
                           </div>
@@ -650,15 +659,18 @@ export default function TeachersManagement() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="english_level">Nivel de Inglés</Label>
+              <Label htmlFor="english_certificate">Certificado de Inglés</Label>
               <Select
-                value={formData.english_level}
+                value={formData.english_certificate}
                 onValueChange={(value: EnglishLevel) =>
-                  setFormData((prev) => ({ ...prev, english_level: value }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    english_certificate: value,
+                  }))
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un nivel" />
+                  <SelectValue placeholder="Selecciona un certificado" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="A1">A1</SelectItem>
@@ -712,8 +724,13 @@ export default function TeachersManagement() {
             <div className="grid gap-4 py-4">
               <div className="flex justify-center mb-4">
                 <Avatar className="h-24 w-24">
-                  <AvatarImage src={teacherToPreview.imageUrl || ""} alt={teacherToPreview.name} />
-                  <AvatarFallback>{teacherToPreview.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                  <AvatarImage
+                    src={teacherToPreview.imageUrl || ""}
+                    alt={teacherToPreview.name}
+                  />
+                  <AvatarFallback>
+                    {teacherToPreview.name.substring(0, 2).toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -741,7 +758,7 @@ export default function TeachersManagement() {
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Nivel:</Label>
+                <Label className="text-right">Certificado:</Label>
                 <div className="col-span-3 font-semibold">
                   <Badge variant="outline">
                     {teacherToPreview.english_level || "N/A"}
@@ -763,7 +780,10 @@ export default function TeachersManagement() {
       </Dialog>
 
       {/* Diálogo de Confirmación de Eliminación */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>

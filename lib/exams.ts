@@ -40,11 +40,11 @@ export async function createExam(examData: Partial<Exam>): Promise<Exam | null> 
       max_attempts: examData.max_attempts,
       is_active: examData.is_active !== undefined ? examData.is_active : true,
       // Incluir estos campos si existen en la tabla
-      instructions: examData.instructions,
-      passing_score: examData.passing_score,
-      show_results: examData.show_results,
-      randomize_questions: examData.randomize_questions,
-      created_by: examData.created_by
+      // Remove instructions field since it's not defined in Exam interface
+      passing_score: (examData as any).passing_score,
+      show_results: (examData as any).show_results,
+      randomize_questions: (examData as any).randomize_questions,
+      created_at: examData.created_at
     };
 
     const { data, error } = await supabase.from("exams").insert([validExamData]).select().single()
@@ -61,10 +61,10 @@ export async function updateExam(id: string, examData: Partial<Exam>): Promise<E
   try {
     // Filtrar solo los campos válidos que existen en la tabla
     const validFields = [
-      "course_id", "title", "description", "duration_minutes", 
+      "course_id", "title", "description", "duration_minutes",
       "total_questions", "exam_type", "due_date", "max_attempts", "is_active"
     ];
-    
+
     const validExamData: Record<string, any> = {};
     for (const field of validFields) {
       if (field in examData) {
@@ -92,14 +92,14 @@ export async function getExamsByTeacher(teacherId: string): Promise<Exam[]> {
       .eq("is_active", true);
 
     if (coursesError) throw coursesError;
-    
+
     if (!courses || courses.length === 0) {
       return [];
     }
-    
+
     // Obtenemos los IDs de los cursos
     const courseIds = courses.map(course => course.id);
-    
+
     // Ahora obtenemos los exámenes relacionados con esos cursos
     const { data, error } = await supabase
       .from("exams")
@@ -255,7 +255,7 @@ export async function deleteExam(id: string): Promise<boolean> {
       .from("questions")
       .delete()
       .eq("exam_id", id);
-    
+
     if (questionsError) throw questionsError;
 
     // Then delete all submissions associated with the exam
@@ -263,7 +263,7 @@ export async function deleteExam(id: string): Promise<boolean> {
       .from("exam_submissions")
       .delete()
       .eq("exam_id", id);
-    
+
     if (submissionsError) throw submissionsError;
 
     // Finally delete the exam itself
@@ -271,9 +271,9 @@ export async function deleteExam(id: string): Promise<boolean> {
       .from("exams")
       .delete()
       .eq("id", id);
-    
+
     if (examError) throw examError;
-    
+
     return true;
   } catch (error) {
     console.error("Delete exam error:", error);
@@ -296,7 +296,7 @@ export async function getExamSubmissions(examId: string): Promise<any[]> {
       `)
       .eq("exam_id", examId)
       .order("submitted_at", { ascending: false });
-    
+
     if (error) throw error;
     return data || [];
   } catch (error) {
@@ -316,7 +316,7 @@ export async function getExamsByCourse(courseId: string): Promise<Exam[]> {
       .from("exams")
       .select("*")
       .eq("course_id", courseId);
-    
+
     if (error) throw error;
     return data as Exam[];
   } catch (error) {
@@ -337,7 +337,7 @@ export async function removeExamsForCourse(courseId: string): Promise<boolean> {
       .from("exams")
       .delete()
       .eq("course_id", courseId);
-    
+
     return !error;
   } catch (error) {
     console.error("Remove exams for course error:", error);
@@ -359,7 +359,7 @@ export async function updateSubmissionScore(submissionId: string, score: number)
       .from("exam_submissions")
       .update({ score })
       .eq("id", submissionId);
-    
+
     return !error;
   } catch (error) {
     console.error("Update submission score error:", error);
