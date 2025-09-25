@@ -34,7 +34,7 @@ import { useToast } from "@/components/ui/use-toast";
 // Importaciones de tipos y funciones de Supabase (ajustadas)
 import { Course, createCourse, updateCourse, deleteCourse, getCourses } from "@/lib/courses";
 import { getStudentsForCourse, searchStudents, addStudentsToCourse } from "@/lib/students";
-import { getTeachers } from "@/lib/teachers"; // <--- Nueva importación para cargar profesores
+import { getTeachers } from "@/lib/teachers";
 
 // Definiciones de tipos para los datos
 type Student = {
@@ -256,7 +256,6 @@ export default function CourseManagement() {
         level: formData.level,
         code: formData.name.substring(0, 10).toUpperCase().replace(/\s/g, ''),
         max_students: formData.max_students,
-        // enrolled_count will be calculated automatically in the backend
         duration_weeks: formData.duration_weeks,
         hours_per_week: formData.hours_per_week,
         teacher_id: formData.teacher_id,
@@ -327,16 +326,11 @@ export default function CourseManagement() {
 
     setIsLoading(true);
     try {
-      // Separar los datos del curso de los estudiantes asignados
       const { assignedStudents, ...courseData } = formData;
-
-      // Actualizar el curso
       await updateCourse(editingCourse.id, {
         ...courseData,
         enrolled_count: assignedStudents.length,
       });
-
-      // Actualizar las inscripciones en la base de datos
       await addStudentsToCourse(editingCourse.id, assignedStudents.map(s => s.id));
 
       await loadCourses();
@@ -445,7 +439,7 @@ export default function CourseManagement() {
               Nuevo Curso
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl overflow-y-auto max-h-[85vh]">
             <DialogHeader>
               <DialogTitle>Crear Nuevo Curso</DialogTitle>
               <DialogDescription>Completa la información del nuevo curso</DialogDescription>
@@ -689,7 +683,6 @@ export default function CourseManagement() {
                 <SelectValue placeholder="Filtrar por nivel" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los niveles</SelectItem>
                 <SelectItem value="A1">A1 - Principiante</SelectItem>
                 <SelectItem value="A2">A2 - Elemental</SelectItem>
                 <SelectItem value="B1">B1 - Intermedio</SelectItem>
@@ -722,11 +715,9 @@ export default function CourseManagement() {
               <div className="space-y-3">
                 {course.description && <p className="text-sm text-gray-600 line-clamp-2">{course.description}</p>}
 
-                {/* --- CAMBIO AQUÍ: Profesor Asignado --- */}
                 <div className="text-sm text-gray-700">
                   <span className="font-semibold">Profesor:</span> {getTeacherName(course.teacher_id)}
                 </div>
-                {/* --- FIN DEL CAMBIO --- */}
 
                 <div className="flex items-center gap-4 text-sm text-gray-500">
                   <div className="flex items-center gap-1">
@@ -828,7 +819,7 @@ export default function CourseManagement() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl overflow-y-auto max-h-[85vh]">
           <DialogHeader>
             <DialogTitle>Editar Curso</DialogTitle>
             <DialogDescription>Modifica la información del curso</DialogDescription>
@@ -1043,7 +1034,7 @@ export default function CourseManagement() {
 
       {/* Preview Dialog */}
       <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-xl overflow-y-auto max-h-[85vh]">
           {previewingCourse && (
             <>
               <DialogHeader>
