@@ -1,5 +1,7 @@
 # Centro de Idiomas Universidad Sergio Arboleda
 
+![Captura de Pantalla de la Plataforma](public/ciusa-1.png)
+
 ## 📜 Descripción
 
 Sistema de gestión académica desarrollado para el **Centro de Idiomas de la Universidad Sergio Arboleda**.  
