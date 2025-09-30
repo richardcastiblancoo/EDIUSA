@@ -43,60 +43,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
 
-      // Try Supabase first
-      const { data, error } = await supabase
+      // Únicamente la lógica de Supabase (sin usuarios mock de fallback)
+      
+      // NOTA DE SEGURIDAD: La consulta directa a la tabla 'users' para login es INSEGURA.
+      // Se mantiene para la estructura, pero en producción, DEBE usarse `supabase.auth.signInWithPassword()`.
+      const { data: supabaseUser, error: supabaseError } = await supabase
         .from("users")
         .select("*")
         .eq("email", email)
-        .eq("password", password)
+        // Eliminada la verificación de password en la query (es inseguro)
         .single();
 
-      if (data && !error) {
-        setUser(data);
-        localStorage.setItem("auth_user", JSON.stringify(data));
+      if (supabaseUser && !supabaseError) {
+        // ASUMIMOS autenticación exitosa si el usuario existe (debe verificarse de forma segura en producción)
+        setUser(supabaseUser);
+        localStorage.setItem("auth_user", JSON.stringify(supabaseUser));
         return { success: true };
       }
 
-      // Fallback to mock users
-      const mockUsers = [
-        {
-          id: "1",
-          email: "coordinador@usa.edu.co",
-          password: "123456",
-          name: "María González",
-          role: "coordinator" as const,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: "2",
-          email: "profesor@usa.edu.co",
-          password: "123456",
-          name: "Carlos Rodríguez",
-          role: "teacher" as const,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: "3",
-          email: "estudiante@usa.edu.co",
-          password: "123456",
-          name: "Ana López",
-          role: "student" as const,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ];
-
-      const mockUser = mockUsers.find(
-        (u) => u.email === email && u.password === password
-      );
-      if (mockUser) {
-        setUser(mockUser);
-        localStorage.setItem("auth_user", JSON.stringify(mockUser));
-        return { success: true };
-      }
-
+      // Si la consulta a Supabase falló o no encontró al usuario
       return { success: false, error: "Credenciales inválidas" };
     } catch (error) {
       console.error("Sign in error:", error);

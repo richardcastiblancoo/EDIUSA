@@ -53,7 +53,7 @@ export default function RootLayout({
         <meta name="robots" content="index, follow" />
         <meta name="publisher" content="Centro de Idiomas Universidad Sergio Arboleda" />
         <meta name="keywords" content="Centro de Idiomas Universidad Sergio Arboleda, Centro de Idiomas, Universidad Sergio Arboleda, Gestión académica, Gestión administrativa, Gestión de estudiantes, Gestión de profesores, Gestión de cursos, Gestión de exámenes, Seguimiento académico, Plataforma de gestión académica, Centro de Idiomas Universidad Sergio Arboleda" />
-        <meta name="theme-color" content="#f9efd4" />
+        <meta name="theme-color" content="#FFFFFF" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />

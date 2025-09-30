@@ -225,10 +225,11 @@ export default function TeacherStudentsPage() {
     }
 
     const score = parseFloat(gradeScore);
-    if (isNaN(score) || score < 0 || score > 100) {
+    // ⭐ CAMBIO IMPLEMENTADO: Validación del rango de calificación de 0 a 5
+    if (isNaN(score) || score < 0 || score > 5) {
       toast({
         title: "Error de Validación",
-        description: "La calificación debe ser un número entre 0 y 100.",
+        description: "La calificación debe ser un número entre 0 y 5.",
         variant: "destructive",
       });
       return;
@@ -609,15 +610,16 @@ export default function TeacherStudentsPage() {
                       <form onSubmit={handleGradeSubmit} className="space-y-4">
                         <div className="space-y-2">
                           <label className="text-sm font-medium">
-                            Calificación (0-100)
+                            Calificación (0-5)
                           </label>
                           <Input
                             type="number"
                             min="0"
-                            max="100"
+                            max="5"
+                            step="0.1" // Permite decimales para notas como 3.5
                             value={gradeScore}
                             onChange={(e) => setGradeScore(e.target.value)}
-                            placeholder="Ingresa la calificación"
+                            placeholder="Ingresa la calificación (0-5)"
                           />
                         </div>
                         <div className="space-y-2">

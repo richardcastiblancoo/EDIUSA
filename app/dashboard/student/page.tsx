@@ -13,7 +13,7 @@ import { getStudentExams } from "@/lib/exams"
 import { useToast } from "@/components/ui/use-toast"
 import Link from "next/link"
 
-// Variants para animaciones
+// Variants para animaciones (Sin cambios)
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -36,13 +36,13 @@ const itemVariants = {
   },
 }
 
-// Efecto de hover
+// Efecto de hover (Sin cambios)
 const cardHoverEffect = {
   scale: 1.02,
   transition: { duration: 0.2 },
 }
 
-// Definición de tipos para los datos
+// Definición de tipos para los datos (Sin cambios)
 interface Course {
   id: string;
   name: string;
@@ -64,13 +64,25 @@ interface Exam {
   }>;
 }
 
+/**
+ * FUNCIÓN DE CONVERSIÓN
+ * Convierte una puntuación de la escala 0-100 a la escala 0-5.
+ * @param score_100 El puntaje en base 100.
+ * @returns El puntaje en base 5.
+ */
+const convertToScaleFive = (score_100: number): number => {
+    return (score_100 / 100) * 5;
+}
+
+
 export default function StudentDashboard() {
   const { user } = useAuth()
   const { toast } = useToast()
   const [courses, setCourses] = useState<Course[]>([])
   const [exams, setExams] = useState<Exam[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [averageScore, setAverageScore] = useState<number | null>(null);
+  // averageScore almacenará el valor en la escala 0-5
+  const [averageScore, setAverageScore] = useState<number | null>(null); 
 
   useEffect(() => {
     const fetchData = async () => {
@@ -92,13 +104,19 @@ export default function StudentDashboard() {
         const studentExams = await getStudentExams(user.id)
         setExams(studentExams ?? [])
 
+        // Filtra y obtiene los puntajes (asumidos en escala 0-100)
         const scores = studentExams
           .filter((exam: Exam) => exam.exam_submissions?.[0]?.score !== null)
           .map((exam: Exam) => exam.exam_submissions![0].score);
         
         if (scores.length > 0) {
-          const average = scores.reduce((a, b) => (a ?? 0) + (b ?? 0), 0) / scores.length;
-          setAverageScore(Number(average.toFixed(2)));
+          const rawAverage = scores.reduce((a, b) => (a ?? 0) + (b ?? 0), 0) / scores.length;
+          
+          // CONVERSIÓN: Convertir a escala 0-5 y redondear a un decimal
+          const finalAverage = convertToScaleFive(rawAverage as number);
+          setAverageScore(Number(finalAverage.toFixed(1)));
+        } else {
+            setAverageScore(null);
         }
       } catch (error) {
         console.error("Error fetching student data:", error)
@@ -175,6 +193,7 @@ export default function StudentDashboard() {
                 </Card>
               </motion.div>
 
+              {/* ⭐️ TARJETA DE PROMEDIO MODIFICADA */}
               <motion.div variants={itemVariants} whileHover={cardHoverEffect}>
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -183,9 +202,11 @@ export default function StudentDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      {averageScore !== null ? `${averageScore}%` : '--'}
+                      {/* Formato 0.0 a 5.0, sin % */}
+                      {averageScore !== null ? averageScore.toFixed(1) : '--'}
                     </div>
-                    <p className="text-xs text-muted-foreground">Sobre 100%</p>
+                    {/* Descripción cambiada */}
+                    <p className="text-xs text-muted-foreground">Sobre 5.0</p>
                   </CardContent>
                 </Card>
               </motion.div>
