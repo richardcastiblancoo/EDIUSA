@@ -25,6 +25,7 @@ import {
   ChevronRight,
   User,
   X,
+  Bot, // Usaremos el icono de Bot (o MessageSquare) para el asistente IA
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import Link from "next/link";
@@ -34,6 +35,19 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
+
+// --- Nuevos Tipos para la Navegación por Categorías ---
+type NavigationItem = {
+  name: string;
+  href: string;
+  icon: React.ElementType;
+  isBeta?: boolean; // Nueva propiedad para la etiqueta Beta
+};
+
+type NavigationSection = {
+  title: string;
+  items: NavigationItem[];
+};
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -89,108 +103,166 @@ export default function DashboardLayout({
     setTheme(theme === "light" ? "dark" : "light");
   };
 
-  const navigationItems = useMemo(() => {
-    const baseItems = [
+  // --- Navegación Agrupada por Secciones (useMemo modificado) ---
+  const navigationSections: NavigationSection[] = useMemo(() => {
+    // Items base para todos los roles
+    const baseItems: NavigationItem[] = [
       {
         name: "Dashboard",
         href: role ? `/dashboard/${role}` : "/dashboard",
         icon: Home,
       },
       { name: "Perfil", href: "/profile", icon: User },
+      // Nuevo elemento de IA con etiqueta Beta
+      { 
+        name: "Asistente IA", 
+        href: "/dashboard/ai-assistant",
+        icon: Bot,
+        isBeta: true,
+      },
     ];
+    
+    // Dividir los items base para las secciones
+    const dashboardItem = baseItems[0];
+    const profileItem = baseItems[1];
+    const aiAssistantItem = baseItems[2];
+
 
     switch (role) {
       case "coordinator":
         return [
-          ...baseItems.slice(0, 1),
           {
-            name: "Usuarios",
-            href: "/dashboard/coordinator/users",
-            icon: Users,
+            title: "General",
+            items: [dashboardItem, aiAssistantItem],
           },
           {
-            name: "Estudiantes",
-            href: "/dashboard/coordinator/students",
-            icon: UserCheck,
+            title: "Administración",
+            items: [
+              {
+                name: "Usuarios",
+                href: "/dashboard/coordinator/users",
+                icon: Users,
+              },
+              {
+                name: "Estudiantes",
+                href: "/dashboard/coordinator/students",
+                icon: UserCheck,
+              },
+              {
+                name: "Profesores",
+                href: "/dashboard/coordinator/teachers",
+                icon: GraduationCap,
+              },
+              {
+                name: "Cursos",
+                href: "/dashboard/coordinator/courses",
+                icon: BookOpen,
+              },
+            ],
           },
           {
-            name: "Profesores",
-            href: "/dashboard/coordinator/teachers",
-            icon: GraduationCap,
+            title: "Reportes y Soporte",
+            items: [
+              {
+                name: "Listado de PQR",
+                href: "/dashboard/coordinator/schedules",
+                icon: MessageSquare,
+              },
+              {
+                name: "Reportes",
+                href: "/dashboard/coordinator/reports",
+                icon: BarChart3,
+              },
+              profileItem,
+            ],
           },
-          {
-            name: "Cursos",
-            href: "/dashboard/coordinator/courses",
-            icon: BookOpen,
-          },
-          {
-            name: "Listado de PQR",
-            href: "/dashboard/coordinator/schedules",
-            icon: MessageSquare,
-          },
-          {
-            name: "Reportes",
-            href: "/dashboard/coordinator/reports",
-            icon: BarChart3,
-          },
-          ...baseItems.slice(1),
         ];
       case "teacher":
         return [
-          ...baseItems.slice(0, 1),
           {
-            name: "Mis Cursos",
-            href: "/dashboard/teacher/courses",
-            icon: BookOpen,
+            title: "General",
+            items: [dashboardItem, aiAssistantItem],
           },
           {
-            name: "Exámenes",
-            href: "/dashboard/teacher/exams",
-            icon: ClipboardList,
+            title: "Académico",
+            items: [
+              {
+                name: "Mis Cursos",
+                href: "/dashboard/teacher/courses",
+                icon: BookOpen,
+              },
+              {
+                name: "Estudiantes",
+                href: "/dashboard/teacher/students",
+                icon: Users,
+              },
+            ],
           },
           {
-            name: "Mis Lecciones",
-            href: "/dashboard/teacher/lessons",
-            icon: FileText,
+            title: "Gestión de Contenido",
+            items: [
+              {
+                name: "Exámenes",
+                href: "/dashboard/teacher/exams",
+                icon: ClipboardList,
+              },
+              {
+                name: "Mis Lecciones",
+                href: "/dashboard/teacher/lessons",
+                icon: FileText,
+              },
+              { name: "PQR", href: "/dashboard/teacher/pqr", icon: MessageSquare },
+              profileItem,
+            ],
           },
-          {
-            name: "Estudiantes",
-            href: "/dashboard/teacher/students",
-            icon: Users,
-          },
-          { name: "PQR", href: "/dashboard/teacher/pqr", icon: MessageSquare },
-          ...baseItems.slice(1),
         ];
       case "student":
         return [
-          ...baseItems.slice(0, 1),
           {
-            name: "Mis Cursos",
-            href: "/dashboard/student/courses",
-            icon: BookOpen,
+            title: "General",
+            items: [dashboardItem, aiAssistantItem],
           },
           {
-            name: "Exámenes",
-            href: "/dashboard/student/exams",
-            icon: ClipboardList,
+            title: "Mi Progreso",
+            items: [
+              {
+                name: "Mis Cursos",
+                href: "/dashboard/student/courses",
+                icon: BookOpen,
+              },
+              {
+                name: "Mis Lecciones",
+                href: "/dashboard/student/lessons",
+                icon: Calendar,
+              },
+              {
+                name: "Calificaciones",
+                href: "/dashboard/student/grades",
+                icon: FileText,
+              },
+            ],
           },
           {
-            name: "Mis Lecciones",
-            href: "/dashboard/student/lessons",
-            icon: Calendar,
+            title: "Evaluación y Soporte",
+            items: [
+              {
+                name: "Exámenes",
+                href: "/dashboard/student/exams",
+                icon: ClipboardList,
+              },
+              { name: "PQR", href: "/dashboard/student/pqr", icon: MessageSquare },
+              profileItem,
+            ],
           },
-          {
-            name: "Calificaciones",
-            href: "/dashboard/student/grades",
-            icon: FileText,
-          },
-          { name: "PQR", href: "/dashboard/student/pqr", icon: MessageSquare },
-          ...baseItems.slice(1),
         ];
       default:
-        return baseItems;
+        // Caso por defecto: solo dashboard, perfil, y IA.
+        return [{ title: "General", items: baseItems }];
     }
   }, [role]);
+
+  // Aplanar la navegación para el cálculo del título de la página
+  const navigationItems = navigationSections.flatMap((section) => section.items);
 
   const currentNav = navigationItems.find(
     (i) => pathname === i.href || pathname.startsWith(i.href + "/")
@@ -211,22 +283,24 @@ export default function DashboardLayout({
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
+          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden transition-opacity duration-300"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col transition-all duration-300 
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col transition-all duration-500 ease-in-out
         ${sidebarCollapsed ? "w-20" : "w-64"} 
-        bg-white dark:bg-slate-900 shadow-lg border-r border-gray-200 dark:border-slate-800 
-        transform ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
+        bg-white dark:bg-slate-900 shadow-xl border-r border-gray-200 dark:border-slate-800 
+        transform ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } lg:translate-x-0`}
       >
         {/* Logo + toggle */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-slate-800">
           {!sidebarCollapsed && (
-            <Link href="/" className="flex items-center space-x-3">
+            <Link href="/" className="flex items-center space-x-3 transition-opacity duration-300">
               {/* Logo más grande */}
               <img
                 src="/ciusa.png"
@@ -240,17 +314,34 @@ export default function DashboardLayout({
               </span>
             </Link>
           )}
+          {/* Muestra un logo más pequeño cuando está colapsado */}
+          {sidebarCollapsed && (
+            <Link href="/" className="flex items-center transition-opacity duration-300">
+              <img
+                src="/ciusa.png"
+                width={32}
+                height={32}
+                alt="logo ciusa"
+                className="rounded-md"
+              />
+            </Link>
+          )}
           <Button
             variant="ghost"
             size="sm"
-            className="hidden lg:flex"
+            className="hidden lg:flex transition-transform duration-300 hover:bg-gray-200 dark:hover:bg-slate-800"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            aria-label={
+              sidebarCollapsed
+                ? "Expandir barra lateral"
+                : "Colapsar barra lateral"
+            }
           >
-            {sidebarCollapsed ? (
-              <ChevronRight className="h-5 w-5 text-gray-500" />
-            ) : (
-              <ChevronLeft className="h-5 w-5 text-gray-500" />
-            )}
+            <ChevronLeft 
+                className={`h-5 w-5 text-gray-500 transition-transform duration-300 ${
+                    sidebarCollapsed ? "rotate-180" : "rotate-0"
+                }`} 
+            />
           </Button>
           <Button
             variant="ghost"
@@ -262,45 +353,79 @@ export default function DashboardLayout({
           </Button>
         </div>
 
-        {/* Navigation */}
-        <nav className="mt-4 px-2 flex-1 overflow-y-auto">
-          <ul className="space-y-1">
-            {navigationItems.map((item) => {
-              const isActive =
-                pathname === item.href || pathname.startsWith(item.href + "/");
-              return (
-                <li key={item.name}>
-                  <Link
-                    href={item.href}
-                    className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors border-l-4
-                      ${
-                        isActive
-                          ? "bg-blue-50 text-blue-700 border-blue-600 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-500"
-                          : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 border-transparent dark:text-gray-300 dark:hover:bg-slate-800 dark:hover:text-gray-100"
-                      }`}
-                  >
-                    <item.icon className="h-5 w-5 mr-3 shrink-0" />
-                    {!sidebarCollapsed && <span>{item.name}</span>}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+        {/* Navigation - CON SECCIONES Y EFECTOS */}
+        <nav className="mt-4 px-2 flex-1 overflow-y-auto custom-scrollbar">
+          {navigationSections.map((section, index) => (
+            <div key={section.title} className="mb-4">
+              {/* Título de la sección solo cuando NO está colapsado */}
+              {!sidebarCollapsed && (
+                <h3 className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 transition-opacity duration-300">
+                  {section.title}
+                </h3>
+              )}
+              <ul className="space-y-1">
+                {section.items.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    pathname.startsWith(item.href + "/");
+                  return (
+                    <li key={item.name}>
+                      <Link
+                        href={item.href}
+                        className={`flex items-center ${
+                          sidebarCollapsed ? "justify-center" : "px-3"
+                        } py-2 text-sm font-medium rounded-lg transition-all duration-200 group
+                          ${
+                            isActive
+                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 shadow-sm"
+                              : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-slate-800/70"
+                          }
+                          ${sidebarCollapsed ? "w-full" : "w-auto"}`}
+                        title={sidebarCollapsed ? item.name : undefined}
+                      >
+                        {/* Icono con efecto de escala al pasar el cursor (solo si no está activo) */}
+                        <item.icon
+                          className={`h-5 w-5 shrink-0 transition-transform duration-200 
+                            ${!sidebarCollapsed ? "mr-3" : ""}`}
+                            style={item.isBeta ? { color: '#8b5cf6' } : {}} // Color morado para el icono IA
+                        />
+                        {/* Texto con animación de opacidad */}
+                        {!sidebarCollapsed && (
+                            <span className={`transition-opacity duration-300 flex items-center justify-between w-full`}>
+                                <span>{item.name}</span>
+                                {/* Etiqueta BETA */}
+                                {item.isBeta && (
+                                  <span className="ml-2 px-2 py-0.5 text-xs font-bold rounded-full bg-purple-500 text-white dark:bg-purple-700/70 dark:text-purple-300 border border-purple-600/50 shadow-sm animate-pulse-slow">
+                                    BETA
+                                  </span>
+                                )}
+                            </span>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
         </nav>
 
-        {/* Perfil abajo estilo Discord (flotante con Popover) */}
+        {/* Perfil abajo con animaciones */}
         <div className="border-t border-gray-200 dark:border-slate-800 p-3">
           <Popover>
             <PopoverTrigger asChild>
-              <button className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800">
-                <Avatar className="h-9 w-9">
+              <button
+                className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-slate-800 hover:shadow-md
+                ${sidebarCollapsed ? "justify-center" : "justify-start"}`}
+              >
+                <Avatar className="h-9 w-9 ring-2 ring-blue-400 dark:ring-blue-600 transition-all duration-300">
                   <AvatarImage src={avatarUrl || ""} />
                   <AvatarFallback>
                     {user?.name?.charAt(0) || "U"}
                   </AvatarFallback>
                 </Avatar>
                 {!sidebarCollapsed && (
-                  <div className="flex flex-col overflow-hidden text-left">
+                  <div className="flex flex-col overflow-hidden text-left transition-opacity duration-300">
                     <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
                       {user?.name}
                     </span>
@@ -312,12 +437,13 @@ export default function DashboardLayout({
               </button>
             </PopoverTrigger>
 
+            {/* El Popover usa animaciones internas de Shadcn/Radix */}
             <PopoverContent
               align="start"
               side="top"
-              className="w-72 p-4 rounded-xl bg-white dark:bg-slate-900 shadow-xl"
+              className="w-72 p-4 rounded-xl bg-white dark:bg-slate-900 shadow-2xl border border-gray-200 dark:border-slate-800"
             >
-              {/* Header usuario */}
+              {/* Contenido del popover sin cambios */}
               <div className="flex items-center gap-3">
                 <Avatar className="h-14 w-14">
                   <AvatarImage src={avatarUrl || ""} />
@@ -339,7 +465,7 @@ export default function DashboardLayout({
               <div className="mt-4 space-y-2">
                 <Button
                   variant="secondary"
-                  className="w-full justify-start"
+                  className="w-full justify-start transition-transform duration-150 hover:scale-[1.02]"
                   asChild
                 >
                   <Link href="/profile">
@@ -348,7 +474,7 @@ export default function DashboardLayout({
                 </Button>
                 <Button
                   variant="secondary"
-                  className="w-full justify-start"
+                  className="w-full justify-start transition-transform duration-150 hover:scale-[1.02]"
                   onClick={toggleTheme}
                 >
                   {theme === "light" ? (
@@ -360,7 +486,7 @@ export default function DashboardLayout({
                 </Button>
                 <Button
                   variant="destructive"
-                  className="w-full justify-start"
+                  className="w-full justify-start transition-transform duration-150 hover:scale-[1.02]"
                   onClick={handleSignOut}
                 >
                   <LogOut className="w-4 h-4 mr-2" /> Cerrar sesión
@@ -373,12 +499,12 @@ export default function DashboardLayout({
 
       {/* Main content */}
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 ${
+        className={`flex-1 flex flex-col transition-all duration-500 ease-in-out ${
           sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
         }`}
       >
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-white dark:bg-slate-900 shadow-sm border-b border-gray-200 dark:border-slate-800">
+        {/* Top bar (Sticky) */}
+        <header className="sticky top-0 z-30 bg-white dark:bg-slate-900 shadow-md border-b border-gray-200 dark:border-slate-800">
           <div className="flex items-center justify-between h-16 px-4 sm:px-6 gap-4">
             <div className="flex items-center gap-3 min-w-0">
               <Button
@@ -389,7 +515,7 @@ export default function DashboardLayout({
               >
                 <Menu className="h-5 w-5 text-gray-500" />
               </Button>
-              <h2 className="hidden sm:block mt-1 text-lg font-semibold leading-tight text-gray-900 dark:text-gray-100 truncate">
+              <h2 className="hidden sm:block mt-1 text-lg font-bold leading-tight text-gray-900 dark:text-gray-100 truncate">
                 {pageTitle}
               </h2>
             </div>

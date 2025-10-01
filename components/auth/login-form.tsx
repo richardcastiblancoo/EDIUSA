@@ -42,7 +42,7 @@ export default function LoginForm() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsPageLoading(false);
-    }, 2000); 
+    }, 2000);
 
     const storedEmail = localStorage.getItem("rememberedEmail");
     if (storedEmail) {
@@ -93,17 +93,22 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex flex-col">
-      <header className="bg-white shadow-sm border-b">
+    // Fondo animado: Se usa un div absoluto para el gradiente
+    <div className="min-h-screen flex flex-col relative overflow-hidden bg-gray-50">
+      <div className="absolute inset-0 z-0 opacity-30 bg-gradient-to-r from-blue-100 via-white to-purple-100 bg-[length:400%_400%] animate-animated-gradient"></div>
+
+      <header className="bg-white shadow-sm border-b relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-3">
             <div className="flex items-center space-x-2">
               <img src="/ciusa.png" width={80} alt="Logo CIUSA" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                {/* Título animado */}
+                <h1 className="text-2xl font-bold text-gray-900 animate-fade-in-up">
                   Centro de Idiomas
                 </h1>
-                <p className="text-base text-gray-600">
+                {/* Subtítulo animado con retraso */}
+                <p className="text-base text-gray-600 animate-fade-in-up delay-150">
                   Universidad Sergio Arboleda
                 </p>
               </div>
@@ -111,7 +116,7 @@ export default function LoginForm() {
           </div>
         </div>
       </header>
-      <div className="flex flex-col lg:flex-row flex-grow overflow-hidden">
+      <div className="flex flex-col lg:flex-row flex-grow overflow-hidden relative z-10">
         <div className="lg:w-1/2 flex items-center justify-center py-4 lg:p-8">
           <div className="max-w-md w-full space-y-6 px-4 lg:px-0">
             <div className="text-center">
@@ -154,9 +159,9 @@ export default function LoginForm() {
             </div>
           </div>
         </div>
-        <div className="lg:w-1/2 flex items-center justify-center py-4 lg:p-8 bg-white lg:bg-gray-50 overflow-hidden">
+        <div className="lg:w-1/2 flex items-center justify-center py-4 lg:p-8 overflow-hidden relative">
           <div className="max-w-md w-full">
-            <Card className="shadow-xl border-0">
+            <Card className="shadow-2xl border-0">
               <CardHeader className="space-y-1 pb-4">
                 <CardTitle className="text-3xl font-bold text-center">
                   Iniciar Sesión

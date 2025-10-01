@@ -58,6 +58,12 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [courses, setCourses] = useState<{ id: string, name: string }[]>([])
 
+  // **********************************************
+  // NUEVOS ESTADOS PARA LA CONFIRMACIÓN DE ELIMINACIÓN
+  // **********************************************
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [lessonToDelete, setLessonToDelete] = useState<string | null>(null)
+
   // Paginación
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(5)
@@ -124,16 +130,16 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
       return
     }
     setCreating(true)
-  
+
     try {
       const { data: lastLesson } = await supabase
         .from("lessons")
         .select("order_index")
         .order("order_index", { ascending: false })
         .limit(1)
-  
+
       const nextOrderIndex = lastLesson && lastLesson[0] ? lastLesson[0].order_index + 1 : 1
-  
+
       const newLesson = {
         ...lessonForm,
         teacher_id: teacherId,
@@ -142,11 +148,11 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
         attachments: lessonForm.attachments,
         audio_url: lessonForm.audio_url
       }
-  
+
       const { error } = await supabase.from("lessons").insert([newLesson])
-  
+
       if (error) throw error
-  
+
       setMessage({ type: "success", text: "Lección creada exitosamente" })
       setDialogOpen(false)
       resetForm()
@@ -185,15 +191,28 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
     }
   }
 
-  const handleDeleteLesson = async (id: string) => {
-    if (!confirm("¿Estás seguro de que deseas eliminar esta lección?")) return
+  // **********************************************
+  // LÓGICA DE ELIMINACIÓN MEJORADA
+  // **********************************************
+
+  // Función que se llama desde la tabla para abrir el diálogo de confirmación
+  const confirmDelete = (id: string) => {
+    setLessonToDelete(id)
+    setDeleteDialogOpen(true)
+  }
+
+  // Función que se llama al confirmar en el diálogo
+  const handleConfirmedDelete = async () => {
+    if (!lessonToDelete) return
+
+    setCreating(true) // Usar 'creating' para deshabilitar el botón mientras se elimina
 
     try {
       // First delete associated grades
       const { error: gradesError } = await supabase
         .from("grades")
         .delete()
-        .eq("lesson_id", id)
+        .eq("lesson_id", lessonToDelete)
 
       if (gradesError) throw gradesError
 
@@ -201,7 +220,7 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
       const { error } = await supabase
         .from("lessons")
         .delete()
-        .eq("id", id)
+        .eq("id", lessonToDelete)
 
       if (error) throw error
 
@@ -210,6 +229,10 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
     } catch (error) {
       console.error("Error deleting lesson:", error)
       setMessage({ type: "error", text: "Error al eliminar la lección" })
+    } finally {
+      setCreating(false)
+      setDeleteDialogOpen(false)
+      setLessonToDelete(null)
     }
   }
 
@@ -260,7 +283,11 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
       completed: "Completado",
     }
 
-    return <Badge variant={variants[status]}>{labels[status]}</Badge>
+    // Se asume que 'default', 'secondary', 'outline', 'destructive' son variantes válidas en tu Badge.
+    // Aquí, se usa 'default' si el estado no está mapeado para evitar errores.
+    const variant = variants[status] || "default" 
+
+    return <Badge variant={variant}>{labels[status] || status}</Badge>
   }
 
   // Paginación
@@ -332,7 +359,10 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
                               <Button variant="outline" size="sm" onClick={() => handleEditLesson(lesson)}>
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button variant="outline" size="sm" onClick={() => handleDeleteLesson(lesson.id)}>
+                              {/* **********************************************
+                                  BOTÓN DE ELIMINACIÓN MODIFICADO para usar la nueva función
+                                  ********************************************** */}
+                              <Button variant="destructive" size="sm" onClick={() => confirmDelete(lesson.id)}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -373,6 +403,9 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
         </CardContent>
       </Card>
 
+      {/* **********************************************
+          DIÁLOGO DE CREACIÓN/EDICIÓN
+          ********************************************** */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
@@ -524,6 +557,40 @@ export default function LessonManagement({ teacherId }: LessonManagementProps) {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* **********************************************
+          DIÁLOGO DE CONFIRMACIÓN DE ELIMINACIÓN
+          ********************************************** */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center">
+              <Trash2 className="h-6 w-6 mr-2" />
+              Confirmar Eliminación
+            </DialogTitle>
+            <DialogDescription>
+              Esta acción no se puede deshacer. Esto eliminará permanentemente la lección (y las calificaciones asociadas). ¿Estás seguro de que deseas continuar?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-end gap-2 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={creating}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleConfirmedDelete}
+              disabled={creating}
+            >
+              {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              {creating ? "Eliminando..." : "Eliminar Lección"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
