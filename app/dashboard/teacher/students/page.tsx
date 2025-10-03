@@ -418,7 +418,9 @@ export default function TeacherStudentsPage() {
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
-        <DialogContent className="sm:max-w-[800px]">
+        <DialogContent 
+          className="sm:max-w-[800px] overflow-y-auto max-h-[90vh]" // ⭐ MODIFICACIÓN CLAVE AQUÍ ⭐
+        >
           <DialogHeader>
             <DialogTitle>
               Gestionar Estudiante: {selectedStudent?.name}

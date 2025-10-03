@@ -71,17 +71,23 @@ export default function TeacherCoursesPage() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {courses.map((course) => (
-              <Card key={course.id}>                
+              <Card key={course.id}>
                 <CardHeader>
                   <CardTitle>{course.name}</CardTitle>
-                  <CardDescription>
-                    <Badge variant="outline" className="mr-2">
+                  
+                  {/*
+                    ***** CORRECCIÓN APLICADA AQUÍ *****
+                    Se reemplazó <CardDescription> por un <div> para evitar anidar <div>s (Badge) dentro de un <p> (CardDescription).
+                  */}
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <Badge variant="outline">
                       {course.language}
                     </Badge>
                     <Badge variant="outline">
                       {course.level}
                     </Badge>
-                  </CardDescription>
+                  </div>
+                  
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
