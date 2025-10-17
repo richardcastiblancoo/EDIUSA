@@ -1,7 +1,7 @@
 {
-  "name": "Centro de Idiomas - Universidad Sergio Arboleda",
-  "short_name": "Centro Idiomas USA",
-  "description": "Sistema de Gestión Académica del Centro de Idiomas",
+  "name": "Escuela de Idiomas Universidad Sergio Arboleda Caribe",
+  "short_name": "Escuela de Idiomas Universidad Sergio Arboleda Caribe",
+  "description": "Sistema de Gestión Académica de la Escuela de Idiomas Universidad Sergio Arboleda Caribe",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FFFFFF",

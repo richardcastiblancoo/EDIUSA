@@ -1,39 +1,43 @@
-import { streamText, convertToModelMessages, type UIMessage } from "ai"
-import { google } from "@ai-sdk/google" // Proveedor para Gemini
+// En tu archivo API (ej: src/app/api/chat/route.ts)
 
+import { streamText, convertToModelMessages, type UIMessage } from "ai"
+import { createOpenAI } from "@ai-sdk/openai" 
+
+// 1. La clave de API de DeepSeek está en la variable OPENAI_API_KEY
+const DEEPSEEK_KEY = process.env.OPENAI_API_KEY;
+
+
+// Define el tipo de la respuesta HTTP
 export async function POST(req: Request) {
   try {
-    // ⚠️ PRUEBA TEMPORAL DE DEPURACIÓN (VERIFICAR EN LOS LOGS)
-    // Esto se ejecuta primero para ver si la variable de entorno está disponible.
-    const apiKeyStatus = process.env.GEMINI_API_KEY 
-        ? "Clave GEMINI_API_KEY cargada correctamente (length: " + process.env.GEMINI_API_KEY.length + ")" 
-        : "⚠️ ERROR: Clave GEMINI_API_KEY no cargada o es undefined";
-    console.log("Estado de la API Key:", apiKeyStatus); 
-    // ⚠️ Una vez que funcione, puedes eliminar estas líneas.
+    // Verificación de clave
+    if (!DEEPSEEK_KEY) {
+        return new Response("Error: Clave de API no configurada (OPENAI_API_KEY).", { status: 500 });
+    }
+
+    // 2. Inicialización del cliente DENTRO de POST (Solución para 404)
+    // 💡 TRUCO AVANZADO: Apuntamos la baseURL al endpoint de chat/completions, 
+    // esperando que el SDK use esta URL completa y no añada su sufijo /responses.
+    const deepseek = createOpenAI({
+        // ✅ Forzamos la URL base a la ruta de chat/completions
+        baseURL: "https://api.deepseek.com/v1/chat/completions",
+        apiKey: DEEPSEEK_KEY, 
+    });
+
 
     const { messages }: { messages: UIMessage[] } = await req.json()
 
     const result = await streamText({
-      // Usamos el modelo gemini-2.5-flash
-      model: google("gemini-2.5-flash"), 
+      // 3. Usamos el modelo 'deepseek-chat' (solo el nombre del modelo, sin la ruta)
+      model: deepseek("deepseek-chat"), 
       
-      system: `Eres un asistente virtual especializado en el Centro de Idiomas de la Universidad Sergio Arboleda. 
-      
-      Tu función es ayudar a usuarios con diferentes roles:
-      - Coordinadores: gestión administrativa, reportes, asignación de profesores
-      - Profesores: creación de exámenes, calificaciones, gestión de cursos
-      - Estudiantes: consultas sobre horarios, exámenes, calificaciones, inscripciones
-      
-      Responde de manera amigable, profesional y en español. Proporciona información específica y útil sobre el sistema de gestión académica.
-      
-      Si no tienes información específica sobre algo, sugiere contactar al coordinador o revisar la documentación del sistema.`,
+      system: `Eres un asistente virtual especializado en el Centro de Idiomas de la Universidad Sergio Arboleda...`,
       
       messages: convertToModelMessages(messages),
     })
 
     return result.toUIMessageStreamResponse()
   } catch (error) {
-    // Esto mostrará el error real (por ejemplo, "401 Unauthenticated") en los logs del servidor
     console.error("Chat API error:", error)
     return new Response("Error interno del servidor", { status: 500 })
   }

@@ -11,11 +11,11 @@ const inter = Inter({ subsets: ["latin"] });
 // Aquí se configura el Open Graph.
 // La imagen en la propiedad 'images' será usada como la vista previa.
 export const metadata: Metadata = {
-  title: "Centro de Idiomas Universidad Sergio Arboleda",
+  title: "Escuela de Idiomas Universidad Sergio Arboleda Caribe",
   openGraph: {
-    title: "Centro de Idiomas Universidad Sergio Arboleda",
+    title: "Escuela de Idiomas Universidad Sergio Arboleda Caribe",
     description:
-      "Sistema de gestión académica para el Centro de Idiomas de la Universidad Sergio Arboleda. Plataforma integral para la gestión académica y administrativa del Centro de Idiomas de la Universidad Sergio Arboleda. Gestión de estudiantes y profesores Administración de cursos y exámenes Seguimiento académico integral",
+    "Sistema de gestión académica para el Centro de Idiomas de la Universidad Sergio Arboleda. Plataforma integral para la gestión académica y administrativa del Centro de Idiomas de la Universidad Sergio Arboleda. Gestión de estudiantes y profesores Administración de cursos y exámenes Seguimiento académico integral",
     url: "https://ciusa.vercel.app/",
     siteName: "Centro de Idiomas Universidad Sergio Arboleda",
     images: [

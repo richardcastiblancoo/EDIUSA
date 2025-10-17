@@ -8,32 +8,19 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Bot, User, Mic, Plus, MessageSquare } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
-// =========================================================================
-// Lógica y Datos
-// =========================================================================
-
-// Definición de las preguntas sugeridas por rol (Coordinador vacío)
+// 🚀 Preguntas Sugeridas Completadas
 const suggestedQuestions = {
   coordinator: [
-    // Lista de preguntas del coordinador vacía
+   
   ],
   teacher: [
-    "¿Cómo creo un nuevo examen?",
-    "¿Cómo califico a mis estudiantes?",
-    "¿Cómo veo la lista de mis cursos?",
-    "¿Cómo subo material de clase?",
+   
   ],
   student: [
-    "¿Cuáles son mis próximos exámenes?",
-    "¿Cómo veo mis calificaciones?",
-    "¿Cuál es mi horario de clases?",
-    "¿Cómo me inscribo en un curso?",
+    
   ],
 };
-
-// =========================================================================
-// Componente Principal AIChat
-// =========================================================================
+// ------------------------------------
 
 export default function AIChat() {
   const { user } = useAuth();
@@ -79,7 +66,10 @@ export default function AIChat() {
   };
 
   const handleSuggestedQuestion = (question: string) => {
-    sendMessage({ text: question });
+    // Si el usuario ya está logueado, se envía el rol implícitamente por el contexto.
+    // Aunque el backend pregunta, es mejor dar un contexto inicial claro.
+    const rolePrefix = user?.role ? `(Mi rol es ${user.role}). ` : '';
+    sendMessage({ text: rolePrefix + question });
   };
 
   // Lógica de envío simplificada: solo maneja texto
@@ -95,6 +85,7 @@ export default function AIChat() {
     setInput("");
   };
 
+  // 💡 Lógica para determinar el rol y las preguntas
   const userRole = (user?.role || "student") as keyof typeof suggestedQuestions;
   const questions = suggestedQuestions[userRole] || suggestedQuestions.student;
 
@@ -110,11 +101,14 @@ export default function AIChat() {
         <div className="flex flex-col min-h-full">
           
           {isWelcomeScreen ? (
-            // Diseño de Bienvenida Centrado - AJUSTADO AQUÍ 👇
+            // Diseño de Bienvenida Centrado
             <div className="flex-1 flex flex-col items-center justify-center text-center py-10">
               <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 dark:text-gray-100 mb-4 animate-in fade-in zoom-in">
                 Hola, {user?.name || "usuario"}
               </h1>
+              <p className="text-lg text-gray-600 dark:text-gray-400 max-w-md">
+                Soy tu Asistente AI, especialista en la gestión del Centro de Idiomas.
+              </p>
             </div>
           ) : (
             // Mensajes de Chat (Conversación)
