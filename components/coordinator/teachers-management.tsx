@@ -16,6 +16,7 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Dialog,
@@ -61,10 +62,13 @@ import {
   BookOpen,
   UserCheck,
   UserX,
-  UserPlus,
   Trash2,
   Edit,
   Eye,
+  ChevronsLeft,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsRight,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -72,7 +76,9 @@ import { supabase } from "@/lib/supabase";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { getUserImage } from "@/lib/images";
 
-type EnglishLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+// --- Tipos de Datos ---
+type EnglishLevel = "1" | "2" | "3" | "4" | "5" | "6" | "7";
+const ENGLISH_LEVELS: EnglishLevel[] = ["1", "2", "3", "4", "5", "6", "7"];
 
 interface User {
   id: string;
@@ -81,7 +87,7 @@ interface User {
   phone: string | null;
   role: string;
   document_number: string | null;
-  english_level: EnglishLevel | null;
+  english_level: EnglishLevel | null; 
   created_at: string;
   updated_at: string | null;
   is_active: boolean;
@@ -89,7 +95,7 @@ interface User {
   address: string | null;
 }
 
-interface Teacher extends Omit<User, "is_active" | "document_number"> {
+interface Teacher extends Omit<User, "is_active" | "document_number" | "avatar" | "address" | "updated_at"> {
   status: "active" | "inactive";
   document: string | null;
   imageUrl?: string | null;
@@ -99,9 +105,9 @@ interface UserStats {
   total: number;
   active: number;
   inactive: number;
-  newThisMonth: number;
 }
 
+// --- Función de Componente de Badge ---
 const getStatusBadge = (status: "active" | "inactive") => {
   const variants = {
     active: "default",
@@ -116,6 +122,7 @@ const getStatusBadge = (status: "active" | "inactive") => {
   return <Badge variant={variants[status]}>{labels[status]}</Badge>;
 };
 
+// --- Componente Principal ---
 export default function TeachersManagement() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -126,7 +133,7 @@ export default function TeachersManagement() {
     phone: "",
     document: "",
     status: "active" as "active" | "inactive",
-    english_certificate: "A1" as EnglishLevel,
+    english_certificate: "1" as EnglishLevel, 
   });
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -138,7 +145,6 @@ export default function TeachersManagement() {
     total: 0,
     active: 0,
     inactive: 0,
-    newThisMonth: 0,
   });
   const [filterDocument, setFilterDocument] = useState("");
 
@@ -150,7 +156,10 @@ export default function TeachersManagement() {
   const [teacherToPreview, setTeacherToPreview] = useState<Teacher | null>(
     null
   );
+  const [selectedEnglishLevel, setSelectedEnglishLevel] = useState<EnglishLevel | "all">("all");
 
+
+  // --- Lógica de Supabase (sin cambios significativos) ---
   const fetchTeachers = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -178,7 +187,7 @@ export default function TeachersManagement() {
             phone: dbUser.phone,
             role: dbUser.role,
             document: dbUser.document_number,
-            english_level: dbUser.english_level,
+            english_level: (ENGLISH_LEVELS.includes(dbUser.english_level as EnglishLevel) ? dbUser.english_level : null) as EnglishLevel | null, 
             created_at: dbUser.created_at,
             status: dbUser.is_active ? "active" : "inactive",
             imageUrl: imageUrl,
@@ -189,9 +198,6 @@ export default function TeachersManagement() {
         mappedTeachers.map((teacher) => ({
           ...teacher,
           status: teacher.status as "active" | "inactive",
-          avatar: null,
-          address: null,
-          updated_at: null,
         }))
       );
     }
@@ -203,21 +209,10 @@ export default function TeachersManagement() {
     const active = teachers.filter((t) => t.status === "active").length;
     const inactive = teachers.filter((t) => t.status === "inactive").length;
 
-    const today = new Date();
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
-
-    const newThisMonth = teachers.filter((teacher) => {
-      const createdAt = new Date(teacher.created_at);
-      return (
-        createdAt.getMonth() === currentMonth &&
-        createdAt.getFullYear() === currentYear
-      );
-    }).length;
-
-    setStats({ total, active, inactive, newThisMonth });
+    setStats({ total, active, inactive });
   };
 
+  // --- Hooks de Efecto ---
   useEffect(() => {
     fetchTeachers();
   }, []);
@@ -226,16 +221,37 @@ export default function TeachersManagement() {
     calculateStats();
   }, [teachers]);
 
-  useEffect(() => {
-    const filtered = teachers.filter((teacher) =>
-      teacher.document
-        ? teacher.document.toLowerCase().includes(filterDocument.toLowerCase())
-        : false
-    );
-    setTotalPages(Math.ceil(filtered.length / itemsPerPage));
-    setCurrentPage(1);
-  }, [teachers, filterDocument, itemsPerPage]);
+  // Lógica de filtrado y paginación
+  const filteredTeachers = teachers.filter((teacher) => {
+    const documentMatch = teacher.document
+      ? teacher.document.toLowerCase().includes(filterDocument.toLowerCase())
+      : false;
+    
+    const englishLevelMatch = selectedEnglishLevel === "all" || teacher.english_level === selectedEnglishLevel;
+    
+    return documentMatch && englishLevelMatch;
+  });
 
+  useEffect(() => {
+    setTotalPages(Math.ceil(filteredTeachers.length / itemsPerPage));
+    setCurrentPage(1);
+  }, [filteredTeachers.length, itemsPerPage]);
+
+  const indexOfLastTeacher = currentPage * itemsPerPage;
+  const indexOfFirstTeacher = indexOfLastTeacher - itemsPerPage;
+  const currentTeachers = filteredTeachers.slice(
+    indexOfFirstTeacher,
+    indexOfLastTeacher
+  );
+
+  const paginate = (pageNumber: number) => {
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
+  };
+
+
+  // --- Manejadores de Formularios y Diálogos ---
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({ ...prevData, [name]: value }));
@@ -250,22 +266,12 @@ export default function TeachersManagement() {
         phone: teacher.phone ?? "",
         document: teacher.document ?? "",
         status: teacher.status,
-        english_certificate: teacher.english_level ?? "A1",
+        english_certificate: teacher.english_level ?? "1", 
       });
-    } else {
-      setCurrentTeacher(null);
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        document: "",
-        status: "active",
-        english_certificate: "A1",
-      });
-    }
-    setIsDialogOpen(true);
+      setIsDialogOpen(true);
+    } 
   };
-
+  
   const handleSaveTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
     const { document, status, english_certificate, ...dataToSave } = formData;
@@ -273,6 +279,7 @@ export default function TeachersManagement() {
     const document_number = document;
 
     if (currentTeacher) {
+      // Lógica de Edición
       const { error } = await supabase
         .from("users")
         .update({
@@ -280,6 +287,7 @@ export default function TeachersManagement() {
           is_active,
           document_number,
           english_level: english_certificate,
+          updated_at: new Date().toISOString(),
         })
         .eq("id", currentTeacher.id);
       if (error) {
@@ -298,12 +306,14 @@ export default function TeachersManagement() {
         setIsDialogOpen(false);
       }
     } else {
+      // Rama que ya no se usa, pero se deja por completitud
       const newTeacherData = {
         ...dataToSave,
         is_active,
         document_number,
         english_level: english_certificate,
         role: "teacher",
+        created_at: new Date().toISOString(),
       };
       const { error } = await supabase.from("users").insert([newTeacherData]);
       if (error) {
@@ -360,35 +370,194 @@ export default function TeachersManagement() {
     setIsPreviewDialogOpen(true);
   };
 
-  const filteredTeachers = teachers.filter((teacher) =>
-    teacher.document
-      ? teacher.document.toLowerCase().includes(filterDocument.toLowerCase())
-      : false
-  );
+  // --- Paginación y navegación (sin cambios) ---
+  const PaginationControls = () => {
+    if (totalPages <= 1) return null;
 
-  const indexOfLastTeacher = currentPage * itemsPerPage;
-  const indexOfFirstTeacher = indexOfLastTeacher - itemsPerPage;
-  const currentTeachers = filteredTeachers.slice(
-    indexOfFirstTeacher,
-    indexOfLastTeacher
-  );
+    const pageNumbers = [];
+    const maxPagesToShow = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
 
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+    if (endPage - startPage + 1 < maxPagesToShow) {
+      startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pageNumbers.push(i);
+    }
+
+    return (
+      <div className="flex justify-center items-center gap-2 mt-6">
+        <Button
+          onClick={() => paginate(1)}
+          disabled={currentPage === 1}
+          variant="outline"
+          size="icon"
+        >
+          <ChevronsLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          onClick={() => paginate(currentPage - 1)}
+          disabled={currentPage === 1}
+          variant="outline"
+          size="icon"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+
+        {pageNumbers.map((number) => (
+          <Button
+            key={number}
+            onClick={() => paginate(number)}
+            variant={number === currentPage ? "default" : "outline"}
+            size="icon"
+            className="hidden sm:flex"
+          >
+            {number}
+          </Button>
+        ))}
+        
+        <span className="text-sm text-gray-700 dark:text-gray-400 sm:hidden">
+          {currentPage} / {totalPages}
+        </span>
+
+        <Button
+          onClick={() => paginate(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          variant="outline"
+          size="icon"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        <Button
+          onClick={() => paginate(totalPages)}
+          disabled={currentPage === totalPages}
+          variant="outline"
+          size="icon"
+        >
+          <ChevronsRight className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  };
+
+  // --- Vista de Listado de Profesores (SOLO CARDS) ---
+
+  const TeacherListView = ({ teachers }: { teachers: Teacher[] }) => {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {teachers.length === 0 ? (
+          <div className="col-span-full text-center py-8 text-gray-500">
+            No se encontraron profesores que coincidan con la búsqueda.
+          </div>
+        ) : (
+          teachers.map((teacher) => (
+            <Card key={teacher.id} className="shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
+                <div className="flex items-center space-x-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage
+                      src={teacher.imageUrl || ""}
+                      alt={teacher.name}
+                    />
+                    <AvatarFallback>
+                      {teacher.name.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <CardTitle className="text-lg font-bold">
+                      {teacher.name}
+                    </CardTitle>
+                    <CardDescription className="text-sm">
+                      ID: {teacher.document || "N/A"}
+                    </CardDescription>
+                  </div>
+                </div>
+                {getStatusBadge(teacher.status)}
+              </CardHeader>
+              <CardContent className="p-4 pt-2 border-t border-b">
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Email:</span>
+                    <a href={`mailto:${teacher.email}`} className="text-blue-600 hover:underline flex items-center gap-1 max-w-[60%] truncate justify-end">
+                       <Mail className="h-3 w-3 sm:hidden"/> {teacher.email}
+                    </a>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Teléfono:</span>
+                    <a href={`tel:${teacher.phone}`} className="text-gray-900 flex items-center gap-1 justify-end">
+                      <Phone className="h-3 w-3 sm:hidden"/> {teacher.phone || "N/A"}
+                    </a>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Certificado:</span>
+                    <Badge variant="outline">{teacher.english_level || "N/A"}</Badge>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-between gap-2 p-4 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenDialog(teacher)}
+                >
+                  <Edit className="h-4 w-4 mr-1" /> Editar
+                </Button>
+                
+                <div className="flex gap-1">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleOpenPreviewDialog(teacher)}
+                        className="text-blue-600"
+                    >
+                        <Eye className="h-4 w-4" />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteConfirmation(teacher.id)}
+                          className="flex items-center gap-2 text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span>Eliminar</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+              </CardFooter>
+            </Card>
+          ))
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
             Gestión de Profesores
           </h2>
+          {/* MODIFICACIÓN DE LA DESCRIPCIÓN */}
           <p className="text-gray-600">
-            Administra los profesores del centro de idiomas.
+            Gestiona, edita y elimina los perfiles de los docentes. Utiliza los filtros para encontrar rápidamente a un profesor específico.
           </p>
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="hover:scale-105 transition-transform duration-300">
+      
+      {/* Sección de Estadísticas */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+        {/* Total de Profesores */}
+        <Card className="hover:scale-[1.02] transition-transform duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total de Profesores
@@ -402,7 +571,9 @@ export default function TeachersManagement() {
             </p>
           </CardContent>
         </Card>
-        <Card className="hover:scale-105 transition-transform duration-300">
+        
+        {/* Activos */}
+        <Card className="hover:scale-[1.02] transition-transform duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Activos</CardTitle>
             <UserCheck className="h-4 w-4 text-green-600" />
@@ -414,7 +585,9 @@ export default function TeachersManagement() {
             </p>
           </CardContent>
         </Card>
-        <Card className="hover:scale-105 transition-transform duration-300">
+        
+        {/* Inactivos */}
+        <Card className="hover:scale-[1.02] transition-transform duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Inactivos</CardTitle>
             <UserX className="h-4 w-4 text-red-600" />
@@ -426,37 +599,41 @@ export default function TeachersManagement() {
             </p>
           </CardContent>
         </Card>
-        <Card className="hover:scale-105 transition-transform duration-300">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Nuevos este mes
-            </CardTitle>
-            <UserPlus className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.newThisMonth}</div>
-            <p className="text-xs text-muted-foreground">
-              Profesores recién agregados
-            </p>
-          </CardContent>
-        </Card>
       </div>
+      
+      {/* Sección de Listado de Profesores (en Cards) */}
       <Card>
         <CardHeader>
           <CardTitle>Listado de Profesores</CardTitle>
           <CardDescription>
-            Una lista completa de todos los profesores registrados.
+            Tarjetas de información de todos los profesores registrados.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 flex flex-col sm:flex-row gap-4">
+          <div className="mb-4 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
             <Input
               type="text"
-              placeholder="Filtrar por cédula..."
+              placeholder="Filtrar por documento..."
               value={filterDocument}
               onChange={(e) => setFilterDocument(e.target.value)}
-              className="max-w-xs"
+              className="max-w-xs flex-grow"
             />
+             <Select
+                value={selectedEnglishLevel}
+                onValueChange={(value: EnglishLevel | "all") =>
+                  setSelectedEnglishLevel(value as EnglishLevel | "all")
+                }
+              >
+                <SelectTrigger className="w-full sm:max-w-[200px]">
+                  <SelectValue placeholder="Filtrar por certificado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {ENGLISH_LEVELS.map(level => (
+                    <SelectItem key={level} value={level}>{level}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
           </div>
           {loading ? (
             <div className="flex justify-center items-center py-8">
@@ -464,149 +641,17 @@ export default function TeachersManagement() {
             </div>
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead className="hidden md:table-cell">
-                      Documento
-                    </TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead className="hidden lg:table-cell">
-                      Teléfono
-                    </TableHead>
-                    <TableHead>Certificado</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {currentTeachers.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={7}
-                        className="text-center py-8 text-gray-500"
-                      >
-                        No se encontraron profesores que coincidan con la
-                        búsqueda.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    currentTeachers.map((teacher) => (
-                      <TableRow key={teacher.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage
-                                src={teacher.imageUrl || ""}
-                                alt={teacher.name}
-                              />
-                              <AvatarFallback>
-                                {teacher.name.substring(0, 2).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span>{teacher.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {teacher.document}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4 hidden lg:inline" />
-                            <span>{teacher.email}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-4 w-4" />
-                            <span>{teacher.phone}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {teacher.english_level || "N/A"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{getStatusBadge(teacher.status)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-2 md:justify-start">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleOpenPreviewDialog(teacher)}
-                            >
-                              <Eye className="h-4 w-4 text-blue-600" />
-                              <span className="sr-only">Previsualizar</span>
-                            </Button>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  aria-haspopup="true"
-                                  size="icon"
-                                  variant="ghost"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Toggle menu</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                <DropdownMenuItem
-                                  onClick={() => handleOpenDialog(teacher)}
-                                  className="flex items-center gap-2"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                  <span>Editar</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleDeleteConfirmation(teacher.id)
-                                  }
-                                  className="flex items-center gap-2 text-red-600"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  <span>Eliminar</span>
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-              {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-4 mt-6">
-                  <Button
-                    onClick={() => paginate(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    variant="outline"
-                  >
-                    Anterior
-                  </Button>
-                  <span className="text-sm text-gray-700">
-                    Página {currentPage} de {totalPages}
-                  </span>
-                  <Button
-                    onClick={() => paginate(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    variant="outline"
-                  >
-                    Siguiente
-                  </Button>
-                </div>
-              )}
+              <TeacherListView teachers={currentTeachers} />
+              {/* Controles de Paginación */}
+              <PaginationControls />
             </>
           )}
         </CardContent>
       </Card>
 
-      {/* Diálogo de Edición/Creación */}
+      {/* Diálogo de Edición */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>
               {currentTeacher ? "Editar Profesor" : "Añadir Nuevo Profesor"}
@@ -618,6 +663,7 @@ export default function TeachersManagement() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSaveTeacher} className="grid gap-4 py-4">
+            {/* ... Campos de Nombre, Documento, Email, Teléfono (sin cambios) ... */}
             <div className="grid gap-2">
               <Label htmlFor="name">Nombre</Label>
               <Input
@@ -658,14 +704,16 @@ export default function TeachersManagement() {
                 onChange={handleInputChange}
               />
             </div>
+
+            {/* Campo Certificado de Inglés */}
             <div className="grid gap-2">
               <Label htmlFor="english_certificate">Certificado de Inglés</Label>
               <Select
                 value={formData.english_certificate}
-                onValueChange={(value: EnglishLevel) =>
+                onValueChange={(value: string) =>
                   setFormData((prev) => ({
                     ...prev,
-                    english_certificate: value,
+                    english_certificate: value as EnglishLevel,
                   }))
                 }
               >
@@ -673,15 +721,13 @@ export default function TeachersManagement() {
                   <SelectValue placeholder="Selecciona un certificado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="A1">A1</SelectItem>
-                  <SelectItem value="A2">A2</SelectItem>
-                  <SelectItem value="B1">B1</SelectItem>
-                  <SelectItem value="B2">B2</SelectItem>
-                  <SelectItem value="C1">C1</SelectItem>
-                  <SelectItem value="C2">C2</SelectItem>
+                  {ENGLISH_LEVELS.map(level => (
+                    <SelectItem key={level} value={level}>{level}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
+
             <div className="grid gap-2">
               <Label htmlFor="status">Estado</Label>
               <Select
@@ -700,7 +746,7 @@ export default function TeachersManagement() {
               </Select>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button variant="outline" type="button" onClick={() => setIsDialogOpen(false)}>
                 Cancelar
               </Button>
               <Button type="submit">
@@ -711,9 +757,9 @@ export default function TeachersManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Nuevo Diálogo de Previsualización */}
+      {/* Diálogo de Previsualización */}
       <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Detalles de {teacherToPreview?.name}</DialogTitle>
             <DialogDescription>
@@ -733,44 +779,32 @@ export default function TeachersManagement() {
                   </AvatarFallback>
                 </Avatar>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Nombre:</Label>
-                <div className="col-span-3 font-semibold">
-                  {teacherToPreview.name}
-                </div>
+              
+              <div className="flex justify-between border-b pb-2">
+                <Label className="font-medium text-muted-foreground">Nombre:</Label>
+                <span className="font-semibold text-right">{teacherToPreview.name}</span>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Documento:</Label>
-                <div className="col-span-3 font-semibold">
-                  {teacherToPreview.document || "N/A"}
-                </div>
+              <div className="flex justify-between border-b pb-2">
+                <Label className="font-medium text-muted-foreground">Documento:</Label>
+                <span className="font-semibold text-right">{teacherToPreview.document || "N/A"}</span>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Email:</Label>
-                <div className="col-span-3 font-semibold">
-                  {teacherToPreview.email}
-                </div>
+              <div className="flex justify-between border-b pb-2">
+                <Label className="font-medium text-muted-foreground">Email:</Label>
+                <span className="font-semibold text-right truncate max-w-[50%]">{teacherToPreview.email}</span>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Teléfono:</Label>
-                <div className="col-span-3 font-semibold">
-                  {teacherToPreview.phone || "N/A"}
-                </div>
+              <div className="flex justify-between border-b pb-2">
+                <Label className="font-medium text-muted-foreground">Teléfono:</Label>
+                <span className="font-semibold text-right">{teacherToPreview.phone || "N/A"}</span>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Certificado:</Label>
-                <div className="col-span-3 font-semibold">
-                  <Badge variant="outline">
-                    {teacherToPreview.english_level || "N/A"}
-                  </Badge>
-                </div>
+              <div className="flex justify-between border-b pb-2">
+                <Label className="font-medium text-muted-foreground">Certificado:</Label>
+                <Badge variant="outline">{teacherToPreview.english_level || "N/A"}</Badge>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Estado:</Label>
-                <div className="col-span-3 font-semibold">
-                  {getStatusBadge(teacherToPreview.status)}
-                </div>
+              <div className="flex justify-between">
+                <Label className="font-medium text-muted-foreground">Estado:</Label>
+                {getStatusBadge(teacherToPreview.status)}
               </div>
+
             </div>
           )}
           <DialogFooter>
@@ -779,7 +813,7 @@ export default function TeachersManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Diálogo de Confirmación de Eliminación */}
+      {/* Diálogo de Confirmación de Eliminación (sin cambios) */}
       <AlertDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
