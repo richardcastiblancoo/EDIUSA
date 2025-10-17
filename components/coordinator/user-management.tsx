@@ -71,7 +71,7 @@ import { getUserImage, uploadImage } from "@/lib/images";
 import ImageUpload from "@/components/shared/image-upload"
 
 // Define el tipo para los roles
-type UserRole = "coordinator" | "teacher" | "student";
+type UserRole = "coordinator" | "teacher" | "student" | "assistant";
 
 // Extiende la interfaz User para incluir un campo de última actividad
 interface UserWithStatus {
@@ -404,6 +404,7 @@ export default function UserManagement() {
       coordinator: "Coordinador",
       teacher: "Profesor",
       student: "Estudiante",
+      assistant: "Asistente",
     };
 
     return (
@@ -619,6 +620,7 @@ export default function UserManagement() {
                         <SelectItem value="student">Estudiante</SelectItem>
                         <SelectItem value="teacher">Profesor</SelectItem>
                         <SelectItem value="coordinator">Coordinador</SelectItem>
+                        <SelectItem value="assistant">Asistente</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

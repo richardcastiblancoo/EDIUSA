@@ -26,34 +26,46 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+// Se mantiene la importación de Table, aunque no se usa en la vista principal
 import { toast } from "@/components/ui/use-toast"
-import { Plus, Edit, Trash2, Search, Users, GraduationCap, Mail, Phone, Calendar, Eye, Image } from "lucide-react"
+import { Plus, Edit, Trash2, Search, Users, GraduationCap, Mail, Phone, Calendar, Eye, Image, Tag, Hash, CreditCard } from "lucide-react" // Importamos CreditCard para la cédula
 import { getAllUsers, createUser, updateUser, deleteUser, type User } from "@/lib/auth"
+
+// Define the new level options
+const ACADEMIC_LEVELS = ["1", "2", "3", "4", "5", "6", "7"]
 
 export default function StudentManagement() {
   const [students, setStudents] = useState<User[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedLevel, setSelectedLevel] = useState<string>("all")
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  
+  // Diálogos
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false) 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [editingStudent, setEditingStudent] = useState<User | null>(null)
   const [viewingStudent, setViewingStudent] = useState<User | null>(null)
+  
+  // Formulario
   const [formData, setFormData] = useState({
     name: "",
     document_number: "",
     email: "",
     phone: "",
     academic_level: "",
-    cohort: "",
     status: "active" as const,
     photo: ""
   })
+  
+  // Eliminar
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [studentToDeleteId, setStudentToDeleteId] = useState<string | null>(null)
+  
+  // Métricas
   const [newThisMonth, setNewThisMonth] = useState(0)
   const [retentionRate, setRetentionRate] = useState("0%")
+  
+  // Foto
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
 
@@ -62,6 +74,7 @@ export default function StudentManagement() {
   }, [])
 
   useEffect(() => {
+    // Lógica de métricas (se mantiene)
     const today = new Date();
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
@@ -93,10 +106,8 @@ export default function StudentManagement() {
     }
   }
 
-  // Simulación de una función para subir la imagen a un servicio
   const uploadImage = async (file: File): Promise<string> => {
-    // Aquí iría la lógica para subir la imagen a un servicio como Cloudinary, AWS S3, etc.
-    // Por ahora, solo devolvemos una URL de previsualización.
+    // Simulación de subida de imagen (base64)
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -107,6 +118,15 @@ export default function StudentManagement() {
   }
 
   const handleCreateStudent = async () => {
+    if (!formData.name || !formData.email) {
+      toast({
+        title: "Error",
+        description: "Nombre y Email son obligatorios.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       let photoUrl = ""
       if (photoFile) {
@@ -117,7 +137,7 @@ export default function StudentManagement() {
         ...formData,
         photo: photoUrl,
         role: "student",
-        password: "student123", // Considera generar una contraseña segura o enviarla por correo
+        password: "student123", // Contraseña por defecto
       })
       toast({
         title: "Éxito",
@@ -202,7 +222,6 @@ export default function StudentManagement() {
       email: "",
       phone: "",
       academic_level: "",
-      cohort: "",
       status: "active",
       photo: ""
     })
@@ -221,8 +240,6 @@ export default function StudentManagement() {
       phone: student.phone || "",
       // @ts-ignore
       academic_level: student.academic_level || "",
-      // @ts-ignore
-      cohort: student.cohort || "",
       // @ts-ignore
       status: student.status || "active",
       photo: (student as any).photo || ""
@@ -259,6 +276,7 @@ export default function StudentManagement() {
       student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       // @ts-ignore
       student.document_number?.toLowerCase().includes(searchTerm.toLowerCase())
+    
     const matchesLevel = selectedLevel === "all" || student.academic_level === selectedLevel
     return matchesSearch && matchesLevel
   })
@@ -278,363 +296,280 @@ export default function StudentManagement() {
       egresado: "Egresado",
     }
 
-    return <Badge variant={variants[`${status}` as keyof typeof variants]}>{labels[`${status}` as keyof typeof labels]}</Badge>
+    // @ts-ignore
+    return <Badge variant={variants[status]}>{labels[status]}</Badge>
   }
 
   const getLevelBadge = (level: string) => {
-    const colors = {
-      A1: "bg-green-100 text-green-800",
-      A2: "bg-blue-100 text-blue-800",
-      B1: "bg-yellow-100 text-yellow-800",
-      B2: "bg-orange-100 text-orange-800",
-      C1: "bg-red-100 text-red-800",
-      C2: "bg-purple-100 text-purple-800",
-      "7": "bg-gray-100 text-gray-800",
+    const colors: { [key: string]: string } = {
+      "1": "bg-gray-100 text-gray-800",
+      "2": "bg-green-100 text-green-800",
+      "3": "bg-blue-100 text-blue-800",
+      "4": "bg-yellow-100 text-yellow-800",
+      "5": "bg-orange-100 text-orange-800",
+      "6": "bg-red-100 text-red-800",
+      "7": "bg-purple-100 text-purple-800",
     }
 
-    return <Badge className={colors[`${level}` as keyof typeof colors] || "bg-gray-100 text-gray-800"}>{level}</Badge>
+    return <Badge className={`text-xs ${colors[level] || "bg-gray-100 text-gray-800"}`}>{level}</Badge>
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 p-4 sm:p-6 lg:p-8">
+      
+      {/* 1. Encabezado */}
+      <div className="flex justify-between items-start sm:items-center">
         <div>
-          <h1 className="text-3xl font-bold">Gestión de Estudiantes</h1>
-          <p className="text-gray-600">Administra los estudiantes del centro de idiomas</p>
+          <h1 className="text-2xl font-bold sm:text-3xl">Gestión de Estudiantes</h1>
+          <p className="text-sm text-gray-600">Administra los estudiantes del centro de idiomas</p>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      {/* 2. Dashboard Cards */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        {/* Componente Card repetido para métricas */}
         <Card className="hover:scale-105 transition-transform duration-300">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Estudiantes</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 md:p-6">
+            <CardTitle className="text-xs font-medium sm:text-sm">Total Estudiantes</CardTitle>
             <Users className="h-4 w-4 text-blue-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{students.length}</div>
+          <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0 md:p-6 md:pt-0">
+            <div className="text-xl font-bold sm:text-2xl">{students.length}</div>
             <p className="text-xs text-muted-foreground">Estudiantes registrados</p>
           </CardContent>
         </Card>
 
         <Card className="hover:scale-105 transition-transform duration-300">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Estudiantes Activos</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 md:p-6">
+            <CardTitle className="text-xs font-medium sm:text-sm">Estudiantes Activos</CardTitle>
             <GraduationCap className="h-4 w-4 text-green-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{students.filter((s) => s.status === "active").length}</div>
+          <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0 md:p-6 md:pt-0">
+            <div className="text-xl font-bold sm:text-2xl">{students.filter((s) => s.status === "active").length}</div>
             <p className="text-xs text-muted-foreground">En cursos actuales</p>
           </CardContent>
         </Card>
 
         <Card className="hover:scale-105 transition-transform duration-300">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Nuevos Este Mes</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 md:p-6">
+            <CardTitle className="text-xs font-medium sm:text-sm">Nuevos Este Mes</CardTitle>
             <Calendar className="h-4 w-4 text-purple-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{newThisMonth}</div>
+          <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0 md:p-6 md:pt-0">
+            <div className="text-xl font-bold sm:text-2xl">{newThisMonth}</div>
             <p className="text-xs text-muted-foreground">Inscripciones recientes</p>
           </CardContent>
         </Card>
 
         <Card className="hover:scale-105 transition-transform duration-300">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tasa de Retención</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 md:p-6">
+            <CardTitle className="text-xs font-medium sm:text-sm">Tasa de Retención</CardTitle>
             <Users className="h-4 w-4 text-orange-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{retentionRate}</div>
+          <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0 md:p-6 md:pt-0">
+            <div className="text-xl font-bold sm:text-2xl">{retentionRate}</div>
             <p className="text-xs text-muted-foreground">Estudiantes activos</p>
           </CardContent>
         </Card>
       </div>
 
+      {/* 3. Filtros */}
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle className="text-lg sm:text-xl">Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 items-center">
-            <div className="flex-1">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center">
+            <div className="flex-1 w-full">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="Buscar estudiantes..."
+                  placeholder="Buscar por nombre, documento o email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 w-full"
                 />
               </div>
             </div>
             <Select value={selectedLevel} onValueChange={setSelectedLevel}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filtrar por situación" />
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Filtrar por nivel" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los niveles</SelectItem>
-                <SelectItem value="A1">A1</SelectItem>
-                <SelectItem value="A2">A2</SelectItem>
-                <SelectItem value="B1">B1</SelectItem>
-                <SelectItem value="B2">B2</SelectItem>
-                <SelectItem value="C1">C1</SelectItem>
-                <SelectItem value="C2">C2</SelectItem>
-                <SelectItem value="7">7</SelectItem>
+                {ACADEMIC_LEVELS.map(level => (
+                  <SelectItem key={level} value={level}>{level}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
         </CardContent>
       </Card>
 
+      {/* 4. Lista de Estudiantes en Formato Card (Mobile-First) */}
       <Card>
         <CardHeader>
-          <CardTitle>Estudiantes ({filteredStudents.length})</CardTitle>
-          <CardDescription>Lista de todos los estudiantes registrados en el centro de idiomas</CardDescription>
+          <CardTitle className="text-lg sm:text-xl">Estudiantes ({filteredStudents.length})</CardTitle>
+          <CardDescription>Lista de todos los estudiantes registrados</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-2 sm:p-4"> 
           {filteredStudents.length === 0 ? (
             <div className="text-center text-gray-500 py-8">
               No se encontraron estudiantes.
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Estudiante</TableHead>
-                  <TableHead>Documento</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Teléfono</TableHead>
-                  <TableHead>Situación Académica</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Cohorte</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredStudents.map((student) => (
-                  <TableRow key={student.id}>
-                    <TableCell>
+            // Cuadrícula de tarjetas: 1 columna en móvil, 2 en pantallas medianas, 3 en grandes
+            <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+              {filteredStudents.map((student) => (
+                <Card key={student.id} className="shadow-sm hover:shadow-md transition-shadow duration-200">
+                  <CardContent className="p-3 flex flex-col gap-3">
+                    {/* Fila 1: Nombre y Nivel */}
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Avatar className="h-8 w-8">
+                        <Avatar className="h-9 w-9">
                           {/* @ts-ignore */}
                           <AvatarImage src={student.photo || "/placeholder-user.jpg"} alt={student.name} />
-                          <AvatarFallback>
-                            <Users className="h-4 w-4 text-gray-400" />
-                          </AvatarFallback>
+                          <AvatarFallback><Users className="h-5 w-5 text-gray-400" /></AvatarFallback>
                         </Avatar>
-                        <span className="font-medium">{student.name}</span>
+                        <span className="text-sm font-semibold truncate">{student.name}</span>
                       </div>
-                    </TableCell>
-                    {/* @ts-ignore */}
-                    <TableCell>{student.document_number || "-"}</TableCell>
-                    <TableCell>{student.email}</TableCell>
-                    {/* @ts-ignore */}
-                    <TableCell>{student.phone || "-"}</TableCell>
-                    {/* @ts-ignore */}
-                    <TableCell>{student.academic_level ? getLevelBadge(student.academic_level) : "-"}</TableCell>
-                    {/* @ts-ignore */}
-                    <TableCell>{getStatusBadge(student.status || "active")}</TableCell>
-                    {/* @ts-ignore */}
-                    <TableCell>{student.cohort || "-"}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => openViewDialog(student)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openEditDialog(student)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteStudent(student.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      {/* @ts-ignore */}
+                      {student.academic_level && getLevelBadge(student.academic_level)}
+                    </div>
+
+                    {/* Fila 2: Email y Documento (detalles) */}
+                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                      <div className="flex items-center gap-1 truncate">
+                        <Mail className="h-3 w-3 text-blue-500" />
+                        <span className="truncate">{student.email}</span>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      <div className="flex items-center gap-1 justify-end truncate">
+                         {/* CORRECCIÓN AQUÍ: Usamos CreditCard para la cédula/documento */}
+                         <CreditCard className="h-3 w-3 text-gray-500" />
+                        {/* @ts-ignore */}
+                        <span className="truncate">{student.document_number || "N/A"}</span> 
+                      </div>
+                    </div>
+                    
+                    {/* Fila 3: Estado y Acciones */}
+                    <div className="flex justify-between items-center pt-2 border-t">
+                      {/* @ts-ignore */}
+                      {getStatusBadge(student.status || "active")}
+                      
+                      {/* Acciones */}
+                      <div className="flex items-center gap-1">
+                          <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => openViewDialog(student)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => openEditDialog(student)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => handleDeleteStudent(student.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                      </div>
+                    </div>
+
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
 
+      {/* 5. Diálogos (Create, View, Edit, Delete) - Se mantienen los diálogos con la corrección del campo de documento */}
+
+      {/* Dialogo de Creación (Oculto por defecto, sin botón) */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-[425px] md:max-w-lg">
           <DialogHeader>
             <DialogTitle>Crear Nuevo Estudiante</DialogTitle>
             <DialogDescription>Completa la información para crear un nuevo estudiante.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="flex flex-col items-center gap-4">
-              <Avatar className="h-32 w-32">
+              <Avatar className="h-28 w-28">
                 <AvatarImage src={photoPreview || "/placeholder-user.jpg"} alt="Foto de Perfil" />
-                <AvatarFallback>
-                  <Image className="h-12 w-12 text-gray-400" />
-                </AvatarFallback>
+                <AvatarFallback><Image className="h-10 w-10 text-gray-400" /></AvatarFallback>
               </Avatar>
-              <Label htmlFor="photo" className="cursor-pointer font-medium text-blue-600 hover:underline">
+              <Label htmlFor="photo" className="cursor-pointer text-sm font-medium text-blue-600 hover:underline">
                 {photoPreview ? "Cambiar foto" : "Subir foto"}
               </Label>
-              <Input
-                id="photo"
-                type="file"
-                className="hidden"
-                accept="image/*"
-                onChange={handleFileChange}
-              />
+              <Input id="photo" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nombre Completo</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Juan Pérez"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="document">Documento</Label>
-                <Input
-                  id="document"
-                  value={formData.document_number}
-                  onChange={(e) => setFormData({ ...formData, document_number: e.target.value })}
-                  placeholder="123456789"
-                />
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2"><Label htmlFor="name">Nombre Completo</Label><Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Juan Pérez" /></div>
+              <div className="space-y-2"><Label htmlFor="document">Documento/Cédula</Label><Input id="document" value={formData.document_number} onChange={(e) => setFormData({ ...formData, document_number: e.target.value })} placeholder="123456789" /></div> {/* Label corregido */}
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="juan@ejemplo.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Teléfono</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="+57 300 123 4567"
-                />
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="juan@ejemplo.com" /></div>
+              <div className="space-y-2"><Label htmlFor="phone">Teléfono</Label><Input id="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="+57 300 123 4567" /></div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="academic_level">Situación Académica</Label>
-                <Select
-                  value={formData.academic_level}
-                  onValueChange={(value) => setFormData({ ...formData, academic_level: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar situación" />
-                  </SelectTrigger>
+                <Label htmlFor="academic_level">Último nivel aprobado</Label>
+                <Select value={formData.academic_level} onValueChange={(value) => setFormData({ ...formData, academic_level: value })}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar nivel" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="A1">A1</SelectItem>
-                    <SelectItem value="A2">A2</SelectItem>
-                    <SelectItem value="B1">B1</SelectItem>
-                    <SelectItem value="B2">B2</SelectItem>
-                    <SelectItem value="C1">C1</SelectItem>
-                    <SelectItem value="C2">C2</SelectItem>
-                    <SelectItem value="7">7</SelectItem>
+                    {ACADEMIC_LEVELS.map(level => (<SelectItem key={level} value={level}>{level}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cohort">Cohorte</Label>
-                <Select
-                  value={formData.cohort}
-                  onValueChange={(value) => setFormData({ ...formData, cohort: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar cohorte" />
-                  </SelectTrigger>
+                <Label htmlFor="status">Estado</Label>
+                <Select value={formData.status} onValueChange={(value: "active" | "inactive" | "graduado" | "egresado") => setFormData(prev => ({ ...prev, status: value as "active" }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="2025-Q1">2025-Q1</SelectItem>
-                    <SelectItem value="2025-Q2">2025-Q2</SelectItem>
-                    <SelectItem value="2024-Q4">2024-Q4</SelectItem>
-                    <SelectItem value="2024-Q3">2024-Q3</SelectItem>
+                    <SelectItem value="active">Activo</SelectItem>
+                    <SelectItem value="inactive">Inactivo</SelectItem>
+                    <SelectItem value="graduado">Graduado</SelectItem>
+                    <SelectItem value="egresado">Egresado</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-              Cancelar
-            </Button>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleCreateStudent}>Crear Estudiante</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
 
+      {/* Dialogo de Ver (View Dialog) */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         {viewingStudent && (
-          <DialogContent>
+          <DialogContent className="w-[95vw] max-w-[425px] md:max-w-lg">
             <DialogHeader>
               <DialogTitle>Datos del Estudiante</DialogTitle>
               <DialogDescription>Información detallada de {viewingStudent.name}</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="flex flex-col items-center gap-4">
-                <Avatar className="h-32 w-32">
+                <Avatar className="h-28 w-28">
                   {/* @ts-ignore */}
                   <AvatarImage src={viewingStudent.photo || "/placeholder-user.jpg"} alt={viewingStudent.name} />
-                  <AvatarFallback>
-                    <Users className="h-12 w-12 text-gray-400" />
-                  </AvatarFallback>
+                  <AvatarFallback><Users className="h-10 w-10 text-gray-400" /></AvatarFallback>
                 </Avatar>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Nombre Completo</Label>
-                  <p className="text-sm font-medium">{viewingStudent.name}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Documento</Label>
-                  {/* @ts-ignore */}
-                  <p className="text-sm font-medium">{viewingStudent.document_number || "-"}</p>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2"><Label className="text-sm">Nombre Completo</Label><p className="text-sm font-medium">{viewingStudent.name}</p></div>
+                <div className="space-y-2"><Label className="text-sm">Documento/Cédula</Label>{/* @ts-ignore */}<p className="text-sm font-medium">{viewingStudent.document_number || "-"}</p></div> {/* Label corregido */}
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <p className="text-sm font-medium">{viewingStudent.email}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Teléfono</Label>
-                  {/* @ts-ignore */}
-                  <p className="text-sm font-medium">{viewingStudent.phone || "-"}</p>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2"><Label className="text-sm">Email</Label><p className="text-sm font-medium break-words">{viewingStudent.email}</p></div>
+                <div className="space-y-2"><Label className="text-sm">Teléfono</Label>{/* @ts-ignore */}<p className="text-sm font-medium">{viewingStudent.phone || "-"}</p></div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Situación Académica</Label>
-                  {/* @ts-ignore */}
-                  <p className="text-sm font-medium">{viewingStudent.academic_level || "-"}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Cohorte</Label>
-                  {/* @ts-ignore */}
-                  <p className="text-sm font-medium">{viewingStudent.cohort || "-"}</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Estado</Label>
-                <div>
-                  {/* @ts-ignore */}
-                  {getStatusBadge(viewingStudent.status || "active")}
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2"><Label className="text-sm">Último nivel aprobado</Label>{/* @ts-ignore */}<p className="text-sm font-medium">{viewingStudent.academic_level || "-"}</p></div>
+                <div className="space-y-2"><Label className="text-sm">Estado</Label><div>{/* @ts-ignore */}{getStatusBadge(viewingStudent.status || "active")}</div></div>
               </div>
             </div>
             <DialogFooter>
@@ -645,141 +580,65 @@ export default function StudentManagement() {
       </Dialog>
 
 
+      {/* Dialogo de Edición (Edit Dialog) */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-[425px] md:max-w-lg">
           <DialogHeader>
             <DialogTitle>Editar Estudiante</DialogTitle>
             <DialogDescription>Modifica la información del estudiante</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="flex flex-col items-center gap-4">
-              <Avatar className="h-32 w-32">
+              <Avatar className="h-28 w-28">
                 <AvatarImage src={photoPreview || "/placeholder-user.jpg"} alt="Foto de Perfil" />
-                <AvatarFallback>
-                  <Image className="h-12 w-12 text-gray-400" />
-                </AvatarFallback>
+                <AvatarFallback><Image className="h-10 w-10 text-gray-400" /></AvatarFallback>
               </Avatar>
-              <Label htmlFor="edit-photo" className="cursor-pointer font-medium text-blue-600 hover:underline">
+              <Label htmlFor="edit-photo" className="cursor-pointer text-sm font-medium text-blue-600 hover:underline">
                 {photoPreview ? "Cambiar foto" : "Subir foto"}
               </Label>
-              <Input
-                id="edit-photo"
-                type="file"
-                className="hidden"
-                accept="image/*"
-                onChange={handleFileChange}
-              />
+              <Input id="edit-photo" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Nombre Completo</Label>
-                <Input
-                  id="edit-name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Juan Pérez"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-document">Documento</Label>
-                <Input
-                  id="edit-document"
-                  value={formData.document_number}
-                  onChange={(e) => setFormData({ ...formData, document_number: e.target.value })}
-                  placeholder="123456789"
-                />
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2"><Label htmlFor="edit-name">Nombre Completo</Label><Input id="edit-name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Juan Pérez" /></div>
+              <div className="space-y-2"><Label htmlFor="edit-document">Documento/Cédula</Label><Input id="edit-document" value={formData.document_number} onChange={(e) => setFormData({ ...formData, document_number: e.target.value })} placeholder="123456789" /></div> {/* Label corregido */}
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-email">Email</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="juan@ejemplo.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-phone">Teléfono</Label>
-                <Input
-                  id="edit-phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="+57 300 123 4567"
-                />
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2"><Label htmlFor="edit-email">Email</Label><Input id="edit-email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="juan@ejemplo.com" /></div>
+              <div className="space-y-2"><Label htmlFor="edit-phone">Teléfono</Label><Input id="edit-phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="+57 300 123 4567" /></div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-academic_level">Situación Académica</Label>
-                <Select
-                  value={formData.academic_level}
-                  onValueChange={(value) => setFormData({ ...formData, academic_level: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar situación" />
-                  </SelectTrigger>
+                <Label htmlFor="edit-academic_level">Último nivel aprobado</Label>
+                <Select value={formData.academic_level} onValueChange={(value) => setFormData({ ...formData, academic_level: value })}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar nivel" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="A1">A1</SelectItem>
-                    <SelectItem value="A2">A2</SelectItem>
-                    <SelectItem value="B1">B1</SelectItem>
-                    <SelectItem value="B2">B2</SelectItem>
-                    <SelectItem value="C1">C1</SelectItem>
-                    <SelectItem value="C2">C2</SelectItem>
-                    <SelectItem value="7">7</SelectItem>
+                    {ACADEMIC_LEVELS.map(level => (<SelectItem key={level} value={level}>{level}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-cohort">Cohorte</Label>
-                <Select
-                  value={formData.cohort}
-                  onValueChange={(value) => setFormData({ ...formData, cohort: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar cohorte" />
-                  </SelectTrigger>
+                <Label htmlFor="edit-status">Estado</Label>
+                <Select value={formData.status} onValueChange={(value: "active" | "inactive" | "graduado" | "egresado") => setFormData(prev => ({ ...prev, status: value as "active" }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="2025-Q1">2025-Q1</SelectItem>
-                    <SelectItem value="2025-Q2">2025-Q2</SelectItem>
-                    <SelectItem value="2024-Q4">2024-Q4</SelectItem>
-                    <SelectItem value="2024-Q3">2024-Q3</SelectItem>
+                    <SelectItem value="active">Activo</SelectItem>
+                    <SelectItem value="inactive">Inactivo</SelectItem>
+                    <SelectItem value="graduado">Graduado</SelectItem>
+                    <SelectItem value="egresado">Egresado</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-status">Estado</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value: "active" | "inactive" | "graduado" | "egresado") =>
-                  setFormData(prev => ({ ...prev, status: value as "active" }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Activo</SelectItem>
-                  <SelectItem value="inactive">Inactivo</SelectItem>
-                  <SelectItem value="graduado">Graduado</SelectItem>
-                  <SelectItem value="egresado">Egresado</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancelar
-            </Button>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleEditStudent}>Guardar Cambios</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
 
+      {/* Delete Confirmation Alert Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

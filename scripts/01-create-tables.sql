@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
   name VARCHAR(255) NOT NULL,
-  role VARCHAR(50) NOT NULL CHECK (role IN ('coordinator', 'teacher', 'student')),
+  role VARCHAR(50) NOT NULL CHECK (role IN ('coordinator', 'teacher', 'student', 'assistant')),
   phone VARCHAR(20),
   document_number VARCHAR(50),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

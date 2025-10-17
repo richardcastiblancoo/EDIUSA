@@ -78,11 +78,22 @@ export default function DashboardLayout({
     userRole ??
     (user?.role as "coordinator" | "teacher" | "student" | undefined);
 
+  // 1. Aplica y guarda el tema
   useEffect(() => {
     document.body.classList.remove("light", "dark");
     document.body.classList.add(theme);
     localStorage.setItem("theme", theme);
   }, [theme]);
+
+  // 2. Limpieza al desmontar (SOLUCIÓN para el modo oscuro persistente)
+  useEffect(() => {
+    // Esta función de limpieza se ejecuta cuando el componente se desmonta (ej. al hacer log out)
+    return () => {
+        // Asegura que al salir del layout, el body vuelve a 'light'
+        document.body.classList.remove("dark");
+        document.body.classList.add("light");
+    };
+  }, []);
 
   useEffect(() => {
     const loadUserAvatar = async () => {
@@ -94,7 +105,12 @@ export default function DashboardLayout({
     loadUserAvatar();
   }, [user?.id]);
 
+  // 3. Resetear el localStorage en handleSignOut (SOLUCIÓN para el modo oscuro persistente)
   const handleSignOut = async () => {
+    // Asegura que la próxima vez que se cargue la página de login (o cualquier otra),
+    // el tema por defecto sea 'light'
+    localStorage.setItem("theme", "light");
+    
     await signOut();
     router.push("/");
   };
@@ -303,14 +319,14 @@ export default function DashboardLayout({
             <Link href="/" className="flex items-center space-x-3 transition-opacity duration-300">
               {/* Logo más grande */}
               <img
-                src="/ciusa.png"
+                src="/ciusa.png" 
                 width={70}
                 height={70}
-                alt="logo ciusa"
+                alt="logo ediusa"
                 className="rounded-lg"
               />
               <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                CIUSA
+                EDIUSA
               </span>
             </Link>
           )}
@@ -321,7 +337,7 @@ export default function DashboardLayout({
                 src="/ciusa.png"
                 width={32}
                 height={32}
-                alt="logo ciusa"
+                alt="logo ediusa"
                 className="rounded-md"
               />
             </Link>

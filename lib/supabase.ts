@@ -27,7 +27,7 @@ export interface User {
   email: string
   password?: string
   name: string
-  role: "coordinator" | "teacher" | "student"
+  role: "coordinator" | "teacher" | "student" | "assistant"
   avatar?: string
   phone?: string
   address?: string
