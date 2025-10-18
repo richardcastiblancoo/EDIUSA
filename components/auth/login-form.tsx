@@ -20,14 +20,11 @@ import {
   User,
   Lock,
   AlertCircle,
-  Globe,
   Loader2,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
-// Componente de Estilos Globales para la animación tipo película
-// NOTA: Estas keyframes deben estar disponibles en tu CSS global (ej: globals.css)
-// o en un archivo de estilos inyectado (como este componente lo hace con <style jsx global>)
+// Componente de Estilos Globales para la animación tipo película (Mantenemos esta parte)
 const CustomStyles = () => (
   <style jsx global>{`
     @keyframes cinematic-fade-in {
@@ -45,6 +42,24 @@ const CustomStyles = () => (
     }
     .animate-cinematic-fade-in {
       animation: cinematic-fade-in 1.5s ease-out forwards;
+    }
+    
+    /* Estilos para el fondo azul y elementos de la nueva página de login */
+    .dark-blue-bg {
+        background-color: #1a237e; /* Un azul oscuro similar al de la imagen */
+    }
+    .welcome-card-bg {
+        background-color: #2c3e50; /* Un tono un poco más claro para la tarjeta de bienvenida */
+        background-image: linear-gradient(135deg, #1e3a8a 0%, #374151 100%); /* Gradiente sutil */
+    }
+    /* Animación simple para los elementos de bienvenida */
+    @keyframes floating-element {
+        0% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+        100% { transform: translateY(0); }
+    }
+    .animate-floating {
+        animation: floating-element 4s ease-in-out infinite;
     }
   `}</style>
 );
@@ -113,6 +128,7 @@ export default function LoginForm() {
         <CustomStyles />
         <div className="flex flex-col items-center space-y-8 p-12">
           <div className="relative flex flex-col items-center justify-center space-y-4">
+            {/* Si tienes un logo para el fondo de carga, úsalo aquí. Por ejemplo: */}
             <img 
               src="/ciusa.png" 
               alt="Logo CIUSA" 
@@ -140,161 +156,171 @@ export default function LoginForm() {
   }
 
   // -------------------------------------------------------------------
-  // PANTALLA DE LOGIN PRINCIPAL
+  // PANTALLA DE LOGIN PRINCIPAL (Nuevo Diseño)
   // -------------------------------------------------------------------
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden bg-gray-50">
-      {/* Fondo animado con gradiente azul/púrpura */}
-      <div className="absolute inset-0 z-0 opacity-30 bg-gradient-to-r from-blue-100 via-white to-purple-100 bg-[length:400%_400%] animate-animated-gradient"></div>
-
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b relative z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-3">
-            <div className="flex items-center space-x-2">
-              <img src="/ciusa.png" width={80} alt="Logo CIUSA" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 animate-fade-in-up">
-                  Escuela de Idiomas
-                </h1>
-                <p className="text-base text-gray-600 animate-fade-in-up delay-150">
-                  Universidad Sergio Arboleda Caribe
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen flex items-center justify-center p-4 dark-blue-bg">
+      <CustomStyles />
       
-      {/* Contenido Principal: Centrado Horizontal y Vertical */}
-      <div className="flex items-center justify-center flex-grow py-8 px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="w-full max-w-xl space-y-8">
-          
-          {/* SECCIÓN DE BIENVENIDA CENTRADA SOBRE EL LOGIN */}
-          <div className="text-center">
-            <div className="mx-auto h-16 w-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center mb-4 shadow-lg">
-              <Globe className="h-8 w-8 text-white" />
+      {/* Contenedor Principal con Sombra Flotante */}
+      <div 
+        className="w-full max-w-5xl rounded-3xl shadow-[0_35px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden flex transform transition-all duration-700 ease-out animate-cinematic-fade-in"
+      >
+        
+        {/* Lado Izquierdo: Bienvenida e Ilustración (Texto Actualizado) */}
+        <div className="hidden lg:flex w-1/2 p-12 flex-col justify-center welcome-card-bg relative">
+            
+            {/* Contenido de Bienvenida - TÍTULO Y DESCRIPCIÓN ACTUALIZADOS AQUÍ */}
+            <div className="mb-10">
+                <div className="flex items-center space-x-3 mb-4">
+                    <img src="/ciusa.png" width={50} alt="Logo CIUSA" className="rounded-full shadow-lg" />
+                    <span className="text-sm font-semibold text-white/80">
+                        Escuela de Idiomas, Universidad Sergio Arboleda Caribe
+                    </span>
+                </div>
+                <h1 className="text-5xl font-extrabold text-white leading-tight">
+                    Bienvenido a la Escuela de Idiomas
+                </h1>
+                <p className="text-xl text-gray-300 mt-4">
+                    Plataforma integral para la gestión académica y administrativa de la Universidad Sergio Arboleda Caribe.
+                </p>
             </div>
-            <h2 className="text-4xl font-extrabold text-gray-900 mb-2">
-              Bienvenido a la Escuela de Idiomas
-            </h2>
-            <p className="text-xl text-gray-600 mb-6 max-w-lg mx-auto">
-              Plataforma integral para la gestión académica y administrativa
-              de la Universidad Sergio Arboleda Caribe.
-            </p>
-          </div>
-          
-          {/* CARD DE LOGIN */}
-          <Card className="shadow-2xl border-0 mx-auto max-w-md">
-            <CardHeader className="space-y-1 pb-4">
-              <CardTitle className="text-3xl font-bold text-center">
-                Iniciar Sesión
-              </CardTitle>
-              <CardDescription className="text-center text-lg">
-                Ingresa tus credenciales para acceder al sistema
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form
-                onSubmit={handleSubmit}
-                className="space-y-4"
-                autoComplete="on"
-              >
-                <div className="space-y-1">
-                  <Label
-                    htmlFor="email"
-                    className="text-base font-medium text-gray-700"
-                  >
-                    Correo Electrónico
-                  </Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="tu.email@usa.edu.co"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-lg"
-                      required
-                      autoComplete="username"
-                    />
-                  </div>
+            
+            {/* Placeholder de Ilustración */}
+            <div className="relative h-64 flex items-center justify-center">
+                {/* Simulamos la ilustración con un div y elementos flotantes */}
+                <div className="w-full h-full relative">
+                    {/* Nube/Mundo */}
+                    <div className="absolute top-0 left-1/4 w-24 h-24 rounded-full bg-blue-400/30 blur-xl animate-floating" style={{ animationDelay: '0s' }}></div>
+                    {/* Libro/Mascota 1 */}
+                    <div className="absolute bottom-4 left-10 w-16 h-16 bg-green-400 rounded-lg shadow-xl transform rotate-3 animate-floating" style={{ animationDelay: '0.5s' }}></div>
+                    {/* Lápiz/Mascota 2 */}
+                    <div className="absolute bottom-8 right-1/4 w-4 h-32 bg-yellow-400 rounded-full shadow-xl transform -rotate-12 animate-floating" style={{ animationDelay: '1s' }}></div>
+                    {/* Búho/Mascota 3 */}
+                    <div className="absolute top-10 right-10 w-20 h-20 bg-purple-400 rounded-full shadow-xl animate-floating" style={{ animationDelay: '1.5s' }}></div>
                 </div>
-                <div className="space-y-1">
-                  <Label
-                    htmlFor="password"
-                    className="text-base font-medium text-gray-700"
-                  >
-                    Contraseña
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10 pr-10 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-lg"
-                      required
-                      autoComplete="current-password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-3 h-5 w-5 text-gray-400 hover:text-gray-600"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-5 w-5" />
-                      ) : (
-                        <Eye className="h-5 w-5" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <input
-                      id="remember-me"
-                      name="remember-me"
-                      type="checkbox"
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                    />
-                    <label
-                      htmlFor="remember-me"
-                      className="ml-2 block text-base text-gray-900"
-                    >
-                      Recordarme
-                    </label>
-                  </div>
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full py-3 text-xl font-semibold bg-blue-600 hover:bg-blue-700"
-                  disabled={formIsLoading}
-                >
-                  {formIsLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Iniciando sesión...
-                    </>
-                  ) : (
-                    "Iniciar Sesión"
-                  )}
-                </Button>
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-              </form>
-            </CardContent>
-          </Card>
+            </div>
         </div>
+        
+        {/* Lado Derecho: Formulario de Login */}
+        <Card className="w-full lg:w-1/2 p-8 shadow-none border-0 rounded-l-none">
+          <CardHeader className="space-y-1 pb-4">
+            <CardTitle className="text-3xl font-bold text-center text-gray-800">
+              Acceder a tu Plataforma
+            </CardTitle>
+            <CardDescription className="text-center text-lg text-gray-500">
+              Por favor, ingresa tu email y contraseña.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-6"
+              autoComplete="on"
+            >
+              {/* Campo Correo Electrónico */}
+              <div className="space-y-1">
+                <Label
+                  htmlFor="email"
+                  className="text-base font-medium text-gray-700"
+                >
+                  Correo Electrónico
+                </Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="tu.email@usa.edu.co"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10 h-12 border-gray-300 focus:border-blue-600 focus:ring-blue-600 text-lg rounded-xl"
+                    required
+                    autoComplete="username"
+                  />
+                </div>
+              </div>
+              
+              {/* Campo Contraseña */}
+              <div className="space-y-1">
+                <Label
+                  htmlFor="password"
+                  className="text-base font-medium text-gray-700"
+                >
+                  Contraseña
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 pr-10 h-12 border-gray-300 focus:border-blue-600 focus:ring-blue-600 text-lg rounded-xl"
+                    required
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              
+              {/* Recordarme - Sin Olvidaste Contraseña */}
+              <div className="flex items-center justify-start">
+                <div className="flex items-center">
+                  <input
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
+                  <label
+                    htmlFor="remember-me"
+                    className="ml-2 block text-base text-gray-900"
+                  >
+                    Recordarme
+                  </label>
+                </div>
+              </div>
+              
+              {/* Botón de Iniciar Sesión */}
+              <Button
+                type="submit"
+                className="w-full py-3 text-xl font-semibold bg-blue-600 hover:bg-blue-700 transition-all rounded-xl shadow-lg hover:shadow-xl"
+                disabled={formIsLoading}
+              >
+                {formIsLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Entrando...
+                  </>
+                ) : (
+                  "Entrar"
+                )}
+              </Button>
+              
+              {/* Alerta de Error */}
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

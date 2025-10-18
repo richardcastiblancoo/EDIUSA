@@ -1,12 +1,11 @@
 "use client"
-
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, BookOpen, TrendingUp, UserCheck, ClipboardList, BarChart3, MessageSquare } from "lucide-react"
+import { Users, BookOpen, UserCheck, ClipboardList, BarChart3, MessageSquare } from "lucide-react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase";
 import { motion } from "framer-motion";
@@ -34,7 +33,7 @@ export default function CoordinatorDashboard() {
       let totalCourses = 0;
       let activeExams = 0;
 
-      // Fetch total students
+      // Fetch Total Students
       const { count: studentsCount, error: studentsError } = await supabase
         .from('users')
         .select('*', { count: 'exact' })
@@ -45,7 +44,7 @@ export default function CoordinatorDashboard() {
         totalStudents = studentsCount || 0;
       }
 
-      // Fetch total teachers
+      // Fetch Total Teachers
       const { count: teachersCount, error: teachersError } = await supabase
         .from('users')
         .select('*', { count: 'exact' })
@@ -56,7 +55,7 @@ export default function CoordinatorDashboard() {
         totalTeachers = teachersCount || 0;
       }
 
-      // Fetch total courses
+      // Fetch Total Courses
       const { count: coursesCount, error: coursesError } = await supabase
         .from('courses')
         .select('*', { count: 'exact' });
@@ -66,7 +65,7 @@ export default function CoordinatorDashboard() {
         totalCourses = coursesCount || 0;
       }
 
-      // Fetch active exams (using is_active instead of non-existent status field)
+      // Fetch Active Exams
       const { count: examsCount, error: examsError } = await supabase
         .from('exams')
         .select('*', { count: 'exact' })
@@ -82,8 +81,8 @@ export default function CoordinatorDashboard() {
         totalTeachers,
         totalCourses,
         activeExams,
-        enrollmentGrowth: 0, // Placeholder, requires more complex logic
-        completionRate: 0, // Placeholder, requires more complex logic
+        enrollmentGrowth: 0,
+        completionRate: 0,
       });
     };
 
@@ -121,7 +120,8 @@ export default function CoordinatorDashboard() {
     },
     {
       title: "Listado de PQR",
-      description: "Configurar horarios de clases y aulas",
+      // DESCRIPCIÓN ACTUALIZADA Y REFERENCIAL PARA PQR
+      description: "Revisar y gestionar Peticiones, Quejas y Reclamos de estudiantes y personal.",
       href: "/dashboard/coordinator/schedules",
       icon: MessageSquare,
       color: "bg-purple-500",
@@ -140,12 +140,13 @@ export default function CoordinatorDashboard() {
       <div className="space-y-6">
         {/* Header */}
         <div>
+          {/* Color del texto principal (Panel de Coordinación) se mantiene en text-gray-900 */}
           <h1 className="text-3xl font-bold text-gray-900">Panel de Coordinación</h1>
           <p className="text-gray-600">Bienvenido, {user.name}. Aquí tienes un resumen del centro de idiomas.</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Stats Cards (Solo las 4 tarjetas restantes, grilla ajustada a 4 columnas) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -163,7 +164,6 @@ export default function CoordinatorDashboard() {
               </CardContent>
             </Card>
           </motion.div>
-
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -181,7 +181,6 @@ export default function CoordinatorDashboard() {
               </CardContent>
             </Card>
           </motion.div>
-
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -199,7 +198,6 @@ export default function CoordinatorDashboard() {
               </CardContent>
             </Card>
           </motion.div>
-
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -217,35 +215,6 @@ export default function CoordinatorDashboard() {
               </CardContent>
             </Card>
           </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
-            whileHover={{ scale: 1.05 }}
-          >
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Tasa de Finalización</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.completionRate}%</div>
-                <p className="text-xs text-muted-foreground">desde el cohorte</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Crecimiento</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">+{stats.enrollmentGrowth}%</div>
-              <p className="text-xs text-muted-foreground">Inscripciones este mes</p>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Quick Actions */}

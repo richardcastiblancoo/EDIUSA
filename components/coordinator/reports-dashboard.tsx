@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect, useRef } from "react";
 import {
   Card,
@@ -9,16 +8,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import {
   FileText,
-  Calendar,
-  TrendingUp,
   Loader2,
-  ListX,
   RefreshCw,
   CheckCircle,
+  UserCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -29,13 +25,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -43,9 +32,6 @@ import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
 import { searchStudents, type Student } from "@/lib/students";
 
-//============================
-// Interfaces
-//============================
 interface LessonReport {
   lessonName: string;
   date: string;
@@ -89,10 +75,6 @@ interface TeacherInfo {
   email?: string;
   assignedCourses: number;
 }
-
-//============================
-// Constantes y datos iniciales
-//============================
 const emptyStudentData: StudentReportData = {
   studentName: "",
   studentId: "",
@@ -100,17 +82,11 @@ const emptyStudentData: StudentReportData = {
   overallAttendanceRate: 0,
   courses: [],
 };
-
-//============================
-// Componente Principal
-//============================
 export default function StudentReportDashboard() {
   const [reportData, setReportData] = useState<StudentReportData | null>(null);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
-  const [activeTab, setActiveTab] = useState("summary");
   const reportRef = useRef<HTMLDivElement>(null);
   const [coordinator, setCoordinator] = useState<Coordinator | null>(null);
   const [teacherInfo, setTeacherInfo] = useState<TeacherInfo | null>(null);
@@ -119,9 +95,6 @@ export default function StudentReportDashboard() {
   const [studentResults, setStudentResults] = useState<Student[]>([]);
   const [searchingStudents, setSearchingStudents] = useState(false);
 
-  //============================
-  // Hooks
-  //============================
   useEffect(() => {
     fetchCoordinator();
   }, []);
@@ -133,12 +106,6 @@ export default function StudentReportDashboard() {
       setStudentResults([]);
     }
   }, [studentQuery]);
-
-  useEffect(() => {
-    if (selectedCourseId) {
-      fetchTeacherInfo(selectedCourseId);
-    }
-  }, [selectedCourseId]);
 
   useEffect(() => {
     let active = true;
@@ -164,9 +131,6 @@ export default function StudentReportDashboard() {
     };
   }, [studentQuery]);
 
-  //============================
-  // Funciones de Negocio
-  //============================
   const handleSelectStudent = async (student: Student | null) => {
     if (!student) {
       setReportData(null);
@@ -179,11 +143,6 @@ export default function StudentReportDashboard() {
       const data = await buildStudentReportData(student);
       const processed = calculateStudentStats(data);
       setReportData(processed);
-      if (processed.courses.length > 0) {
-        setSelectedCourseId(processed.courses[0].courseId);
-      } else {
-        setSelectedCourseId("");
-      }
     } catch (error) {
       console.error("Error cargando datos del estudiante:", error);
       toast({
@@ -203,11 +162,9 @@ export default function StudentReportDashboard() {
       .from("enrollments")
       .select("id, course:courses(id, name, teacher_id)")
       .eq("student_id", student.id);
-
     if (enrErr) {
       throw enrErr;
     }
-
     const courses: CourseReport[] = await Promise.all(
       (enrollments || []).map(async (enr: any) => {
         const courseId = enr.course_id ?? enr.course?.id;
@@ -228,18 +185,15 @@ export default function StudentReportDashboard() {
             .select("lesson_id, score")
             .eq("enrollment_id", enr.id),
         ]);
-
         const lessonsData = lessonsRes.data || [];
         const attendanceData = attendanceRes.data || [];
         const gradesData = gradesRes.data || [];
-
         const attendanceMap = new Map(
           attendanceData.map((r: any) => [r.lesson_id, r.status])
         );
         const gradesMap = new Map(
           gradesData.map((r: any) => [r.lesson_id, r.score])
         );
-
         const lessons: LessonReport[] = lessonsData.map((l: any) => ({
           lessonName: l.title || l.name || `Lección ${l.id}`,
           date: l.scheduled_date || l.created_at,
@@ -250,13 +204,11 @@ export default function StudentReportDashboard() {
               ? (gradesMap.get(l.id) as number)
               : null,
         }));
-
         const { data: examsData } = await supabase
           .from("exams")
           .select("id, title, due_date, created_at, is_active")
           .eq("course_id", courseId)
           .eq("is_active", true);
-
         const examIds = (examsData || []).map((e: any) => e.id);
         let submissionsMap = new Map<string, number | null>();
         if (examIds.length > 0) {
@@ -265,7 +217,6 @@ export default function StudentReportDashboard() {
             .select("exam_id, score")
             .eq("student_id", student.id)
             .in("exam_id", examIds);
-
           submissionsMap = new Map(
             (subsData || []).map((s: any) => [
               s.exam_id,
@@ -273,14 +224,12 @@ export default function StudentReportDashboard() {
             ])
           );
         }
-
         const exams: ExamReport[] = (examsData || []).map((e: any) => ({
           title: e.title,
           date: e.due_date || e.created_at,
           score: submissionsMap.get(e.id) ?? null,
           attendance: submissionsMap.has(e.id) ? "Presente" : "Ausente",
         }));
-
         return {
           courseId,
           courseName,
@@ -289,7 +238,6 @@ export default function StudentReportDashboard() {
         };
       })
     );
-
     return {
       studentName: student.name,
       studentId: student.documentId,
@@ -355,7 +303,6 @@ export default function StudentReportDashboard() {
         totalAttendance += 0.5;
       }
     });
-
     const examsWithScore = (course.exams || []).filter(
       (exam) => typeof exam.score === "number"
     );
@@ -365,15 +312,12 @@ export default function StudentReportDashboard() {
     );
     const avgExamNotes =
       examsWithScore.length > 0 ? totalExamScore / examsWithScore.length : 0;
-
     const avgLessonNotes = lessonNotesCount > 0 ? lessonNotesSum / lessonNotesCount : 0;
-
     const allScores = [
       ...course.lessons.filter(l => typeof l.notes === "number").map(l => l.notes!),
       ...examsWithScore.map(e => e.score!)
     ];
     const overallAvgNotes = allScores.length > 0 ? allScores.reduce((sum, score) => sum + score, 0) / allScores.length : 0;
-
     return {
       avgLessonNotes,
       avgExamNotes,
@@ -387,10 +331,9 @@ export default function StudentReportDashboard() {
     let allExamScores: number[] = [];
     let totalAttendance = 0;
     let totalClasses = 0;
-
     data.courses.forEach((course) => {
       course.lessons.forEach(lesson => {
-        if(typeof lesson.notes === "number") {
+        if (typeof lesson.notes === "number") {
           allLessonScores.push(lesson.notes);
         }
         totalClasses++;
@@ -401,16 +344,14 @@ export default function StudentReportDashboard() {
         }
       });
       course.exams?.forEach(exam => {
-        if(typeof exam.score === "number") {
+        if (typeof exam.score === "number") {
           allExamScores.push(exam.score);
         }
       });
     });
-
     const allScores = [...allLessonScores, ...allExamScores];
     const overallAvgNotes = allScores.length > 0 ? allScores.reduce((sum, score) => sum + score, 0) / allScores.length : 0;
     const overallAttendanceRate = totalClasses > 0 ? (totalAttendance / totalClasses) * 100 : 0;
-
     return {
       ...data,
       overallAvgNotes,
@@ -428,16 +369,16 @@ export default function StudentReportDashboard() {
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`reporte-estudiante-${reportData?.studentName || "export"}.pdf`);
+      pdf.save(`boletin-${reportData?.studentName || "export"}.pdf`);
       toast({
         title: "Exportado",
-        description: "El reporte ha sido exportado como PDF",
+        description: "El boletín ha sido exportado como PDF",
       });
     } catch (error) {
       console.error("Error exporting PDF:", error);
       toast({
         title: "Error",
-        description: "No se pudo exportar el reporte como PDF",
+        description: "No se pudo exportar el boletín como PDF",
         variant: "destructive",
       });
     } finally {
@@ -459,13 +400,13 @@ export default function StudentReportDashboard() {
       await handleSelectStudent(selectedStudent);
       toast({
         title: "Datos actualizados",
-        description: "El reporte ha sido actualizado con los últimos datos",
+        description: "El boletín ha sido actualizado con los últimos datos",
       });
     } catch (error) {
       console.error("Error refreshing data:", error);
       toast({
         title: "Error",
-        description: "No se pudo actualizar el reporte",
+        description: "No se pudo actualizar el boletín",
         variant: "destructive",
       });
     } finally {
@@ -473,9 +414,6 @@ export default function StudentReportDashboard() {
     }
   };
 
-  //============================
-  // Renderizado
-  //============================
   const showLoader = loading && selectedStudent;
   if (showLoader) {
     return (
@@ -487,388 +425,233 @@ export default function StudentReportDashboard() {
   }
 
   const currentReportData = reportData || emptyStudentData;
-  const selectedCourse = currentReportData.courses.find(
-    (c) => c.courseId === selectedCourseId
-  );
-  const courseStats = selectedCourse ? getCourseStats(selectedCourse) : null;
+
+  // Template helpers
+  const passed = currentReportData.overallAvgNotes >= 60; // adjustable pass threshold
+  const fullName = currentReportData.studentName;
+  const studentId = currentReportData.studentId;
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-8">
-      {/* HEADER: título a la izquierda; INPUT + BOTONES juntos a la derecha */}
+    <div className="space-y-6 max-w-5xl mx-auto p-4 md:p-8">
+      {/* Header */}
       <div className="flex justify-between items-start">
-        <h1 className="text-2xl font-bold tracking-tight">Reporte de Estudiante</h1>
-
-        {/* Contenedor derecho: input + botones (juntos) */}
-        <div className="flex flex-col items-end">
-          <div className="flex items-center space-x-2">
-            {/* Wrapper relativo para permitir dropdown absoluto debajo del input */}
-            <div className="relative w-64 md:w-[420px]">
-              <Input
-                value={studentQuery}
-                onChange={(e) => setStudentQuery(e.target.value)}
-                placeholder="Buscar estudiante por cédula o nombre"
-                className="w-full"
-              />
-              {/* Dropdown de resultados — absoluto para que quede debajo del input */}
-              {studentQuery && (
-                <div className="absolute left-0 right-0 mt-1 z-50">
-                  <div className="border rounded-md bg-white shadow-sm max-h-60 overflow-auto">
-                    {searchingStudents ? (
-                      <div className="p-2 text-sm text-muted-foreground flex items-center">
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Buscando estudiantes...
-                      </div>
-                    ) : studentResults.length > 0 ? (
-                      studentResults.map((s) => (
-                        <button
-                          key={s.id}
-                          onClick={() => {
-                            setStudentQuery("");
-                            handleSelectStudent(s);
-                          }}
-                          className="w-full text-left px-3 py-2 hover:bg-muted/50 flex items-center justify-between"
-                        >
-                          <span className="font-medium">{s.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {s.documentId}
-                          </span>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="p-2 text-sm text-muted-foreground">Sin resultados</div>
-                    )}
-                  </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Boletín Educativo</h1>
+          <p className="text-sm text-muted-foreground">Informe resumido del estudiante</p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="relative w-64 md:w-[420px]">
+            <Input
+              value={studentQuery}
+              onChange={(e) => setStudentQuery(e.target.value)}
+              placeholder="Buscar estudiante por cédula o nombre"
+              className="w-full"
+            />
+            {studentQuery && (
+              <div className="absolute left-0 right-0 mt-1 z-50">
+                <div className="border rounded-md bg-white shadow-sm max-h-60 overflow-auto">
+                  {searchingStudents ? (
+                    <div className="p-2 text-sm text-muted-foreground flex items-center">
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Buscando estudiantes...
+                    </div>
+                  ) : studentResults.length > 0 ? (
+                    studentResults.map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => {
+                          setStudentQuery("");
+                          handleSelectStudent(s);
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-muted/50 flex items-center justify-between"
+                      >
+                        <span className="font-medium">{s.name}</span>
+                        <span className="text-xs text-muted-foreground">{s.documentId}</span>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="p-2 text-sm text-muted-foreground">Sin resultados</div>
+                  )}
                 </div>
-              )}
-            </div>
-
-            {/* Botones juntos al lado del input */}
-            <div className="flex items-center space-x-2 flex-shrink-0">
-              <Button onClick={handleExportPDF} disabled={exporting || !reportData}>
-                {exporting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <FileText className="mr-2 h-4 w-4" />
-                )}
-                Exportar PDF
-              </Button>
-              <Button onClick={handleRefresh} disabled={refreshing || !reportData} variant="outline">
-                {refreshing ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                )}
-                Actualizar
-              </Button>
-            </div>
+              </div>
+            )}
           </div>
+          <Button onClick={handleExportPDF} disabled={exporting || !reportData}>
+            {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+            Exportar PDF
+          </Button>
+          <Button onClick={handleRefresh} disabled={refreshing || !reportData} variant="outline">
+            {refreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+            Actualizar
+          </Button>
         </div>
       </div>
 
-      {/* ---- resto del layout ---- */}
+      {/* If no data */}
       {!reportData ? (
         <Card className="text-center p-8">
           <CardHeader className="items-center">
-            <ListX className="w-12 h-12 text-muted-foreground" />
+            <UserCheck className="w-12 h-12 text-muted-foreground" />
             <CardTitle>Selecciona un estudiante</CardTitle>
-            <CardDescription>Usa el buscador para generar un reporte.</CardDescription>
+            <CardDescription>Usa el buscador para generar el boletín.</CardDescription>
           </CardHeader>
         </Card>
       ) : (
-        <div ref={reportRef} className="space-y-6 bg-white rounded-xl shadow-lg p-4 md:p-8">
-          <div className="flex justify-between items-center border-b pb-4">
+        <div ref={reportRef} className="bg-white rounded-xl shadow-lg p-6 md:p-8">
+          {/* Top summary (certificate-like) */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between border-b pb-6 mb-6">
             <div>
-              <h2 className="text-xl font-semibold">
-                {currentReportData.studentName || "Sin estudiante seleccionado"}
-              </h2>
-              <p className="text-muted-foreground">
-                Cédula: {currentReportData.studentId || "Nulo"}
-              </p>
-              <p className="text-muted-foreground">
-                Curso(s):{" "}
-                {currentReportData.courses.length > 0
-                  ? currentReportData.courses.map((c) => c.courseName).join(", ")
-                  : "Sin cursos"}
-              </p>
+              <h2 className="text-xl font-semibold">{fullName}</h2>
+              <p className="text-muted-foreground">ID: <span className="font-medium">{studentId}</span></p>
             </div>
-            <div className="text-right space-y-2">
-              {coordinator && (
-                <div>
-                  <Badge variant="secondary">Coordinador</Badge>
-                  <p className="font-medium">{coordinator.name}</p>
-                  <p className="text-sm text-muted-foreground">{coordinator.email}</p>
+            <div className="mt-4 md:mt-0 text-right">
+              <div className="flex items-center justify-end space-x-4">
+                <div className="text-center">
+                  <div className="text-sm text-muted-foreground">Nota Final</div>
+                  <div className="text-3xl font-bold">{currentReportData.overallAvgNotes.toFixed(1)}</div>
                 </div>
-              )}
+                <div className="text-center">
+                  <div className="text-sm text-muted-foreground">Asistencia</div>
+                  <div className="text-3xl font-bold">{currentReportData.overallAttendanceRate.toFixed(0)}%</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-sm text-muted-foreground">Estado</div>
+                  <Badge variant={passed ? "default" : "destructive"} className="px-4 py-2">
+                    {passed ? "Aprobado" : "Reprobado"}
+                  </Badge>
+                </div>
+              </div>
             </div>
           </div>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList>
-              <TabsTrigger value="summary">Resumen del Estudiante</TabsTrigger>
-              <TabsTrigger value="details">Detalle de Cursos</TabsTrigger>
-            </TabsList>
+          {/* Courses table */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-2">Cursos</h3>
+            {currentReportData.courses.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Curso</TableHead>
+                    <TableHead>Prom. Curso</TableHead>
+                    <TableHead>Asistencia</TableHead>
+                    <TableHead>Estado</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {currentReportData.courses.map((course) => {
+                    const stats = getCourseStats(course);
+                    const coursePassed = stats.overallAvgNotes >= 60;
+                    return (
+                      <TableRow key={course.courseId}>
+                        <TableCell>{course.courseName}</TableCell>
+                        <TableCell>{stats.overallAvgNotes.toFixed(1)}</TableCell>
+                        <TableCell>{stats.attendanceRate.toFixed(0)}%</TableCell>
+                        <TableCell>
+                          <Badge variant={coursePassed ? "default" : "destructive"}>
+                            {coursePassed ? "Aprobado" : "Reprobado"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-6 text-muted-foreground">No hay cursos registrados para este estudiante.</div>
+            )}
+          </div>
 
-            <TabsContent value="summary" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Estadísticas Generales</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Promedio General de Notas</CardTitle>
-                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{currentReportData.overallAvgNotes.toFixed(1)}</div>
-                        <Progress value={currentReportData.overallAvgNotes} max={100} className="mt-2" />
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Tasa de Asistencia General</CardTitle>
-                        <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{currentReportData.overallAttendanceRate.toFixed(0)}%</div>
-                        <Progress value={currentReportData.overallAttendanceRate} max={100} className="mt-2" />
-                      </CardContent>
-                    </Card>
+          {/* Detailed: small breakdown per course (lessons + exams) */}
+          {currentReportData.courses.map((course) => (
+            <Card key={course.courseId} className="mb-4">
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">{course.courseName}</CardTitle>
+                <CardDescription>
+                  Promedio: {getCourseStats(course).overallAvgNotes.toFixed(1)} • Asistencia: {getCourseStats(course).attendanceRate.toFixed(0)}%
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">Lecciones</h4>
+                    {course.lessons.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Lección</TableHead>
+                            <TableHead>Fecha</TableHead>
+                            <TableHead>Asistencia</TableHead>
+                            <TableHead>Nota</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {course.lessons.map((l, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell>{l.lessonName}</TableCell>
+                              <TableCell>{new Date(l.date).toLocaleDateString()}</TableCell>
+                              <TableCell>
+                                <Badge variant={l.attendance === "Presente" ? "default" : l.attendance === "Tarde" ? "secondary" : "destructive"}>
+                                  {l.attendance}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{typeof l.notes === "number" ? l.notes : "-"}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">Sin lecciones registradas.</div>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Lecciones por Curso</CardTitle>
-                  <CardDescription>Resumen de lecciones, asistencia y notas de todos los cursos</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {currentReportData.courses.flatMap(c => c.lessons).length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Curso</TableHead>
-                          <TableHead>Lección</TableHead>
-                          <TableHead>Fecha</TableHead>
-                          <TableHead>Asistencia</TableHead>
-                          <TableHead>Nota</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {currentReportData.courses.flatMap(c => c.lessons.map(l => ({ ...l, courseName: c.courseName }))).map((lesson, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell>{lesson.courseName}</TableCell>
-                            <TableCell>{lesson.lessonName}</TableCell>
-                            <TableCell>{new Date(lesson.date).toLocaleDateString()}</TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={
-                                  lesson.attendance === "Presente"
-                                    ? "default"
-                                    : lesson.attendance === "Tarde"
-                                      ? "secondary"
-                                      : "destructive"
-                                }
-                              >
-                                {lesson.attendance}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{typeof lesson.notes === "number" ? lesson.notes : "-"}</TableCell>
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">Exámenes</h4>
+                    {course.exams && course.exams.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Examen</TableHead>
+                            <TableHead>Fecha</TableHead>
+                            <TableHead>Asistencia</TableHead>
+                            <TableHead>Nota</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <div className="text-center py-6 text-muted-foreground">No hay lecciones registradas.</div>
-                  )}
-                </CardContent>
-              </Card>
+                        </TableHeader>
+                        <TableBody>
+                          {course.exams.map((e, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell>{e.title}</TableCell>
+                              <TableCell>{new Date(e.date).toLocaleDateString()}</TableCell>
+                              <TableCell>
+                                <Badge variant={e.attendance === "Presente" ? "default" : "destructive"}>
+                                  {e.attendance}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{typeof e.score === "number" ? e.score : "-"}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">Sin exámenes registrados.</div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Exámenes por Curso</CardTitle>
-                  <CardDescription>Resumen de exámenes, asistencia y notas de todos los cursos</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {currentReportData.courses.flatMap(c => c.exams || []).length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Curso</TableHead>
-                          <TableHead>Examen</TableHead>
-                          <TableHead>Fecha</TableHead>
-                          <TableHead>Asistencia</TableHead>
-                          <TableHead>Nota</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {currentReportData.courses.flatMap(c => c.exams?.map(e => ({ ...e, courseName: c.courseName })) || []).map((exam, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell>{exam.courseName}</TableCell>
-                            <TableCell>{exam.title}</TableCell>
-                            <TableCell>{new Date(exam.date).toLocaleDateString()}</TableCell>
-                            <TableCell>
-                              <Badge variant={exam.attendance === "Presente" ? "default" : "destructive"}>
-                                {exam.attendance}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{typeof exam.score === "number" ? exam.score : "-"}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <div className="text-center py-6 text-muted-foreground">No hay exámenes registrados.</div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="details" className="space-y-6">
+          {/* Footer with coordinator info */}
+          {coordinator && (
+            <div className="mt-6 border-t pt-4 text-sm text-muted-foreground">
               <div className="flex justify-between items-center">
-                <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
-                  <SelectTrigger
-                    className="w-[300px]"
-                    disabled={!reportData || reportData.courses.length === 0}
-                  >
-                    <SelectValue placeholder="Selecciona un curso" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currentReportData.courses.map((course) => (
-                      <SelectItem key={course.courseId} value={course.courseId}>
-                        {course.courseName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div>
+                  <div className="font-medium">Coordinador: {coordinator.name}</div>
+                  <div>{coordinator.email}</div>
+                </div>
+                <div className="text-right">Documento generado: {new Date().toLocaleDateString()}</div>
               </div>
-
-              {selectedCourse ? (
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-x-4">
-                    <div className="flex-1 space-y-1">
-                      <CardTitle>{selectedCourse.courseName}</CardTitle>
-                      <CardDescription>Detalle de lecciones y exámenes</CardDescription>
-                    </div>
-                    {teacherInfo && (
-                      <div className="text-right flex-shrink-0">
-                        <Badge variant="outline">Profesor</Badge>
-                        <p className="font-medium text-sm">{teacherInfo.name}</p>
-                        <p className="text-xs text-muted-foreground">{teacherInfo.email}</p>
-                      </div>
-                    )}
-                  </CardHeader>
-
-                  <CardContent>
-                    {courseStats && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <Card>
-                          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Promedio de Notas del Curso</CardTitle>
-                            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                          </CardHeader>
-                          <CardContent>
-                            <div className="text-2xl font-bold">{courseStats.overallAvgNotes.toFixed(1)}</div>
-                            <Progress value={courseStats.overallAvgNotes} max={100} className="mt-2" />
-                          </CardContent>
-                        </Card>
-
-                        <Card>
-                          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Asistencia del Curso</CardTitle>
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                          </CardHeader>
-                          <CardContent>
-                            <div className="text-2xl font-bold">{courseStats.attendanceRate.toFixed(0)}%</div>
-                            <Progress value={courseStats.attendanceRate} max={100} className="mt-2" />
-                          </CardContent>
-                        </Card>
-                      </div>
-                    )}
-
-                    {selectedCourse.lessons.length > 0 && (
-                      <>
-                        <h4 className="text-md font-semibold mb-2">Lecciones</h4>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Lección</TableHead>
-                              <TableHead>Fecha</TableHead>
-                              <TableHead>Asistencia</TableHead>
-                              <TableHead>Notas</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {selectedCourse.lessons.map((lesson, idx) => (
-                              <TableRow key={idx}>
-                                <TableCell>{lesson.lessonName}</TableCell>
-                                <TableCell>{new Date(lesson.date).toLocaleDateString()}</TableCell>
-                                <TableCell>
-                                  <Badge
-                                    variant={
-                                      lesson.attendance === "Presente"
-                                        ? "default"
-                                        : lesson.attendance === "Tarde"
-                                          ? "secondary"
-                                          : "destructive"
-                                    }
-                                  >
-                                    {lesson.attendance}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>{typeof lesson.notes === "number" ? lesson.notes : "-"}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </>
-                    )}
-
-                    {selectedCourse.exams && selectedCourse.exams.length > 0 && (
-                      <>
-                        <h4 className="text-md font-semibold mt-6 mb-2">Exámenes</h4>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Examen</TableHead>
-                              <TableHead>Fecha</TableHead>
-                              <TableHead>Asistencia</TableHead>
-                              <TableHead>Nota</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {selectedCourse.exams.map((exam, idx) => (
-                              <TableRow key={idx}>
-                                <TableCell>{exam.title}</TableCell>
-                                <TableCell>{new Date(exam.date).toLocaleDateString()}</TableCell>
-                                <TableCell>
-                                  <Badge variant={exam.attendance === "Presente" ? "default" : "destructive"}>
-                                    {exam.attendance}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>{typeof exam.score === "number" ? exam.score : "-"}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </>
-                    )}
-
-                    {selectedCourse.lessons.length === 0 && selectedCourse.exams?.length === 0 && (
-                      <div className="text-center py-6 text-muted-foreground">
-                        No hay lecciones ni exámenes registrados para este curso.
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="text-center py-6 text-muted-foreground">Selecciona un curso para ver detalles.</div>
-              )}
-            </TabsContent>
-          </Tabs>
+            </div>
+          )}
         </div>
       )}
     </div>

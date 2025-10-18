@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/layout/dashboard-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +23,6 @@ import {
   ArrowRight,
   XCircle,
   Loader2,
-  // ADDED: Imported missing icons
   User,
   GraduationCap,
 } from "lucide-react";
@@ -32,42 +30,32 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getPQRsForCoordinator, updatePQRByCoordinator } from "@/lib/pqrs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
-// Tipos para PQR
-type PQRStatusType = "pending" | "in_progress" | "resolved" | "closed";
-
+type PQRStatusType = "pending" | "in_progress" | "closed";
 import type { PQR } from "@/lib/supabase";
-
 const getStatusIcon = (status: PQRStatusType) => {
   switch (status) {
     case "pending":
       return <AlertCircle className="h-4 w-4 text-orange-500" />;
     case "in_progress":
       return <CircleDashed className="h-4 w-4 text-blue-500 animate-spin" />;
-    case "resolved":
-      return <CheckCircle2 className="h-4 w-4 text-green-500" />;
     case "closed":
       return <XCircle className="h-4 w-4 text-gray-500" />;
     default:
       return <MailQuestion className="h-4 w-4 text-gray-500" />;
   }
 };
-
 const getStatusBadgeVariant = (status: PQRStatusType) => {
   switch (status) {
     case "pending":
       return "destructive";
     case "in_progress":
       return "secondary";
-    case "resolved":
-      return "default";
     case "closed":
       return "outline";
     default:
       return "outline";
   }
 };
-
 const formatTimeAgo = (dateString: string) => {
   const date = new Date(dateString);
   const now = new Date();
@@ -80,11 +68,9 @@ const formatTimeAgo = (dateString: string) => {
   if (interval > 1) return `${Math.floor(interval)} días`;
   interval = seconds / 3600;
   if (interval > 1) return `${Math.floor(interval)} horas`;
-  interval = seconds / 60;
   if (interval > 1) return `${Math.floor(interval)} minutos`;
   return "hace unos segundos";
 };
-
 export default function CoordinatorPQRPage() {
   const [pqrs, setPqrs] = useState<PQR[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,7 +79,6 @@ export default function CoordinatorPQRPage() {
   const [newStatus, setNewStatus] = useState<PQRStatusType>("in_progress");
   const [isUpdating, setIsUpdating] = useState(false);
   const [alert, setAlert] = useState<{ message: string; type: "success" | "error" } | null>(null);
-
   useEffect(() => {
     const fetchPQRs = async () => {
       setLoading(true);
@@ -106,21 +91,19 @@ export default function CoordinatorPQRPage() {
         setLoading(false);
       }
     };
-
     fetchPQRs();
   }, []);
-
   const handleSelectPqr = (pqr: PQR) => {
     setSelectedPqr(pqr);
     setResponse(pqr.coordinator_response || "");
-    setNewStatus(pqr.status as PQRStatusType);
-    setAlert(null); // Limpiar alerta al seleccionar nuevo PQR
+    // Asegurarse de que el estado sea uno de los nuevos tipos. Si es 'resolved', se cambia a 'closed' por defecto.
+    const currentStatus = pqr.status as PQRStatusType;
+    setNewStatus(currentStatus === 'resolved' ? 'closed' : currentStatus);
+    setAlert(null);
   };
-
   const handleUpdatePqr = async () => {
     if (!selectedPqr) return;
     setIsUpdating(true);
-
     try {
       await updatePQRByCoordinator(selectedPqr.id, newStatus, response);
 
@@ -128,14 +111,14 @@ export default function CoordinatorPQRPage() {
       const updatedPqrs = pqrs.map((pqr) =>
         pqr.id === selectedPqr.id
           ? {
-              ...pqr,
-              status: newStatus,
-              coordinator_response: response,
-              resolved_at: newStatus === "resolved" ? new Date().toISOString() : pqr.resolved_at,
-            }
+            ...pqr,
+            status: newStatus,
+            coordinator_response: response,
+            // MODIFICADO: Se elimina la lógica de 'resolved_at' al resolver
+            resolved_at: pqr.resolved_at,
+          }
           : pqr
       );
-
       setPqrs(updatedPqrs);
       setAlert({ message: "PQR actualizado exitosamente.", type: "success" });
       setSelectedPqr(null);
@@ -147,11 +130,9 @@ export default function CoordinatorPQRPage() {
       setTimeout(() => setAlert(null), 5000); // Ocultar la alerta después de 5 segundos
     }
   };
-
   const getStatusCount = (status: PQRStatusType) => {
     return pqrs.filter((pqr) => pqr.status === status).length;
   };
-
   if (loading) {
     return (
       <DashboardLayout userRole="coordinator">
@@ -161,7 +142,6 @@ export default function CoordinatorPQRPage() {
       </DashboardLayout>
     );
   }
-
   return (
     <DashboardLayout userRole="coordinator">
       <div className="space-y-6 transition-opacity duration-500 animate-in fade-in">
@@ -171,7 +151,6 @@ export default function CoordinatorPQRPage() {
             Revisa y responde a las peticiones, quejas y reclamos de los estudiantes.
           </p>
         </div>
-
         {/* Alerta de éxito/error */}
         {alert && (
           <div className="animate-in fade-in slide-in-from-top-4">
@@ -187,9 +166,9 @@ export default function CoordinatorPQRPage() {
             </Alert>
           </div>
         )}
-
         {/* Status Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* MODIFICADO: Ajustado a 3 columnas (lg:grid-cols-3) ya que se eliminó la cuarta card */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card className="transition-transform duration-300 hover:scale-105 hover:shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
@@ -210,28 +189,19 @@ export default function CoordinatorPQRPage() {
               <p className="text-xs text-muted-foreground">Siendo gestionadas</p>
             </CardContent>
           </Card>
-          <Card className="transition-transform duration-300 hover:scale-105 hover:shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Resueltas</CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{getStatusCount("resolved")}</div>
-              <p className="text-xs text-muted-foreground">Con respuesta del coordinador</p>
-            </CardContent>
-          </Card>
+          {/* ELIMINADO: La tarjeta de "Resueltas" ha sido eliminada. */}
           <Card className="transition-transform duration-300 hover:scale-105 hover:shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Cerradas</CardTitle>
               <XCircle className="h-4 w-4 text-gray-500" />
             </CardHeader>
             <CardContent>
+              {/* MODIFICADO: Usar el recuento de 'closed' */}
               <div className="text-2xl font-bold">{getStatusCount("closed")}</div>
               <p className="text-xs text-muted-foreground">Finalizadas</p>
             </CardContent>
           </Card>
         </div>
-
         {/* PQR List and Detail */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* PQR List Table */}
@@ -264,11 +234,11 @@ export default function CoordinatorPQRPage() {
                         key={pqr.id}
                         onClick={() => handleSelectPqr(pqr)}
                         className={`
-                          cursor-pointer
-                          transition-colors duration-200
-                          hover:bg-accent/50
-                          ${selectedPqr?.id === pqr.id ? "bg-accent scale-[1.01] shadow-lg" : ""}
-                        `}
+                                                    cursor-pointer
+                                                    transition-colors duration-200
+                                                    hover:bg-accent/50
+                                                    ${selectedPqr?.id === pqr.id ? "bg-accent scale-[1.01] shadow-lg" : ""}
+                                                `}
                       >
                         <TableCell className="font-medium">{pqr.subject}</TableCell>
                         <TableCell>{pqr.courseName}</TableCell>
@@ -279,8 +249,11 @@ export default function CoordinatorPQRPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getStatusBadgeVariant(pqr.status)} className="flex items-center gap-1 w-fit">
-                            {getStatusIcon(pqr.status)}
+                          <Badge
+                            variant={getStatusBadgeVariant(pqr.status as PQRStatusType)}
+                            className="flex items-center gap-1 w-fit"
+                          >
+                            {getStatusIcon(pqr.status as PQRStatusType)}
                             {pqr.status.replace(/_/g, ' ').toUpperCase()}
                           </Badge>
                         </TableCell>
@@ -292,7 +265,6 @@ export default function CoordinatorPQRPage() {
               </div>
             </CardContent>
           </Card>
-
           {/* PQR Detail Card */}
           {selectedPqr ? (
             <Card className="lg:col-span-1 animate-in fade-in slide-in-from-right-1">
@@ -333,9 +305,9 @@ export default function CoordinatorPQRPage() {
                     {selectedPqr.message}
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="status">Estado</Label>
+                  {/* MODIFICADO: Se añade un cast explícito */}
                   <Select value={newStatus} onValueChange={(value: PQRStatusType) => setNewStatus(value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecciona un estado" />
@@ -343,12 +315,11 @@ export default function CoordinatorPQRPage() {
                     <SelectContent>
                       <SelectItem value="pending">Pendiente</SelectItem>
                       <SelectItem value="in_progress">En Proceso</SelectItem>
-                      <SelectItem value="resolved">Resuelto</SelectItem>
+                      {/* ELIMINADO: SelectItem para "Resuelto" */}
                       <SelectItem value="closed">Cerrado</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="coordinator-response">Tu Respuesta</Label>
                   <Textarea
@@ -359,7 +330,6 @@ export default function CoordinatorPQRPage() {
                     rows={4}
                   />
                 </div>
-
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setSelectedPqr(null)} disabled={isUpdating}>
                     Cancelar
@@ -392,7 +362,6 @@ export default function CoordinatorPQRPage() {
             </Card>
           )}
         </div>
-
         {pqrs.length === 0 && (
           <Card>
             <CardContent className="text-center py-8">

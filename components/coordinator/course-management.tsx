@@ -1,10 +1,8 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
@@ -30,13 +28,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, Search, BookOpen, Users, Clock, Calendar, X, Loader2, Eye as EyeIcon } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-
-// Importaciones de tipos y funciones de Supabase (ajustadas)
 import { Course, createCourse, updateCourse, deleteCourse, getCourses } from "@/lib/courses";
 import { getStudentsForCourse, searchStudents, addStudentsToCourse } from "@/lib/students";
 import { getTeachers } from "@/lib/teachers";
-
-// Definiciones de tipos para los datos
 type Student = {
   id: string;
   name: string;
@@ -44,13 +38,10 @@ type Student = {
   documentId: string;
   photoUrl: string;
 };
-
 type Teacher = {
   id: string;
   name: string;
 };
-
-// Custom hook para implementar el debounce
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   useEffect(() => {
@@ -63,10 +54,7 @@ function useDebounce<T>(value: T, delay: number): T {
   }, [value, delay]);
   return debouncedValue;
 }
-
-// Componente principal de gestión de cursos
 export default function CourseManagement() {
-  // --- Estado del componente ---
   const { toast } = useToast();
   const [courses, setCourses] = useState<Course[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
@@ -79,14 +67,11 @@ export default function CourseManagement() {
   const [isLoading, setIsLoading] = useState(false);
   const [studentsByCourse, setStudentsByCourse] = useState<{ [key: string]: Student[] }>({});
   const [teachers, setTeachers] = useState<Teacher[]>([]);
-
   const [studentSearchTerm, setStudentSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Student[]>([]);
   const [isStudentSearchLoading, setIsStudentSearchLoading] = useState(false);
-
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
   const [previewingCourse, setPreviewingCourse] = useState<Course | null>(null);
-
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -101,19 +86,14 @@ export default function CourseManagement() {
     end_date: "",
     assignedStudents: [] as Student[],
   });
-
   const debouncedSearchTerm = useDebounce(studentSearchTerm, 500);
-
-  // --- Efectos de carga y filtrado ---
   useEffect(() => {
     loadCourses();
     loadTeachers();
   }, []);
-
   useEffect(() => {
     filterCourses();
   }, [courses, searchTerm, filterLanguage, filterLevel]);
-
   useEffect(() => {
     if (debouncedSearchTerm) {
       handleSearchStudents(debouncedSearchTerm);
@@ -121,8 +101,6 @@ export default function CourseManagement() {
       setSearchResults([]);
     }
   }, [debouncedSearchTerm]);
-
-  // --- Funciones de manejo de datos ---
   const loadCourses = async () => {
     try {
       const coursesData = await getCourses();
@@ -134,7 +112,6 @@ export default function CourseManagement() {
           return { courseId: course.id, students };
         })
       );
-
       const newStudentsByCourse = studentsData.reduce((acc, curr) => {
         acc[curr.courseId] = curr.students.map(student => ({
           ...student,
@@ -143,7 +120,6 @@ export default function CourseManagement() {
         return acc;
       }, {} as { [key: string]: Student[] });
       setStudentsByCourse(newStudentsByCourse);
-
     } catch (error) {
       console.error("Error loading courses:", error);
       toast({
@@ -153,7 +129,6 @@ export default function CourseManagement() {
       });
     }
   };
-
   const loadTeachers = async () => {
     try {
       const teachersData = await getTeachers();
@@ -167,7 +142,6 @@ export default function CourseManagement() {
       });
     }
   };
-
   const handleSearchStudents = async (query: string) => {
     setIsStudentSearchLoading(true);
     try {
@@ -186,10 +160,8 @@ export default function CourseManagement() {
       setIsStudentSearchLoading(false);
     }
   };
-
   const filterCourses = () => {
     let filtered = courses;
-
     if (searchTerm) {
       filtered = filtered.filter(
         (course) =>
@@ -197,18 +169,14 @@ export default function CourseManagement() {
           (course.description?.toLowerCase().includes(searchTerm.toLowerCase()) || false),
       );
     }
-
     if (filterLanguage !== "all") {
       filtered = filtered.filter((course) => course.language === filterLanguage);
     }
-
     if (filterLevel !== "all") {
       filtered = filtered.filter((course) => course.level === filterLevel);
     }
-
     setFilteredCourses(filtered);
   };
-
   const resetForm = () => {
     setFormData({
       name: "",
@@ -227,7 +195,6 @@ export default function CourseManagement() {
     setStudentSearchTerm("");
     setSearchResults([]);
   };
-
   const handleCreate = async () => {
     if (!formData.name || !formData.language || !formData.level || !formData.teacher_id) {
       toast({
@@ -237,7 +204,6 @@ export default function CourseManagement() {
       });
       return;
     }
-
     if (!formData.start_date || !formData.end_date) {
       toast({
         title: "Error",
@@ -246,7 +212,6 @@ export default function CourseManagement() {
       });
       return;
     }
-
     setIsLoading(true);
     try {
       const newCourse = await createCourse({
@@ -264,11 +229,9 @@ export default function CourseManagement() {
         end_date: formData.end_date,
         room: "TBD",
       });
-
       if (newCourse && formData.assignedStudents.length > 0) {
         await addStudentsToCourse(newCourse.id, formData.assignedStudents.map(s => s.id));
       }
-
       await loadCourses();
       setIsCreateDialogOpen(false);
       resetForm();
@@ -287,7 +250,6 @@ export default function CourseManagement() {
       setIsLoading(false);
     }
   };
-
   const handleEdit = (course: Course) => {
     setEditingCourse(course);
     setFormData({
@@ -308,12 +270,10 @@ export default function CourseManagement() {
     setStudentSearchTerm("");
     setSearchResults([]);
   };
-
   const handlePreview = (course: Course) => {
     setPreviewingCourse(course);
     setIsPreviewDialogOpen(true);
   };
-
   const handleUpdate = async () => {
     if (!editingCourse || !formData.name || !formData.language || !formData.level) {
       toast({
@@ -323,7 +283,6 @@ export default function CourseManagement() {
       });
       return;
     }
-
     setIsLoading(true);
     try {
       const { assignedStudents, ...courseData } = formData;
@@ -352,7 +311,6 @@ export default function CourseManagement() {
       setIsLoading(false);
     }
   };
-
   const handleDelete = async (courseId: string) => {
     setIsLoading(true);
     try {
@@ -373,7 +331,6 @@ export default function CourseManagement() {
       setIsLoading(false);
     }
   };
-
   const handleAddStudentToForm = (student: Student) => {
     setFormData(prev => ({
       ...prev,
@@ -381,49 +338,38 @@ export default function CourseManagement() {
     }));
     setStudentSearchTerm("");
   };
-
   const handleRemoveStudentFromForm = (studentId: string) => {
     setFormData(prev => ({
       ...prev,
       assignedStudents: prev.assignedStudents.filter(s => s.id !== studentId)
     }));
   };
-
-  // --- Funciones de utilidad para la UI ---
   const getLevelColor = (level: string) => {
     const colors = {
-      A1: "bg-green-100 text-green-800",
-      A2: "bg-green-200 text-green-900",
-      B1: "bg-yellow-100 text-yellow-800",
-      B2: "bg-yellow-200 text-yellow-900",
-      C1: "bg-orange-100 text-orange-800",
-      C2: "bg-red-100 text-red-800",
+      "1": "bg-green-100 text-green-800",
+      "2": "bg-green-200 text-green-900",
+      "3": "bg-yellow-100 text-yellow-800",
+      "4": "bg-yellow-200 text-yellow-900",
+      "5": "bg-orange-100 text-orange-800",
+      "6": "bg-red-100 text-red-800",
+      "7": "bg-red-200 text-red-900",
     };
     return colors[level as keyof typeof colors] || "bg-gray-100 text-gray-800";
   };
-
   const getLanguageFlag = (language: string) => {
     const flags = {
       Inglés: "🇺🇸",
       Francés: "🇫🇷",
-      Alemán: "🇩🇪",
-      Italiano: "🇮🇹",
-      Portugués: "🇧🇷",
-      Mandarín: "🇨🇳",
     };
     return flags[language as keyof typeof flags] || "🌐";
   };
-
   const isStudentAssigned = (student: Student) => {
     return formData.assignedStudents.some(s => s.id === student.id);
   };
-
   const getTeacherName = (teacherId: string | null) => {
     const teacher = teachers.find(t => t.id === teacherId);
     return teacher ? teacher.name : 'No asignado';
   };
-
-  // --- Renderizado del componente ---
   return (
     <div className="space-y-6 p-6">
       {/* Header y botón de crear */}
@@ -466,10 +412,6 @@ export default function CourseManagement() {
                   <SelectContent>
                     <SelectItem value="Inglés">🇺🇸 Inglés</SelectItem>
                     <SelectItem value="Francés">🇫🇷 Francés</SelectItem>
-                    <SelectItem value="Alemán">🇩🇪 Alemán</SelectItem>
-                    <SelectItem value="Italiano">🇮🇹 Italiano</SelectItem>
-                    <SelectItem value="Portugués">🇧🇷 Portugués</SelectItem>
-                    <SelectItem value="Mandarín">🇨🇳 Mandarín</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -480,12 +422,13 @@ export default function CourseManagement() {
                     <SelectValue placeholder="Selecciona nivel" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="A1">A1 - Principiante</SelectItem>
-                    <SelectItem value="A2">A2 - Elemental</SelectItem>
-                    <SelectItem value="B1">B1 - Intermedio</SelectItem>
-                    <SelectItem value="B2">B2 - Intermedio Alto</SelectItem>
-                    <SelectItem value="C1">C1 - Avanzado</SelectItem>
-                    <SelectItem value="C2">C2 - Dominio</SelectItem>
+                    <SelectItem value="1">1</SelectItem>
+                    <SelectItem value="2">2</SelectItem>
+                    <SelectItem value="3">3</SelectItem>
+                    <SelectItem value="4">4</SelectItem>
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="6">6</SelectItem>
+                    <SelectItem value="7">7</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -517,16 +460,7 @@ export default function CourseManagement() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="duration_weeks">Duración (semanas)</Label>
-                <Input
-                  id="duration_weeks"
-                  type="number"
-                  value={formData.duration_weeks}
-                  onChange={(e) => setFormData({ ...formData, duration_weeks: Number.parseInt(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="hours_per_week">Horas por semana</Label>
+                <Label htmlFor="hours_per_week">Horas por día</Label>
                 <Input
                   id="hours_per_week"
                   type="number"
@@ -553,24 +487,43 @@ export default function CourseManagement() {
                 />
               </div>
               <div className="col-span-2 space-y-2">
-                <Label htmlFor="schedule">Horario</Label>
-                <Input
-                  id="schedule"
-                  value={formData.schedule}
-                  onChange={(e) => setFormData({ ...formData, schedule: e.target.value })}
-                  placeholder="Ej: Lunes y miércoles 10:00 - 12:00"
-                />
+                <Label htmlFor="days">Días</Label>
+                <div className="flex flex-wrap gap-2">
+                  {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"].map((day) => (
+                    <div key={day} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`day-${day}`}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <label htmlFor={`day-${day}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        {day}
+                      </label>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div className="col-span-2 space-y-2">
-                <Label htmlFor="description">Descripción</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Describe el contenido y objetivos del curso"
-                />
+                <Label htmlFor="schedule">Horario</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="start_time" className="text-xs">Hora inicio</Label>
+                    <Input
+                      id="start_time"
+                      type="time"
+                      placeholder="Hora inicio"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="end_time" className="text-xs">Hora fin</Label>
+                    <Input
+                      id="end_time"
+                      type="time"
+                      placeholder="Hora fin"
+                    />
+                  </div>
+                </div>
               </div>
-
               {/* Sección para agregar estudiantes */}
               <div className="col-span-2 space-y-2">
                 <Label>Asignar Estudiantes</Label>
@@ -648,7 +601,6 @@ export default function CourseManagement() {
           </DialogContent>
         </Dialog>
       </div>
-
       {/* Filtros */}
       <Card>
         <CardContent className="pt-6">
@@ -672,10 +624,6 @@ export default function CourseManagement() {
                 <SelectItem value="all">Todos los idiomas</SelectItem>
                 <SelectItem value="Inglés">🇺🇸 Inglés</SelectItem>
                 <SelectItem value="Francés">🇫🇷 Francés</SelectItem>
-                <SelectItem value="Alemán">🇩🇪 Alemán</SelectItem>
-                <SelectItem value="Italiano">🇮🇹 Italiano</SelectItem>
-                <SelectItem value="Portugués">🇧🇷 Portugués</SelectItem>
-                <SelectItem value="Mandarín">🇨🇳 Mandarín</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterLevel} onValueChange={setFilterLevel}>
@@ -683,18 +631,18 @@ export default function CourseManagement() {
                 <SelectValue placeholder="Filtrar por nivel" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="A1">A1 - Principiante</SelectItem>
-                <SelectItem value="A2">A2 - Elemental</SelectItem>
-                <SelectItem value="B1">B1 - Intermedio</SelectItem>
-                <SelectItem value="B2">B2 - Intermedio Alto</SelectItem>
-                <SelectItem value="C1">C1 - Avanzado</SelectItem>
-                <SelectItem value="C2">C2 - Dominio</SelectItem>
+                <SelectItem value="1">1</SelectItem>
+                <SelectItem value="2">2</SelectItem>
+                <SelectItem value="3">3</SelectItem>
+                <SelectItem value="4">4</SelectItem>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="6">6</SelectItem>
+                <SelectItem value="7">7</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </CardContent>
       </Card>
-
       {/* Courses Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredCourses.map((course) => (
@@ -714,11 +662,9 @@ export default function CourseManagement() {
             <CardContent>
               <div className="space-y-3">
                 {course.description && <p className="text-sm text-gray-600 line-clamp-2">{course.description}</p>}
-
                 <div className="text-sm text-gray-700">
                   <span className="font-semibold">Profesor:</span> {getTeacherName(course.teacher_id)}
                 </div>
-
                 <div className="flex items-center gap-4 text-sm text-gray-500">
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
@@ -733,13 +679,11 @@ export default function CourseManagement() {
                     {course.hours_per_week}h/sem
                   </div>
                 </div>
-
                 {course.schedule && (
                   <div className="text-sm">
                     <span className="font-medium">Horario:</span> {course.schedule}
                   </div>
                 )}
-
                 {/* Sección de Estudiantes */}
                 <div className="space-y-2 pt-4 border-t mt-4">
                   <h4 className="font-semibold text-gray-800">Estudiantes inscritos:</h4>
@@ -760,7 +704,6 @@ export default function CourseManagement() {
                     )}
                   </ul>
                 </div>
-
                 <div className="flex justify-between items-center pt-3 border-t">
                   <div className="flex gap-2">
                     {/* Botón de previsualización */}
@@ -801,8 +744,6 @@ export default function CourseManagement() {
           </Card>
         ))}
       </div>
-
-
       {filteredCourses.length === 0 && (
         <Card>
           <CardContent className="text-center py-12">
@@ -816,7 +757,6 @@ export default function CourseManagement() {
           </CardContent>
         </Card>
       )}
-
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl overflow-y-auto max-h-[85vh]">
@@ -845,10 +785,6 @@ export default function CourseManagement() {
                 <SelectContent>
                   <SelectItem value="Inglés">🇺🇸 Inglés</SelectItem>
                   <SelectItem value="Francés">🇫🇷 Francés</SelectItem>
-                  <SelectItem value="Alemán">🇩🇪 Alemán</SelectItem>
-                  <SelectItem value="Italiano">🇮🇹 Italiano</SelectItem>
-                  <SelectItem value="Portugués">🇧🇷 Portugués</SelectItem>
-                  <SelectItem value="Mandarín">🇨🇳 Mandarín</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -859,12 +795,13 @@ export default function CourseManagement() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="A1">A1 - Principiante</SelectItem>
-                  <SelectItem value="A2">A2 - Elemental</SelectItem>
-                  <SelectItem value="B1">B1 - Intermedio</SelectItem>
-                  <SelectItem value="B2">B2 - Intermedio Alto</SelectItem>
-                  <SelectItem value="C1">C1 - Avanzado</SelectItem>
-                  <SelectItem value="C2">C2 - Dominio</SelectItem>
+                  <SelectItem value="1">1</SelectItem>
+                  <SelectItem value="2">2</SelectItem>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="4">4</SelectItem>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="6">6</SelectItem>
+                  <SelectItem value="7">7</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -881,11 +818,6 @@ export default function CourseManagement() {
                   {teachers.map((teacher) => (
                     <SelectItem key={teacher.id} value={teacher.id}>
                       <div className="flex items-center gap-2">
-                        <img
-                          src={"https://api.dicebear.com/7.x/notionists/svg?seed=" + teacher.id}
-                          alt={`Foto de ${teacher.name}`}
-                          className="w-6 h-6 rounded-full"
-                        />
                         {teacher.name}
                       </div>
                     </SelectItem>
@@ -946,15 +878,6 @@ export default function CourseManagement() {
                 onChange={(e) => setFormData({ ...formData, schedule: e.target.value })}
               />
             </div>
-            <div className="col-span-2 space-y-2">
-              <Label htmlFor="edit-description">Descripción</Label>
-              <Textarea
-                id="edit-description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              />
-            </div>
-
             {/* Sección para agregar estudiantes en el editor */}
             <div className="col-span-2 space-y-2">
               <Label>Asignar Estudiantes</Label>
@@ -1031,7 +954,6 @@ export default function CourseManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* Preview Dialog */}
       <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
         <DialogContent className="max-w-xl overflow-y-auto max-h-[85vh]">
@@ -1080,7 +1002,6 @@ export default function CourseManagement() {
                     <p>{previewingCourse.hours_per_week}h</p>
                   </div>
                 </div>
-
                 <div className="space-y-2 border-t pt-4">
                   <h4 className="font-semibold text-gray-800">Estudiantes inscritos: ({studentsByCourse[previewingCourse.id]?.length || 0})</h4>
                   <div className="relative overflow-x-auto">
