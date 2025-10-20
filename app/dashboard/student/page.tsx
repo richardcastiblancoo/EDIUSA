@@ -1,19 +1,15 @@
 "use client"
-
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
 import { BookOpen, FileText, Award, Loader2, MessageSquare } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { getStudentCourses } from "@/lib/courses"
 import { getStudentExams } from "@/lib/exams"
 import { useToast } from "@/components/ui/use-toast"
 import Link from "next/link"
-
-// Variants para animaciones (Sin cambios)
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -23,7 +19,6 @@ const containerVariants = {
     },
   },
 }
-
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
   visible: {
@@ -35,14 +30,10 @@ const itemVariants = {
     },
   },
 }
-
-// Efecto de hover (Sin cambios)
 const cardHoverEffect = {
   scale: 1.02,
   transition: { duration: 0.2 },
 }
-
-// Definición de tipos para los datos (Sin cambios)
 interface Course {
   id: string;
   name: string;
@@ -51,7 +42,6 @@ interface Course {
     name: string;
   };
 }
-
 interface Exam {
   id: string;
   title: string;
@@ -63,7 +53,6 @@ interface Exam {
     score: number | null;
   }>;
 }
-
 /**
  * FUNCIÓN DE CONVERSIÓN
  * Convierte una puntuación de la escala 0-100 a la escala 0-5.
@@ -73,17 +62,13 @@ interface Exam {
 const convertToScaleFive = (score_100: number): number => {
     return (score_100 / 100) * 5;
 }
-
-
 export default function StudentDashboard() {
   const { user } = useAuth()
   const { toast } = useToast()
   const [courses, setCourses] = useState<Course[]>([])
   const [exams, setExams] = useState<Exam[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  // averageScore almacenará el valor en la escala 0-5
   const [averageScore, setAverageScore] = useState<number | null>(null); 
-
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true)
@@ -97,22 +82,15 @@ export default function StudentDashboard() {
           setIsLoading(false)
           return
         }
-
         const studentCourses = await getStudentCourses(user.id)
         setCourses(studentCourses ?? [])
-
         const studentExams = await getStudentExams(user.id)
         setExams(studentExams ?? [])
-
-        // Filtra y obtiene los puntajes (asumidos en escala 0-100)
         const scores = studentExams
           .filter((exam: Exam) => exam.exam_submissions?.[0]?.score !== null)
           .map((exam: Exam) => exam.exam_submissions![0].score);
-        
         if (scores.length > 0) {
           const rawAverage = scores.reduce((a, b) => (a ?? 0) + (b ?? 0), 0) / scores.length;
-          
-          // CONVERSIÓN: Convertir a escala 0-5 y redondear a un decimal
           const finalAverage = convertToScaleFive(rawAverage as number);
           setAverageScore(Number(finalAverage.toFixed(1)));
         } else {
@@ -129,20 +107,16 @@ export default function StudentDashboard() {
         setIsLoading(false)
       }
     }
-
     fetchData()
   }, [user, toast])
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
   }
-
   const formatTime = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
   }
-
   return (
     <DashboardLayout userRole="student">
       <motion.div
@@ -192,7 +166,6 @@ export default function StudentDashboard() {
                   </CardContent>
                 </Card>
               </motion.div>
-
               {/* ⭐️ TARJETA DE PROMEDIO MODIFICADA */}
               <motion.div variants={itemVariants} whileHover={cardHoverEffect}>
                 <Card>
@@ -211,7 +184,6 @@ export default function StudentDashboard() {
                 </Card>
               </motion.div>
             </motion.div>
-
             {/* PQR Section */}
             <motion.div variants={itemVariants} whileHover={cardHoverEffect}>
               <Card>
@@ -233,7 +205,6 @@ export default function StudentDashboard() {
                 </CardContent>
               </Card>
             </motion.div>
-
             <motion.div className="grid gap-4 md:grid-cols-2" variants={containerVariants}>
               {/* Enrolled Courses */}
               <motion.div variants={itemVariants} whileHover={cardHoverEffect}>
@@ -273,7 +244,6 @@ export default function StudentDashboard() {
                   </CardContent>
                 </Card>
               </motion.div>
-
               {/* Upcoming Exams */}
               <motion.div variants={itemVariants} whileHover={cardHoverEffect}>
                 <Card>
