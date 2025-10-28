@@ -21,10 +21,12 @@ import {
   Lock,
   AlertCircle,
   Loader2,
+  BookOpen, // Icono de libro para la interactividad
+  Globe, // Icono de mundo
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
-// Componente de Estilos Globales para la animación tipo película (Mantenemos esta parte)
+// Componente de Estilos Globales
 const CustomStyles = () => (
   <style jsx global>{`
     @keyframes cinematic-fade-in {
@@ -44,25 +46,104 @@ const CustomStyles = () => (
       animation: cinematic-fade-in 1.5s ease-out forwards;
     }
     
+    /* Animación simple para los elementos flotantes en la carga */
+    @keyframes float-and-rotate {
+        0%, 100% { 
+            transform: translateY(0) rotate(0deg); 
+        }
+        50% { 
+            transform: translateY(-10px) rotate(5deg); 
+        }
+    }
+    .animate-float-and-rotate {
+        animation: float-and-rotate 6s ease-in-out infinite;
+    }
+
+    /* Estilos para el fondo azul de carga */
+    .loading-blue-bg {
+        background-color: #1565C0; /* Un azul medio-oscuro y vibrante */
+        background-image: linear-gradient(135deg, #1A237E 0%, #1565C0 100%); /* Gradiente */
+    }
+
     /* Estilos para el fondo azul y elementos de la nueva página de login */
     .dark-blue-bg {
-        background-color: #1a237e; /* Un azul oscuro similar al de la imagen */
+      background-color: #1a237e;
     }
     .welcome-card-bg {
-        background-color: #2c3e50; /* Un tono un poco más claro para la tarjeta de bienvenida */
-        background-image: linear-gradient(135deg, #1e3a8a 0%, #374151 100%); /* Gradiente sutil */
+      background-color: #2c3e50;
+      background-image: linear-gradient(135deg, #1e3a8a 0%, #374151 100%);
     }
-    /* Animación simple para los elementos de bienvenida */
     @keyframes floating-element {
-        0% { transform: translateY(0); }
-        50% { transform: translateY(-10px); }
-        100% { transform: translateY(0); }
+      0% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+      100% { transform: translateY(0); }
     }
     .animate-floating {
-        animation: floating-element 4s ease-in-out infinite;
+      animation: floating-element 4s ease-in-out infinite;
     }
   `}</style>
 );
+
+// Componente para elementos interactivos 3D en la pantalla de carga
+const DynamicLoadingElements = () => (
+    <div className="absolute inset-0 z-0 opacity-20">
+        {/* Mundo (Globe) */}
+        <Globe 
+            className="absolute top-1/4 left-1/4 h-20 w-20 text-white/50 animate-float-and-rotate"
+            style={{ animationDelay: '0s', filter: 'blur(1px)' }}
+        />
+        {/* Libro 1 */}
+        <BookOpen 
+            className="absolute bottom-1/4 right-1/4 h-16 w-16 text-yellow-300/60 animate-float-and-rotate"
+            style={{ animationDelay: '1.5s', transform: 'rotate(-20deg)' }}
+        />
+        {/* Letra 'E' */}
+        <span 
+            className="absolute top-10 right-20 text-7xl font-extrabold text-red-400/70 animate-float-and-rotate"
+            style={{ animationDelay: '3s', transform: 'rotate(10deg)' }}
+        >
+            E
+        </span>
+         {/* Letra 'A' */}
+         <span 
+            className="absolute bottom-10 left-20 text-7xl font-extrabold text-green-400/70 animate-float-and-rotate"
+            style={{ animationDelay: '4.5s', transform: 'rotate(-15deg)' }}
+        >
+            A
+        </span>
+    </div>
+);
+
+
+// Componente para la Carga Dinámica de Frases
+const DynamicLoadingText = ({ phrases, intervalTime = 1200 }: { phrases: string[], intervalTime?: number }) => {
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
+
+  useEffect(() => {
+    // Cambia de frase rápidamente
+    const interval = setInterval(() => {
+      setCurrentPhraseIndex((prevIndex) => (prevIndex + 1) % phrases.length);
+    }, intervalTime); 
+
+    return () => clearInterval(interval);
+  }, [phrases.length, intervalTime]);
+  
+  return (
+    <div className="relative h-10 w-full flex items-center justify-center">
+      {phrases.map((phrase, index) => (
+        <p
+          key={index}
+          className={`absolute text-xl md:text-2xl font-bold text-yellow-300 text-center transition-opacity duration-500 ${
+            index === currentPhraseIndex ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          {phrase}
+        </p>
+      ))}
+    </div>
+  );
+};
+
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
@@ -75,12 +156,25 @@ export default function LoginForm() {
 
   const { signIn } = useAuth();
   const router = useRouter();
+  
+  // Frases dinámicas solicitadas
+  const loadingPhrases = [
+      "EL MUNDO TE ESTÁ ESPERANDO",
+      "NOSOTROS TE PREPARAMOS",
+      "El inglés en la Sergio te conecta con el mundo"
+  ];
+  
+  // Intervalo de tiempo para cada frase (más rápido)
+  const phraseIntervalTime = 1000; // 1 segundo por frase visible
+  
+  // Duración total de la pantalla de carga (3 frases * 1s) + 0.5s para la transición final.
+  const loadingDurationMs = (loadingPhrases.length * phraseIntervalTime) + 500; // 3 * 1000 + 500 = 3500ms
 
   useEffect(() => {
-    // La animación de carga se muestra por 2 segundos.
+    // La animación de carga se muestra por el tiempo definido
     const timer = setTimeout(() => {
       setIsPageLoading(false);
-    }, 2000); 
+    }, loadingDurationMs); 
 
     const storedEmail = localStorage.getItem("rememberedEmail");
     if (storedEmail) {
@@ -89,7 +183,8 @@ export default function LoginForm() {
     }
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [loadingDurationMs]);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,15 +215,21 @@ export default function LoginForm() {
   };
 
   // -------------------------------------------------------------------
-  // PANTALLA DE CARGA (LOADING SCREEN - Fondo Negro Cinematográfico)
+  // PANTALLA DE CARGA (LOADING SCREEN - Fondo Azul Cinematográfico e Interactivo)
   // -------------------------------------------------------------------
   if (isPageLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-black">
+      <div className="flex items-center justify-center min-h-screen loading-blue-bg relative overflow-hidden">
         <CustomStyles />
-        <div className="flex flex-col items-center space-y-8 p-12">
+        
+        {/* Elementos flotantes y 3D de la carga */}
+        <DynamicLoadingElements />
+        
+        {/* Contenido principal (Logo y texto) */}
+        <div className="relative z-10 flex flex-col items-center space-y-8 p-12">
+          
           <div className="relative flex flex-col items-center justify-center space-y-4">
-            {/* Si tienes un logo para el fondo de carga, úsalo aquí. Por ejemplo: */}
+            {/* Logo y Títulos Fijos */}
             <img 
               src="/ciusa.png" 
               alt="Logo CIUSA" 
@@ -137,19 +238,21 @@ export default function LoginForm() {
               className="relative z-10 opacity-0 animate-cinematic-fade-in" 
             />
             <div className="text-center opacity-0 [animation-delay:0.5s] animate-cinematic-fade-in">
-                <p className="text-4xl font-extrabold text-white">
-                  Escuela de Idiomas
-                </p>
-                <p className="text-lg text-gray-300 mt-1">
-                  Universidad Sergio Arboleda Caribe
-                </p>
+              <p className="text-4xl font-extrabold text-white">
+                Escuela de Idiomas
+              </p>
+              <p className="text-lg text-gray-300 mt-1">
+                Universidad Sergio Arboleda Caribe
+              </p>
             </div>
           </div>
           
-          <div className="flex items-center space-x-2 opacity-0 [animation-delay:1.5s] animate-cinematic-fade-in">
-              <Loader2 className="h-6 w-6 text-purple-400 animate-spin" />
-              <span className="text-base text-gray-400 font-medium">Cargando la experiencia...</span>
+          {/* Contenedor de Texto Dinámico y Spinner */}
+          <div className="opacity-0 [animation-delay:1.5s] animate-cinematic-fade-in w-full max-w-lg pt-4 flex items-center justify-center space-x-3"> 
+             <Loader2 className="h-6 w-6 text-yellow-300 animate-spin flex-shrink-0" />
+             <DynamicLoadingText phrases={loadingPhrases} intervalTime={phraseIntervalTime} />
           </div>
+          
         </div>
       </div>
     );

@@ -65,15 +65,13 @@ import {
   Upload,
   X,
   FileText,
+  Download,
 } from "lucide-react";
-// Supongo que estas funciones existen en tus librerías:
+import * as XLSX from 'xlsx';
 import { getAllUsers, createUser, updateUser, deleteUser } from "@/lib/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getUserImage, uploadImage } from "@/lib/images";
-// Supongo que este componente está disponible:
 import ImageUpload from "@/components/shared/image-upload";
-
-// --- Tipos y Constantes ---
 
 type UserRole = "coordinator" | "teacher" | "student" | "assistant";
 interface UserWithStatus {
@@ -87,10 +85,7 @@ interface UserWithStatus {
 }
 
 const PAGE_SIZE = 10;
-const MOBILE_BREAKPOINT = 768; // md en Tailwind
-
-// --- Hooks Personalizados ---
-
+const MOBILE_BREAKPOINT = 768; 
 const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState<{
     width: number | undefined;
@@ -111,7 +106,7 @@ const useWindowSize = () => {
 
     if (typeof window !== "undefined") {
       window.addEventListener("resize", handleResize);
-      handleResize(); // Call on mount
+      handleResize(); 
     }
 
     return () => {
@@ -123,8 +118,6 @@ const useWindowSize = () => {
 
   return windowSize;
 };
-
-// --- Componentes Reutilizables de Vista (Adaptados) ---
 
 const UserTable = ({
   users,
@@ -299,8 +292,6 @@ const UserCardList = ({
   );
 };
 
-// --- Componente de Carga Masiva (Nuevo) ---
-
 const CSVUploadDialog = ({
   open,
   onOpenChange,
@@ -341,10 +332,8 @@ const CSVUploadDialog = ({
     reader.onload = async (event) => {
       const csvText = event.target?.result as string;
       const lines = csvText.split("\n").filter((line) => line.trim() !== "");
-
-      // Omitir la cabecera, si existe (asumiendo formato: name,email,password,role,phone,document_number)
       const usersData = lines
-        .slice(1) // Omitir la primera línea si asumimos cabecera
+        .slice(1) 
         .map((line) => {
           const [name, email, password, role, phone, document_number] =
             line.split(",").map((s) => s.trim().replace(/"/g, ""));
@@ -367,12 +356,8 @@ const CSVUploadDialog = ({
 
       let successCount = 0;
       let errorCount = 0;
-
-      // Aquí se simularía la llamada a la API por cada usuario
       for (const userData of usersData) {
         try {
-          // Nota: La creación masiva real debería tener un endpoint optimizado
-          // En este ejemplo, llamamos a createUser por cada uno (puede ser lento/caro en la vida real)
           const result = await createUser(userData);
           if (result) {
             successCount++;
@@ -458,8 +443,6 @@ const CSVUploadDialog = ({
   );
 };
 
-// --- Componente Principal ---
-
 export default function UserManagement() {
   const { isMobile } = useWindowSize(); // Usar el hook para responsividad
   const [users, setUsers] = useState<UserWithStatus[]>([]);
@@ -488,16 +471,13 @@ export default function UserManagement() {
   });
   const [tempImageFile, setTempImageFile] = useState<File | null>(null);
   const [tempImagePreview, setTempImagePreview] = useState<string | null>(null);
-
   const loadUsers = useCallback(async () => {
     setLoading(true);
-    // Reiniciar paginación al recargar usuarios
     setCurrentPage(1);
     try {
       const userData = await getAllUsers();
       const usersWithImages = await Promise.all(
         userData.map(async (user) => {
-          // Cargar imagen solo si el usuario tiene un ID (para evitar errores en la carga)
           const imageUrl = user.id
             ? await getUserImage(user.id, "avatar")
             : undefined;
@@ -552,23 +532,16 @@ export default function UserManagement() {
     try {
       let success = false;
       let newOrUpdatedUser;
-
-      // 1. Preparar datos de envío
       const dataToSend = { ...formData };
       if (editingUser) {
-        // En edición, si la contraseña está vacía, no la enviamos para no cambiarla
         if (!dataToSend.password) {
           (dataToSend as Partial<typeof dataToSend>).password = undefined;
         }
-        // Llamada a actualización
         newOrUpdatedUser = await updateUser(editingUser.id, dataToSend);
         success = newOrUpdatedUser !== null && newOrUpdatedUser !== undefined;
       } else {
-        // En creación, la contraseña es obligatoria (validado en el formulario)
         newOrUpdatedUser = await createUser(formData);
         success = newOrUpdatedUser !== null && newOrUpdatedUser !== undefined;
-
-        // 2. Subir imagen si es un usuario nuevo y hay una imagen temporal
         if (success && tempImageFile && newOrUpdatedUser?.id) {
           try {
             await uploadImage(tempImageFile, newOrUpdatedUser.id, "avatar");
@@ -577,12 +550,9 @@ export default function UserManagement() {
               "Error al subir la imagen del nuevo usuario:",
               imageError
             );
-            // Mostrar un error de imagen, pero la creación de usuario es exitosa
           }
         }
       }
-
-      // 3. Manejo de resultado
       if (success) {
         setMessage({
           type: "success",
@@ -652,7 +622,7 @@ export default function UserManagement() {
     setFormData({
       name: user.name,
       email: user.email,
-      password: "", // Siempre vacío al editar
+      password: "", 
       role: user.role as UserRole,
       phone: user.phone || "",
       document_number: user.document_number || "",
@@ -666,7 +636,6 @@ export default function UserManagement() {
 
   const handleView = useCallback(async (user: UserWithStatus) => {
     setViewingUser(user);
-    // Cargar la imagen del usuario para el modal de vista
     try {
       const imageUrl = await getUserImage(user.id, "avatar");
       setViewingUserImage(imageUrl);
@@ -709,7 +678,7 @@ export default function UserManagement() {
       coordinator: "default",
       teacher: "secondary",
       student: "outline",
-      assistant: "default", // Agregado variante para asistente
+      assistant: "default",
     } as const;
     const labels = {
       coordinator: "Coordinador",
@@ -729,7 +698,7 @@ export default function UserManagement() {
       coordinator: "bg-blue-600",
       teacher: "bg-green-600",
       student: "bg-purple-600",
-      assistant: "bg-orange-600", // Agregado color para asistente
+      assistant: "bg-orange-600", 
     };
     const avatarIconMap = {
       coordinator: <Users className="h-5 w-5 text-white" />,
