@@ -1,6 +1,6 @@
 # Centro de Idiomas Universidad Sergio Arboleda
 
-![Captura de Pantalla de la Plataforma](public/ciusa-1.png)
+![Captura de Pantalla de la Plataforma](public/ediusa.png)
 
 ## 📜 Descripción
 
