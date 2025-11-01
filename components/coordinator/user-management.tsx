@@ -704,7 +704,7 @@ export default function UserManagement() {
       coordinator: <Users className="h-5 w-5 text-white" />,
       teacher: <BookOpen className="h-5 w-5 text-white" />,
       student: <GraduationCap className="h-5 w-5 text-white" />,
-      assistant: <Users className="h-5 w-5 text-white" />, // Ícono de Users o uno específico
+      assistant: <Users className="h-5 w-5 text-white" />, 
     };
     return (
       <span

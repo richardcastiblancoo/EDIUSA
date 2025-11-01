@@ -148,11 +148,16 @@ const DynamicLoadingText = ({ phrases, intervalTime = 1200 }: { phrases: string[
 export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formIsLoading, setFormIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
+  const [isSignUpMode, setIsSignUpMode] = useState(false);
 
   const { signIn } = useAuth();
   const router = useRouter();

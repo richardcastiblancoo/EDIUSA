@@ -1,10 +1,8 @@
 "use client";
-
 import type React from "react";
 import { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import type { User } from "./supabase";
-
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -15,17 +13,13 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   updateUser: (userData: Partial<User>) => Promise<void>;
 }
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     checkUser();
   }, []);
-
   const checkUser = async () => {
     try {
       const savedUser = localStorage.getItem("auth_user");
@@ -38,36 +32,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
   };
-
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
-
-      // Únicamente la lógica de Supabase (sin usuarios mock de fallback)
-      
-      // NOTA DE SEGURIDAD: La consulta directa a la tabla 'users' para login es INSEGURA.
-      // Se mantiene para la estructura, pero en producción, DEBE usarse `supabase.auth.signInWithPassword()`.
       const { data: supabaseUser, error: supabaseError } = await supabase
         .from("users")
         .select("*")
         .eq("email", email)
-        // Eliminada la verificación de password en la query (es inseguro)
+        .eq("password", password)
         .single();
 
       if (supabaseUser && !supabaseError) {
-        // ASUMIMOS autenticación exitosa si el usuario existe (debe verificarse de forma segura en producción)
         setUser(supabaseUser);
-        
-        // Guardar en localStorage para acceso del cliente
         localStorage.setItem("auth_user", JSON.stringify(supabaseUser));
-        
-        // Guardar en cookie para que el proxy pueda acceder
-        document.cookie = `auth_user=${JSON.stringify(supabaseUser)}; path=/; max-age=2592000`; // 30 días
-        
+        document.cookie = `auth_user=${JSON.stringify(supabaseUser)}; path=/; max-age=2592000`;   
         return { success: true };
       }
-
-      // Si la consulta a Supabase falló o no encontró al usuario
       return { success: false, error: "Credenciales inválidas" };
     } catch (error) {
       console.error("Sign in error:", error);
@@ -76,13 +56,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
   };
-
   const signOut = async () => {
     setUser(null);
     localStorage.removeItem("auth_user");
-    document.cookie = "auth_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
   };
-
   const updateUser = async (userData: Partial<User>) => {
     if (user) {
       const updatedUser = { ...user, ...userData };
@@ -90,7 +67,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("auth_user", JSON.stringify(updatedUser));
     }
   };
-
   return (
     <AuthContext.Provider
       value={{ user, loading, signIn, signOut, updateUser }}
@@ -99,7 +75,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     </AuthContext.Provider>
   );
 }
-
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {

@@ -313,8 +313,8 @@ export default function DashboardLayout({
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0`}
       >
-        {/* Logo + toggle */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-slate-800">
+        {/* Logo + toggle - MODIFICADO AQUÍ */}
+        <div className={`flex items-center h-16 px-4 border-b border-gray-200 dark:border-slate-800 ${sidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
           {!sidebarCollapsed && (
             <Link href="/" className="flex items-center space-x-3 transition-opacity duration-300">
               {/* Logo más grande */}
@@ -330,18 +330,9 @@ export default function DashboardLayout({
               </span>
             </Link>
           )}
-          {/* Muestra un logo más pequeño cuando está colapsado */}
-          {sidebarCollapsed && (
-            <Link href="/" className="flex items-center transition-opacity duration-300">
-              <img
-                src="/ciusa.png"
-                width={32}
-                height={32}
-                alt="logo ediusa"
-                className="rounded-md"
-              />
-            </Link>
-          )}
+          
+          {/* El logo pequeño fue ELIMINADO para ocultarlo totalmente cuando está colapsado */}
+          
           <Button
             variant="ghost"
             size="sm"
@@ -408,13 +399,13 @@ export default function DashboardLayout({
                         {/* Texto con animación de opacidad */}
                         {!sidebarCollapsed && (
                             <span className={`transition-opacity duration-300 flex items-center justify-between w-full`}>
-                                <span>{item.name}</span>
-                                {/* Etiqueta BETA */}
-                                {item.isBeta && (
-                                  <span className="ml-2 px-2 py-0.5 text-xs font-bold rounded-full bg-purple-500 text-white dark:bg-purple-700/70 dark:text-purple-300 border border-purple-600/50 shadow-sm animate-pulse-slow">
-                                    BETA
-                                  </span>
-                                )}
+                              <span>{item.name}</span>
+                              {/* Etiqueta BETA */}
+                              {item.isBeta && (
+                                <span className="ml-2 px-2 py-0.5 text-xs font-bold rounded-full bg-purple-500 text-white dark:bg-purple-700/70 dark:text-purple-300 border border-purple-600/50 shadow-sm animate-pulse-slow">
+                                  BETA
+                                </span>
+                              )}
                             </span>
                         )}
                       </Link>
