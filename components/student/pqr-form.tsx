@@ -46,6 +46,8 @@ import {
   ArrowLeft,
   ArrowRight,
   Trash2,
+  // === CORRECCIÓN APLICADA AQUÍ ===
+  Users, 
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -82,6 +84,7 @@ export default function PQRForm({ studentId }: PQRFormProps) {
   const [selectedPqr, setSelectedPqr] = useState<PQR | null>(null);
   const [alert, setAlert] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [studentName, setStudentName] = useState("");
 
   // New state for pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -98,6 +101,11 @@ export default function PQRForm({ studentId }: PQRFormProps) {
         ]);
         setPqrs(pqrsData);
         setCourses(coursesData);
+        
+        if (pqrsData.length > 0 && pqrsData[0].students?.name) {
+          setStudentName(pqrsData[0].students.name);
+        }
+
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -154,6 +162,8 @@ export default function PQRForm({ studentId }: PQRFormProps) {
       if (formData.recipient === "teacher" && !teacherId) {
         throw new Error("Este curso no tiene un profesor asignado");
       }
+      
+      const isCoordinator = formData.recipient === "coordinator";
 
       await createPQR(
         studentId,
@@ -161,7 +171,7 @@ export default function PQRForm({ studentId }: PQRFormProps) {
         teacherId,
         formData.subject,
         formData.message,
-        formData.recipient === "coordinator"
+        isCoordinator
       );
 
       setFormData({
@@ -181,9 +191,9 @@ export default function PQRForm({ studentId }: PQRFormProps) {
           icon: "/placeholder-logo.png"
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al enviar PQR:", error);
-      setAlert({ message: "Error al enviar el PQR. Inténtalo de nuevo.", type: "error" });
+      setAlert({ message: error.message || "Error al enviar el PQR. Inténtalo de nuevo.", type: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -197,6 +207,12 @@ export default function PQRForm({ studentId }: PQRFormProps) {
     if (!selectedPqr) return;
 
     try {
+      if (selectedPqr.status !== 'pending' && selectedPqr.status !== 'in_progress') {
+        setAlert({ message: "Solo se pueden eliminar PQRs pendientes o en progreso.", type: "error" });
+        setIsDeleteAlertOpen(false);
+        return;
+      }
+      
       const success = await deletePQR(selectedPqr.id);
       if (success) {
         const updatedPqrs = await getPQRsByStudent(studentId);
@@ -217,17 +233,21 @@ export default function PQRForm({ studentId }: PQRFormProps) {
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case "pending":
-        return "warning";
+        return "warning"; 
       case "in_progress":
         return "default";
       case "resolved":
-        return "success";
+        return "success"; 
       case "closed":
         return "secondary";
       default:
         return "outline";
     }
   };
+
+  const getRecipientName = (pqr: PQR) => {
+    return pqr.is_coordinator ? "Coordinador" : (pqr.teachers?.name || "Profesor (No asignado)");
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -246,7 +266,7 @@ export default function PQRForm({ studentId }: PQRFormProps) {
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString();
+    return date.toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   const getStatusCount = (status: string) => {
@@ -406,6 +426,18 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                         ))}
                       </SelectContent>
                     </Select>
+                    {formData.courseId && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Curso seleccionado: {courses.find(c => c.id === formData.courseId)?.name || ""}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="student">Estudiante</Label>
+                    <p className="text-sm font-medium">
+                      {studentName || "Cargando nombre..."}
+                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -490,8 +522,8 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                             className={`cursor-pointer ${selectedPqr?.id === pqr.id ? "bg-accent" : ""}`}
                           >
                             <TableCell className="font-medium">{pqr.subject}</TableCell>
-                            <TableCell>{pqr.courses?.name}</TableCell>
-                            <TableCell>{pqr.students?.name}</TableCell>
+                            <TableCell>{pqr.courses?.name || "N/A"}</TableCell>
+                            <TableCell>{pqr.students?.name || "N/A"}</TableCell>
                             <TableCell>
                               <Badge variant={getStatusBadgeVariant(pqr.status)} className="flex items-center gap-1 w-fit">
                                 {getStatusIcon(pqr.status)}
@@ -567,24 +599,28 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <h4 className="font-semibold text-lg">{selectedPqr.subject}</h4>
+                    
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="h-4 w-4" />
                       <span>Creado: {new Date(selectedPqr.created_at).toLocaleDateString()}</span>
                     </div>
+                    
+                    {/* === DETALLE DE ESTUDIANTE Y CURSO CORREGIDO === */}
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MessageSquare className="h-4 w-4" />
-                      <span>Curso: {selectedPqr.courses?.name}</span>
+                      <Users className="h-4 w-4" />
+                      <span><strong>Enviado por:</strong> {selectedPqr.students?.name || "No disponible"}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MessageSquare className="h-4 w-4" />
-                      <span>Estudiante: {selectedPqr.students?.name}</span>
+                      <span>Curso: {selectedPqr.courses?.name || "N/A"}</span>
                     </div>
+                    {/* ----------------------------------------------- */}
+
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MessageSquare className="h-4 w-4" />
-                      <span>
-                        Profesor: {selectedPqr.teacher_id ? (selectedPqr.teachers?.name || "No asignado") : "Coordinador"}
-                      </span>
+                      <span>Destinatario: {getRecipientName(selectedPqr)}</span>
                     </div>
+                    
                     <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md text-sm">
                       {selectedPqr.message}
                     </div>

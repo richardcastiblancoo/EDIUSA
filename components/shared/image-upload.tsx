@@ -298,24 +298,19 @@ export default function ImageUpload({
   );
 }
 
+import { supabase } from "@/lib/supabase";
+
 export async function getUserImage(
   userId: string,
   imageType: "avatar" | "logo" | "banner"
 ): Promise<string | null> {
   try {
-    if (
-      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ) {
-      console.error(
-        "Supabase client not initialized: Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY"
-      );
-      return null;
-    }
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    // Aseguramos que se incluyan los headers correctos
+    const headers = {
+      apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    };
     const { data, error } = await supabase
       .from("user_images")
       .select("image_url")

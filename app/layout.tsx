@@ -14,13 +14,13 @@ export const metadata: Metadata = {
     description:
       "Sistema de gestión académica para el Centro de Idiomas de la Universidad Sergio Arboleda. Plataforma integral para la gestión académica y administrativa del Centro de Idiomas de la Universidad Sergio Arboleda. Gestión de estudiantes y profesores Administración de cursos y exámenes Seguimiento académico integral",
     url: "https://ciusa.vercel.app/",
-    siteName: "Centro de Idiomas Universidad Sergio Arboleda",
+    siteName: "Escuela de Idiomas, Universidad Sergio Arboleda Caribe ",
     images: [
       {
         url: "/ciusa.png",
         width: 1200,
         height: 630,
-        alt: "Centro de Idiomas Universidad Sergio Arboleda",
+        alt: "Escuela de Idiomas, Universidad Sergio Arboleda Caribe ",
       },
     ],
     locale: "es",
@@ -51,7 +51,7 @@ export default function RootLayout({
         <meta name="robots" content="index, follow" />
         <meta
           name="publisher"
-          content="Centro de Idiomas Universidad Sergio Arboleda"
+          content="Escuela de Idiomas, Universidad Sergio Arboleda Caribe "
         />
         <meta
           name="keywords"
@@ -63,7 +63,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta
           name="apple-mobile-web-app-title"
-          content="Centro de Idiomas Universidad Sergio Arboleda"
+          content="Escuela de Idiomas, Universidad Sergio Arboleda Caribe "
         />
         <link rel="apple-touch-icon" href="/icon-192x192.png" />
       </head>

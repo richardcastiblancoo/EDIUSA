@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState, useEffect } from "react";
 import {
   Card,
@@ -19,15 +18,29 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, CheckCircle2, CircleDashed, MailQuestion, MessageSquare, Clock, ArrowRight, XCircle } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  CircleDashed,
+  MailQuestion,
+  MessageSquare,
+  Clock,
+  ArrowRight,
+  XCircle,
+} from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getPQRsByTeacher, updatePQR } from "@/lib/pqrs";
 import type { PQR } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Tipos para PQR
-type PQRStatusType = "pending" | "in_progress" | "resolved" | "closed";
+type PQRStatusType = "pending" | "in_progress" | "closed";
 
 const getStatusIcon = (status: PQRStatusType) => {
   switch (status) {
@@ -35,8 +48,6 @@ const getStatusIcon = (status: PQRStatusType) => {
       return <AlertCircle className="h-4 w-4 text-orange-500" />;
     case "in_progress":
       return <CircleDashed className="h-4 w-4 text-blue-500 animate-spin" />;
-    case "resolved":
-      return <CheckCircle2 className="h-4 w-4 text-green-500" />;
     case "closed":
       return <XCircle className="h-4 w-4 text-gray-500" />;
     default:
@@ -50,8 +61,6 @@ const getStatusBadgeVariant = (status: PQRStatusType) => {
       return "destructive";
     case "in_progress":
       return "secondary";
-    case "resolved":
-      return "default";
     case "closed":
       return "outline";
     default:
@@ -63,6 +72,7 @@ const formatTimeAgo = (dateString: string) => {
   const date = new Date(dateString);
   const now = new Date();
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
   let interval = seconds / 31536000;
   if (interval > 1) return `${Math.floor(interval)} años`;
   interval = seconds / 2592000;
@@ -80,7 +90,6 @@ interface PQRManagementProps {
   teacherId: string;
 }
 
-// Variantes de animación para Framer Motion
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -106,8 +115,19 @@ const itemVariants = {
 
 const detailCardVariants = {
   initial: { opacity: 0, scale: 0.95 },
-  animate: { opacity: 1, scale: 1, transition: { type: "spring", stiffness: 100 } },
+  animate: {
+    opacity: 1,
+    scale: 1,
+    transition: { type: "spring", stiffness: 100 },
+  },
   exit: { opacity: 0, scale: 0.95, transition: { duration: 0.2 } },
+};
+
+// Variante para la animación de la alerta tipo banner (minimalista)
+const successBannerVariants = {
+  initial: { y: -20, opacity: 0 },
+  animate: { y: 0, opacity: 1 },
+  exit: { y: -20, opacity: 0 },
 };
 
 export default function PQRManagement({ teacherId }: PQRManagementProps) {
@@ -116,6 +136,7 @@ export default function PQRManagement({ teacherId }: PQRManagementProps) {
   const [selectedPqr, setSelectedPqr] = useState<PQR | null>(null);
   const [response, setResponse] = useState("");
   const [newStatus, setNewStatus] = useState<PQRStatusType>("in_progress");
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
   useEffect(() => {
     const fetchPQRs = async () => {
@@ -129,35 +150,38 @@ export default function PQRManagement({ teacherId }: PQRManagementProps) {
         setLoading(false);
       }
     };
-
     fetchPQRs();
   }, [teacherId]);
 
   const handleSelectPqr = (pqr: PQR) => {
     setSelectedPqr(pqr);
     setResponse(pqr.teacher_response || "");
-    setNewStatus(pqr.status as PQRStatusType);
+    setNewStatus(pqr.status === 'resolved' ? 'in_progress' : (pqr.status as PQRStatusType));
   };
 
   const handleUpdatePqr = async () => {
     if (!selectedPqr) return;
-
     try {
       await updatePQR(selectedPqr.id, newStatus, response);
-
       const updatedPqrs = pqrs.map((pqr) =>
         pqr.id === selectedPqr.id
           ? {
-            ...pqr,
-            status: newStatus,
-            teacher_response: response,
-            resolved_at: newStatus === "resolved" ? new Date().toISOString() : pqr.resolved_at,
-          }
+              ...pqr,
+              status: newStatus,
+              teacher_response: response,
+              resolved_at:
+                newStatus === "closed"
+                  ? new Date().toISOString()
+                  : pqr.resolved_at,
+            }
           : pqr
       );
-
       setPqrs(updatedPqrs);
-      alert("PQR actualizado exitosamente.");
+      
+      // Muestra la alerta de éxito
+      setShowSuccessAlert(true);
+      setTimeout(() => setShowSuccessAlert(false), 3000); // Ocultar después de 3 segundos
+      
       setSelectedPqr(null);
     } catch (error) {
       console.error("Error updating PQR:", error);
@@ -184,16 +208,46 @@ export default function PQRManagement({ teacherId }: PQRManagementProps) {
       animate="visible"
       variants={containerVariants}
     >
+      
+      {/* Alerta de éxito flotante - Tipo Banner */}
+      <AnimatePresence>
+        {showSuccessAlert && (
+          <motion.div
+            key="success-banner"
+            variants={successBannerVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ type: "tween", duration: 0.3 }}
+            className="w-full"
+          >
+            {/* Contenedor que simula el estilo de Card/Input de la imagen */}
+            <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
+                <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <div className="flex flex-col text-sm">
+                      <span className="font-semibold text-base">Éxito</span>
+                      <p className="text-muted-foreground text-sm">PQR actualizado exitosamente.</p>
+                    </div>
+                </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">Gestión de PQR</h2>
         <p className="text-muted-foreground">
-          Revisa y responde a las peticiones, quejas y reclamos de tus estudiantes.
+          Revisa y responde a las peticiones, quejas y reclamos de tus
+          estudiantes.
         </p>
       </div>
 
-      {/* Status Cards */}
+      {/* --- */}
+
+      {/* Status Cards - Adjusted to 3 columns */}
       <motion.div
-        className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+        className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
         variants={containerVariants}
       >
         <motion.div variants={itemVariants} whileTap={{ scale: 0.95 }}>
@@ -203,7 +257,9 @@ export default function PQRManagement({ teacherId }: PQRManagementProps) {
               <AlertCircle className="h-4 w-4 text-orange-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{getStatusCount("pending")}</div>
+              <div className="text-2xl font-bold">
+                {getStatusCount("pending")}
+              </div>
               <p className="text-xs text-muted-foreground">PQR sin respuesta</p>
             </CardContent>
           </Card>
@@ -215,20 +271,12 @@ export default function PQRManagement({ teacherId }: PQRManagementProps) {
               <CircleDashed className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{getStatusCount("in_progress")}</div>
-              <p className="text-xs text-muted-foreground">Siendo gestionadas</p>
-            </CardContent>
-          </Card>
-        </motion.div>
-        <motion.div variants={itemVariants} whileTap={{ scale: 0.95 }}>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Resueltas</CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{getStatusCount("resolved")}</div>
-              <p className="text-xs text-muted-foreground">Con respuesta del profesor</p>
+              <div className="text-2xl font-bold">
+                {getStatusCount("in_progress")}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Siendo gestionadas
+              </p>
             </CardContent>
           </Card>
         </motion.div>
@@ -239,12 +287,16 @@ export default function PQRManagement({ teacherId }: PQRManagementProps) {
               <XCircle className="h-4 w-4 text-gray-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{getStatusCount("closed")}</div>
+              <div className="text-2xl font-bold">
+                {getStatusCount("closed")}
+              </div>
               <p className="text-xs text-muted-foreground">Finalizadas</p>
             </CardContent>
           </Card>
         </motion.div>
       </motion.div>
+      
+      {/* --- */}
 
       {/* PQR List and Detail */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -252,7 +304,11 @@ export default function PQRManagement({ teacherId }: PQRManagementProps) {
         <motion.div
           className="lg:col-span-2"
           initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0, transition: { delay: 0.5, type: "spring", stiffness: 100 } }}
+          animate={{
+            opacity: 1,
+            x: 0,
+            transition: { delay: 0.5, type: "spring", stiffness: 100 },
+          }}
         >
           <Card>
             <CardHeader>
@@ -286,20 +342,20 @@ export default function PQRManagement({ teacherId }: PQRManagementProps) {
                           exit={{ opacity: 0 }}
                           transition={{ duration: 0.3 }}
                           whileHover={{ scale: 1.02, backgroundColor: "rgba(0, 0, 0, 0.05)" }}
-                          whileTap={{ scale: 0.98 }} // Animación de clic
+                          whileTap={{ scale: 0.98 }}
                           onClick={() => handleSelectPqr(pqr)}
                           className={`cursor-pointer ${selectedPqr?.id === pqr.id ? "bg-accent" : ""}`}
                         >
                           <TableCell className="font-medium">{pqr.subject}</TableCell>
-                          <TableCell>{pqr.courseName}</TableCell>
-                          <TableCell>{pqr.studentName}</TableCell>
+                          <TableCell>{pqr.courses?.name || "N/A"}</TableCell>
+                          <TableCell>{pqr.students?.name || "N/A"}</TableCell>
                           <TableCell>
-                            <Badge variant={getStatusBadgeVariant(pqr.status)} className="flex items-center gap-1 w-fit">
-                              {getStatusIcon(pqr.status)}
+                            <Badge variant={getStatusBadgeVariant(pqr.status === 'resolved' ? 'in_progress' : pqr.status as PQRStatusType)} className="flex items-center gap-1 w-fit">
+                              {getStatusIcon(pqr.status === 'resolved' ? 'in_progress' : pqr.status as PQRStatusType)}
                               {pqr.status.replace(/_/g, ' ').toUpperCase()}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">{formatTimeAgo(pqr.createdAt)}</TableCell>
+                          <TableCell className="text-right">{formatTimeAgo(pqr.created_at)}</TableCell>
                         </motion.tr>
                       ))}
                     </AnimatePresence>
@@ -333,39 +389,46 @@ export default function PQRManagement({ teacherId }: PQRManagementProps) {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <h4 className="font-semibold text-lg">{selectedPqr.subject}</h4>
+                    <h4 className="font-semibold text-lg">
+                      {selectedPqr.subject}
+                    </h4>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="h-4 w-4" />
-                      <span>Creado: {new Date(selectedPqr.createdAt).toLocaleDateString()}</span>
+                      <span>
+                        Creado:{" "}
+                        {new Date(selectedPqr.created_at).toLocaleDateString()}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MessageSquare className="h-4 w-4" />
-                      <span>Curso: {selectedPqr.courseName}</span>
+                      <span>Curso: {selectedPqr.courses?.name || "N/A"}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MessageSquare className="h-4 w-4" />
-                      <span>Estudiante: {selectedPqr.studentName}</span>
+                      <span>Estudiante: {selectedPqr.students?.name || "N/A"}</span>
                     </div>
                     <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md text-sm">
                       {selectedPqr.message}
                     </div>
                   </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="status">Estado</Label>
-                    <Select value={newStatus} onValueChange={(value: PQRStatusType) => setNewStatus(value)}>
+                    <Select
+                      value={newStatus}
+                      onValueChange={(value: PQRStatusType) =>
+                        setNewStatus(value)
+                      }
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecciona un estado" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pendiente</SelectItem>
                         <SelectItem value="in_progress">En Proceso</SelectItem>
-                        <SelectItem value="resolved">Resuelto</SelectItem>
                         <SelectItem value="closed">Cerrado</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="teacher-response">Tu Respuesta</Label>
                     <Textarea
@@ -376,10 +439,14 @@ export default function PQRManagement({ teacherId }: PQRManagementProps) {
                       rows={4}
                     />
                   </div>
-
                   <div className="flex justify-end gap-2">
                     <motion.div whileTap={{ scale: 0.95 }}>
-                      <Button variant="outline" onClick={() => setSelectedPqr(null)}>Cancelar</Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setSelectedPqr(null)}
+                      >
+                        Cancelar
+                      </Button>
                     </motion.div>
                     <motion.div whileTap={{ scale: 0.95 }}>
                       <Button onClick={handleUpdatePqr}>

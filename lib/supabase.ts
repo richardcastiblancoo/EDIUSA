@@ -104,4 +104,7 @@ export interface PQR {
   resolved_at?: string;
   created_at: string;
   updated_at: string;
+  courses?: { name: string };
+  students?: { name: string };
+  teachers?: { name: string };
 }

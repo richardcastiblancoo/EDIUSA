@@ -234,15 +234,13 @@ export default function CoordinatorPQRPage() {
                         key={pqr.id}
                         onClick={() => handleSelectPqr(pqr)}
                         className={`
-                                                    cursor-pointer
-                                                    transition-colors duration-200
-                                                    hover:bg-accent/50
-                                                    ${selectedPqr?.id === pqr.id ? "bg-accent scale-[1.01] shadow-lg" : ""}
-                                                `}
+                          cursor-pointer transition-colors duration-200 hover:bg-accent/50
+                          ${selectedPqr?.id === pqr.id ? "bg-accent scale-[1.01] shadow-lg" : ""}
+                        `}
                       >
                         <TableCell className="font-medium">{pqr.subject}</TableCell>
-                        <TableCell>{pqr.courseName}</TableCell>
-                        <TableCell>{pqr.studentName}</TableCell>
+                        <TableCell>{pqr.courses?.name || "N/A"}</TableCell>
+                        <TableCell>{pqr.students?.name || "N/A"}</TableCell>
                         <TableCell>
                           <Badge variant={pqr.teacher_id ? "secondary" : "default"} className="w-fit">
                             {pqr.teacher_id ? "Profesor" : "Coordinador"}
@@ -257,7 +255,7 @@ export default function CoordinatorPQRPage() {
                             {pqr.status.replace(/_/g, ' ').toUpperCase()}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">{formatTimeAgo(pqr.createdAt)}</TableCell>
+                        <TableCell className="text-right">{formatTimeAgo(pqr.created_at)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -282,17 +280,16 @@ export default function CoordinatorPQRPage() {
                   <h4 className="font-semibold text-lg">{selectedPqr.subject}</h4>
                   <div className="flex flex-col gap-2 mb-4">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      {/* FIXED: Added User and GraduationCap components */}
                       <User className="h-4 w-4" />
-                      <span className="font-medium">Enviado por: {selectedPqr.studentName}</span>
+                      <span className="font-medium">Enviado por: {selectedPqr.students?.name || "N/A"}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="h-4 w-4" />
-                      <span>Creado: {new Date(selectedPqr.createdAt).toLocaleDateString()}</span>
+                      <span>Creado: {new Date(selectedPqr.created_at).toLocaleDateString()}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <GraduationCap className="h-4 w-4" />
-                      <span>Curso: {selectedPqr.courseName}</span>
+                      <span>Curso: {selectedPqr.courses?.name || "N/A"}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Badge variant={selectedPqr.teacher_id ? "secondary" : "default"}>
