@@ -53,40 +53,20 @@ export const createUser = async (userData: UserCreateData, maxRetries = 3, initi
     const { email, password, role, ...profileData } = userData;
 
     try {
-        // PASO 1: Crear usuario en Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-            email,
-            password: password || 'temp123', // Contraseña temporal si no se proporciona
-            options: {
-                emailRedirectTo: undefined, // Evitar confirmación por email en desarrollo
-            }
-        });
-
-        if (authError) {
-            console.error("Error creating auth user:", authError);
-            throw authError;
-        }
-
-        if (!authData.user) {
-            throw new Error("No se pudo crear el usuario de autenticación");
-        }
-
-        // PASO 2: Crear perfil del usuario en la tabla users
+        // Generar un ID único para el usuario
+        const userId = crypto.randomUUID();
+        
+        // Insertar directamente en la tabla users sin usar supabase.auth.signUp
         const { data, error: insertError } = await supabase.from("users").insert({
-            id: authData.user.id, // Usar el ID generado por Supabase Auth
+            id: userId,
             email,
+            password, // Ahora puede ser de cualquier longitud
             role,
             ...profileData,
         }).select().single();
 
         if (insertError) {
             console.error("Error creating user profile:", insertError);
-            // Si falla la creación del perfil, intentar limpiar el usuario de auth
-            try {
-                await supabase.auth.admin.deleteUser(authData.user.id);
-            } catch (cleanupError) {
-                console.error("Error cleaning up auth user:", cleanupError);
-            }
             throw insertError;
         }
 
@@ -108,18 +88,7 @@ export const updateUser = async (userId: string, updateData: UserUpdateData) => 
 
 export async function deleteUser(userId: string): Promise<boolean> {
     try {
-        // First, delete all enrollments for this user
-        const { error: enrollmentError } = await supabase
-            .from("enrollments")
-            .delete()
-            .eq("student_id", userId)
-
-        if (enrollmentError) {
-            console.error("Error al eliminar inscripciones del estudiante:", enrollmentError)
-            throw enrollmentError
-        }
-
-        // Update any courses where this user is a teacher
+        // First, update any courses where this user is a teacher
         const { error: courseError } = await supabase
             .from("courses")
             .update({ teacher_id: null })
