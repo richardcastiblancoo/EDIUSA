@@ -8,6 +8,7 @@ import type { Metadata, Viewport } from "next";
 const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Escuela de Idiomas Universidad Sergio Arboleda Caribe",
+  metadataBase: new URL("https://ciusa.vercel.app"),
   openGraph: {
     title: "Escuela de Idiomas Universidad Sergio Arboleda Caribe",
     description:

@@ -57,7 +57,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (supabaseUser && !supabaseError) {
         // ASUMIMOS autenticación exitosa si el usuario existe (debe verificarse de forma segura en producción)
         setUser(supabaseUser);
+        
+        // Guardar en localStorage para acceso del cliente
         localStorage.setItem("auth_user", JSON.stringify(supabaseUser));
+        
+        // Guardar en cookie para que el proxy pueda acceder
+        document.cookie = `auth_user=${JSON.stringify(supabaseUser)}; path=/; max-age=2592000`; // 30 días
+        
         return { success: true };
       }
 
@@ -74,6 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     setUser(null);
     localStorage.removeItem("auth_user");
+    document.cookie = "auth_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
   };
 
   const updateUser = async (userData: Partial<User>) => {
