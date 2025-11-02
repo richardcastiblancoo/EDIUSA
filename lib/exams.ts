@@ -332,13 +332,44 @@ export async function getExamsByCourse(courseId: string): Promise<Exam[]> {
  */
 export async function removeExamsForCourse(courseId: string): Promise<boolean> {
   try {
-    // Eliminamos directamente todos los exámenes asociados al curso
-    const { error } = await supabase
+    // Obtener IDs de exámenes del curso
+    const { data: exams, error: fetchError } = await supabase
       .from("exams")
-      .delete()
+      .select("id")
       .eq("course_id", courseId);
 
-    return !error;
+    if (fetchError) throw fetchError;
+
+    const examIds = (exams || []).map((e: { id: string }) => e.id);
+    if (examIds.length === 0) return true;
+
+    // Borrar dependencias: envíos, intentos y preguntas
+    const { error: submissionsError } = await supabase
+      .from("exam_submissions")
+      .delete()
+      .in("exam_id", examIds);
+    if (submissionsError) throw submissionsError;
+
+    const { error: attemptsError } = await supabase
+      .from("exam_attempts")
+      .delete()
+      .in("exam_id", examIds);
+    if (attemptsError) throw attemptsError;
+
+    const { error: questionsError } = await supabase
+      .from("questions")
+      .delete()
+      .in("exam_id", examIds);
+    if (questionsError) throw questionsError;
+
+    // Borrar los exámenes
+    const { error: examsDeleteError } = await supabase
+      .from("exams")
+      .delete()
+      .in("id", examIds);
+    if (examsDeleteError) throw examsDeleteError;
+
+    return true;
   } catch (error) {
     console.error("Remove exams for course error:", error);
     return false;

@@ -277,13 +277,42 @@ export async function registerGrade(
  * @returns El resultado de la operación.
  */
 export async function removeEnrollmentsForCourse(courseId: string) {
-  const { error } = await supabase
+  const { data: enrollments, error: fetchError } = await supabase
     .from("enrollments")
-    .delete()
+    .select("id")
     .eq("course_id", courseId);
 
-  if (error) {
-    throw error;
+  if (fetchError) {
+    throw fetchError;
+  }
+
+  const enrollmentIds = (enrollments || []).map((e: { id: string }) => e.id);
+  if (enrollmentIds.length === 0) {
+    return;
+  }
+
+  const { error: attendanceError } = await supabase
+    .from("attendance")
+    .delete()
+    .in("enrollment_id", enrollmentIds);
+  if (attendanceError) {
+    throw attendanceError;
+  }
+
+  const { error: gradesError } = await supabase
+    .from("grades")
+    .delete()
+    .in("enrollment_id", enrollmentIds);
+  if (gradesError) {
+    throw gradesError;
+  }
+
+  const { error: enrollmentsDeleteError } = await supabase
+    .from("enrollments")
+    .delete()
+    .in("id", enrollmentIds);
+  if (enrollmentsDeleteError) {
+    throw enrollmentsDeleteError;
   }
 }
 

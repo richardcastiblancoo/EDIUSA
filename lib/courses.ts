@@ -101,13 +101,22 @@ export async function deleteCourse(id: string): Promise<void> {
         
         // Luego, elimina todas las inscripciones asociadas en la tabla 'enrollments'
         await removeEnrollmentsForCourse(id);
-
+    
+        // Elimina las lecciones asociadas al curso
+        const { error: lessonsDeleteError } = await supabase
+          .from("lessons")
+          .delete()
+          .eq("course_id", id);
+        if (lessonsDeleteError) {
+          console.error("Error deleting lessons for course:", lessonsDeleteError.message);
+          throw lessonsDeleteError;
+        }
+    
         // Finalmente, procede a eliminar el curso
         const { error } = await supabase.from("courses").delete().eq("id", id);
-
         if (error) {
-            console.error("Error deleting course:", error.message);
-            throw error;
+          console.error("Error deleting course:", error.message);
+          throw error;
         }
     } catch (e) {
         console.error("Error en la operación de eliminación del curso:", e);
