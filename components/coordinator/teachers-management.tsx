@@ -3,14 +3,6 @@
 import type React from "react";
 import { useState, useEffect } from "react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Card,
   CardHeader,
   CardTitle,
@@ -45,7 +37,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -71,12 +62,9 @@ import {
   ChevronsRight,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-
 import { supabase } from "@/lib/supabase";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { getUserImage } from "@/lib/images";
-
-// --- Tipos de Datos ---
 type EnglishLevel = "1" | "2" | "3" | "4" | "5" | "6" | "7";
 const ENGLISH_LEVELS: EnglishLevel[] = ["1", "2", "3", "4", "5", "6", "7"];
 
@@ -87,7 +75,7 @@ interface User {
   phone: string | null;
   role: string;
   document_number: string | null;
-  english_level: EnglishLevel | null; 
+  english_level: EnglishLevel | null;
   created_at: string;
   updated_at: string | null;
   is_active: boolean;
@@ -95,7 +83,11 @@ interface User {
   address: string | null;
 }
 
-interface Teacher extends Omit<User, "is_active" | "document_number" | "avatar" | "address" | "updated_at"> {
+interface Teacher
+  extends Omit<
+    User,
+    "is_active" | "document_number" | "avatar" | "address" | "updated_at"
+  > {
   status: "active" | "inactive";
   document: string | null;
   imageUrl?: string | null;
@@ -107,22 +99,18 @@ interface UserStats {
   inactive: number;
 }
 
-// --- Función de Componente de Badge ---
 const getStatusBadge = (status: "active" | "inactive") => {
   const variants = {
     active: "default",
     inactive: "secondary",
   } as const;
-
   const labels = {
     active: "Activo",
     inactive: "Inactivo",
   };
-
   return <Badge variant={variants[status]}>{labels[status]}</Badge>;
 };
 
-// --- Componente Principal ---
 export default function TeachersManagement() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -133,7 +121,7 @@ export default function TeachersManagement() {
     phone: "",
     document: "",
     status: "active" as "active" | "inactive",
-    english_certificate: "1" as EnglishLevel, 
+    english_certificate: "1" as EnglishLevel,
   });
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -147,19 +135,16 @@ export default function TeachersManagement() {
     inactive: 0,
   });
   const [filterDocument, setFilterDocument] = useState("");
-
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [totalPages, setTotalPages] = useState(0);
-
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
   const [teacherToPreview, setTeacherToPreview] = useState<Teacher | null>(
     null
   );
-  const [selectedEnglishLevel, setSelectedEnglishLevel] = useState<EnglishLevel | "all">("all");
-
-
-  // --- Lógica de Supabase (sin cambios significativos) ---
+  const [selectedEnglishLevel, setSelectedEnglishLevel] = useState<
+    EnglishLevel | "all"
+  >("all");
   const fetchTeachers = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -187,7 +172,11 @@ export default function TeachersManagement() {
             phone: dbUser.phone,
             role: dbUser.role,
             document: dbUser.document_number,
-            english_level: (ENGLISH_LEVELS.includes(dbUser.english_level as EnglishLevel) ? dbUser.english_level : null) as EnglishLevel | null, 
+            english_level: (ENGLISH_LEVELS.includes(
+              dbUser.english_level as EnglishLevel
+            )
+              ? dbUser.english_level
+              : null) as EnglishLevel | null,
             created_at: dbUser.created_at,
             status: dbUser.is_active ? "active" : "inactive",
             imageUrl: imageUrl,
@@ -212,7 +201,6 @@ export default function TeachersManagement() {
     setStats({ total, active, inactive });
   };
 
-  // --- Hooks de Efecto ---
   useEffect(() => {
     fetchTeachers();
   }, []);
@@ -221,14 +209,15 @@ export default function TeachersManagement() {
     calculateStats();
   }, [teachers]);
 
-  // Lógica de filtrado y paginación
   const filteredTeachers = teachers.filter((teacher) => {
     const documentMatch = teacher.document
       ? teacher.document.toLowerCase().includes(filterDocument.toLowerCase())
       : false;
-    
-    const englishLevelMatch = selectedEnglishLevel === "all" || teacher.english_level === selectedEnglishLevel;
-    
+
+    const englishLevelMatch =
+      selectedEnglishLevel === "all" ||
+      teacher.english_level === selectedEnglishLevel;
+
     return documentMatch && englishLevelMatch;
   });
 
@@ -250,8 +239,6 @@ export default function TeachersManagement() {
     }
   };
 
-
-  // --- Manejadores de Formularios y Diálogos ---
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({ ...prevData, [name]: value }));
@@ -266,20 +253,18 @@ export default function TeachersManagement() {
         phone: teacher.phone ?? "",
         document: teacher.document ?? "",
         status: teacher.status,
-        english_certificate: teacher.english_level ?? "1", 
+        english_certificate: teacher.english_level ?? "1",
       });
       setIsDialogOpen(true);
-    } 
+    }
   };
-  
+
   const handleSaveTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
     const { document, status, english_certificate, ...dataToSave } = formData;
     const is_active = status === "active";
     const document_number = document;
-
     if (currentTeacher) {
-      // Lógica de Edición
       const { error } = await supabase
         .from("users")
         .update({
@@ -306,7 +291,6 @@ export default function TeachersManagement() {
         setIsDialogOpen(false);
       }
     } else {
-      // Rama que ya no se usa, pero se deja por completitud
       const newTeacherData = {
         ...dataToSave,
         is_active,
@@ -370,23 +354,18 @@ export default function TeachersManagement() {
     setIsPreviewDialogOpen(true);
   };
 
-  // --- Paginación y navegación (sin cambios) ---
   const PaginationControls = () => {
     if (totalPages <= 1) return null;
-
     const pageNumbers = [];
     const maxPagesToShow = 5;
     let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
     let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
-
     if (endPage - startPage + 1 < maxPagesToShow) {
       startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
-
     for (let i = startPage; i <= endPage; i++) {
       pageNumbers.push(i);
     }
-
     return (
       <div className="flex justify-center items-center gap-2 mt-6">
         <Button
@@ -417,7 +396,7 @@ export default function TeachersManagement() {
             {number}
           </Button>
         ))}
-        
+
         <span className="text-sm text-gray-700 dark:text-gray-400 sm:hidden">
           {currentPage} / {totalPages}
         </span>
@@ -442,8 +421,6 @@ export default function TeachersManagement() {
     );
   };
 
-  // --- Vista de Listado de Profesores (SOLO CARDS) ---
-
   const TeacherListView = ({ teachers }: { teachers: Teacher[] }) => {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -453,7 +430,10 @@ export default function TeachersManagement() {
           </div>
         ) : (
           teachers.map((teacher) => (
-            <Card key={teacher.id} className="shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <Card
+              key={teacher.id}
+              className="shadow-lg hover:shadow-xl transition-shadow duration-300"
+            >
               <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
                 <div className="flex items-center space-x-3">
                   <Avatar className="h-10 w-10">
@@ -480,19 +460,28 @@ export default function TeachersManagement() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Email:</span>
-                    <a href={`mailto:${teacher.email}`} className="text-blue-600 hover:underline flex items-center gap-1 max-w-[60%] truncate justify-end">
-                       <Mail className="h-3 w-3 sm:hidden"/> {teacher.email}
+                    <a
+                      href={`mailto:${teacher.email}`}
+                      className="text-blue-600 hover:underline flex items-center gap-1 max-w-[60%] truncate justify-end"
+                    >
+                      <Mail className="h-3 w-3 sm:hidden" /> {teacher.email}
                     </a>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Teléfono:</span>
-                    <a href={`tel:${teacher.phone}`} className="text-gray-900 flex items-center gap-1 justify-end">
-                      <Phone className="h-3 w-3 sm:hidden"/> {teacher.phone || "N/A"}
+                    <a
+                      href={`tel:${teacher.phone}`}
+                      className="text-gray-900 flex items-center gap-1 justify-end"
+                    >
+                      <Phone className="h-3 w-3 sm:hidden" />{" "}
+                      {teacher.phone || "N/A"}
                     </a>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Certificado:</span>
-                    <Badge variant="outline">{teacher.english_level || "N/A"}</Badge>
+                    <Badge variant="outline">
+                      {teacher.english_level || "N/A"}
+                    </Badge>
                   </div>
                 </div>
               </CardContent>
@@ -504,33 +493,32 @@ export default function TeachersManagement() {
                 >
                   <Edit className="h-4 w-4 mr-1" /> Editar
                 </Button>
-                
                 <div className="flex gap-1">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleOpenPreviewDialog(teacher)}
-                        className="text-blue-600"
-                    >
-                        <Eye className="h-4 w-4" />
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                        <DropdownMenuItem
-                          onClick={() => handleDeleteConfirmation(teacher.id)}
-                          className="flex items-center gap-2 text-red-600"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span>Eliminar</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleOpenPreviewDialog(teacher)}
+                    className="text-blue-600"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteConfirmation(teacher.id)}
+                        className="flex items-center gap-2 text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span>Eliminar</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </CardFooter>
             </Card>
@@ -547,16 +535,13 @@ export default function TeachersManagement() {
           <h2 className="text-3xl font-bold tracking-tight">
             Gestión de Profesores
           </h2>
-          {/* MODIFICACIÓN DE LA DESCRIPCIÓN */}
           <p className="text-gray-600">
-            Gestiona, edita y elimina los perfiles de los docentes. Utiliza los filtros para encontrar rápidamente a un profesor específico.
+            Gestiona, edita y elimina los perfiles de los docentes. Utiliza los
+            filtros para encontrar rápidamente a un profesor específico.
           </p>
         </div>
       </div>
-      
-      {/* Sección de Estadísticas */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-        {/* Total de Profesores */}
         <Card className="hover:scale-[1.02] transition-transform duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -571,8 +556,6 @@ export default function TeachersManagement() {
             </p>
           </CardContent>
         </Card>
-        
-        {/* Activos */}
         <Card className="hover:scale-[1.02] transition-transform duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Activos</CardTitle>
@@ -585,8 +568,6 @@ export default function TeachersManagement() {
             </p>
           </CardContent>
         </Card>
-        
-        {/* Inactivos */}
         <Card className="hover:scale-[1.02] transition-transform duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Inactivos</CardTitle>
@@ -600,8 +581,6 @@ export default function TeachersManagement() {
           </CardContent>
         </Card>
       </div>
-      
-      {/* Sección de Listado de Profesores (en Cards) */}
       <Card>
         <CardHeader>
           <CardTitle>Listado de Profesores</CardTitle>
@@ -618,22 +597,24 @@ export default function TeachersManagement() {
               onChange={(e) => setFilterDocument(e.target.value)}
               className="max-w-xs flex-grow"
             />
-             <Select
-                value={selectedEnglishLevel}
-                onValueChange={(value: EnglishLevel | "all") =>
-                  setSelectedEnglishLevel(value as EnglishLevel | "all")
-                }
-              >
-                <SelectTrigger className="w-full sm:max-w-[200px]">
-                  <SelectValue placeholder="Filtrar por certificado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {ENGLISH_LEVELS.map(level => (
-                    <SelectItem key={level} value={level}>{level}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <Select
+              value={selectedEnglishLevel}
+              onValueChange={(value: EnglishLevel | "all") =>
+                setSelectedEnglishLevel(value as EnglishLevel | "all")
+              }
+            >
+              <SelectTrigger className="w-full sm:max-w-[200px]">
+                <SelectValue placeholder="Filtrar por certificado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {ENGLISH_LEVELS.map((level) => (
+                  <SelectItem key={level} value={level}>
+                    {level}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           {loading ? (
             <div className="flex justify-center items-center py-8">
@@ -642,14 +623,11 @@ export default function TeachersManagement() {
           ) : (
             <>
               <TeacherListView teachers={currentTeachers} />
-              {/* Controles de Paginación */}
               <PaginationControls />
             </>
           )}
         </CardContent>
       </Card>
-
-      {/* Diálogo de Edición */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -663,7 +641,6 @@ export default function TeachersManagement() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSaveTeacher} className="grid gap-4 py-4">
-            {/* ... Campos de Nombre, Documento, Email, Teléfono (sin cambios) ... */}
             <div className="grid gap-2">
               <Label htmlFor="name">Nombre</Label>
               <Input
@@ -704,8 +681,6 @@ export default function TeachersManagement() {
                 onChange={handleInputChange}
               />
             </div>
-
-            {/* Campo Certificado de Inglés */}
             <div className="grid gap-2">
               <Label htmlFor="english_certificate">Certificado de Inglés</Label>
               <Select
@@ -721,13 +696,14 @@ export default function TeachersManagement() {
                   <SelectValue placeholder="Selecciona un certificado" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ENGLISH_LEVELS.map(level => (
-                    <SelectItem key={level} value={level}>{level}</SelectItem>
+                  {ENGLISH_LEVELS.map((level) => (
+                    <SelectItem key={level} value={level}>
+                      {level}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-
             <div className="grid gap-2">
               <Label htmlFor="status">Estado</Label>
               <Select
@@ -746,7 +722,11 @@ export default function TeachersManagement() {
               </Select>
             </div>
             <DialogFooter>
-              <Button variant="outline" type="button" onClick={() => setIsDialogOpen(false)}>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => setIsDialogOpen(false)}
+              >
                 Cancelar
               </Button>
               <Button type="submit">
@@ -756,8 +736,6 @@ export default function TeachersManagement() {
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Diálogo de Previsualización */}
       <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -779,41 +757,61 @@ export default function TeachersManagement() {
                   </AvatarFallback>
                 </Avatar>
               </div>
-              
               <div className="flex justify-between border-b pb-2">
-                <Label className="font-medium text-muted-foreground">Nombre:</Label>
-                <span className="font-semibold text-right">{teacherToPreview.name}</span>
+                <Label className="font-medium text-muted-foreground">
+                  Nombre:
+                </Label>
+                <span className="font-semibold text-right">
+                  {teacherToPreview.name}
+                </span>
               </div>
               <div className="flex justify-between border-b pb-2">
-                <Label className="font-medium text-muted-foreground">Documento:</Label>
-                <span className="font-semibold text-right">{teacherToPreview.document || "N/A"}</span>
+                <Label className="font-medium text-muted-foreground">
+                  Documento:
+                </Label>
+                <span className="font-semibold text-right">
+                  {teacherToPreview.document || "N/A"}
+                </span>
               </div>
               <div className="flex justify-between border-b pb-2">
-                <Label className="font-medium text-muted-foreground">Email:</Label>
-                <span className="font-semibold text-right truncate max-w-[50%]">{teacherToPreview.email}</span>
+                <Label className="font-medium text-muted-foreground">
+                  Email:
+                </Label>
+                <span className="font-semibold text-right truncate max-w-[50%]">
+                  {teacherToPreview.email}
+                </span>
               </div>
               <div className="flex justify-between border-b pb-2">
-                <Label className="font-medium text-muted-foreground">Teléfono:</Label>
-                <span className="font-semibold text-right">{teacherToPreview.phone || "N/A"}</span>
+                <Label className="font-medium text-muted-foreground">
+                  Teléfono:
+                </Label>
+                <span className="font-semibold text-right">
+                  {teacherToPreview.phone || "N/A"}
+                </span>
               </div>
               <div className="flex justify-between border-b pb-2">
-                <Label className="font-medium text-muted-foreground">Certificado:</Label>
-                <Badge variant="outline">{teacherToPreview.english_level || "N/A"}</Badge>
+                <Label className="font-medium text-muted-foreground">
+                  Certificado:
+                </Label>
+                <Badge variant="outline">
+                  {teacherToPreview.english_level || "N/A"}
+                </Badge>
               </div>
               <div className="flex justify-between">
-                <Label className="font-medium text-muted-foreground">Estado:</Label>
+                <Label className="font-medium text-muted-foreground">
+                  Estado:
+                </Label>
                 {getStatusBadge(teacherToPreview.status)}
               </div>
-
             </div>
           )}
           <DialogFooter>
-            <Button onClick={() => setIsPreviewDialogOpen(false)}>Cerrar</Button>
+            <Button onClick={() => setIsPreviewDialogOpen(false)}>
+              Cerrar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Diálogo de Confirmación de Eliminación (sin cambios) */}
       <AlertDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}

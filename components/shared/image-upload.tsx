@@ -304,35 +304,29 @@ export async function getUserImage(
   userId: string,
   imageType: "avatar" | "logo" | "banner"
 ): Promise<string | null> {
-  try {
-    // Aseguramos que se incluyan los headers correctos
-    const headers = {
-      apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-      "Content-Type": "application/json",
-      "Accept": "application/json"
-    };
-    const { data, error } = await supabase
-      .from("user_images")
-      .select("image_url")
-      .eq("user_id", userId)
-      .eq("image_type", imageType)
-      .eq("is_active", true)
-      .single();
-    if (error) {
-      if (error.code === "PGRST116") {
-        console.info(`No active ${imageType} image found for user ${userId}.`);
-        return null;
-      }
-      console.error(
-        `Error fetching user ${imageType} image for user ${userId}:`,
-        error
-      );
-      return null;
-    }
-    if (!data) return null;
-    return data.image_url;
-  } catch (error) {
-    console.error("Get user image (unexpected) error:", error);
+  // Aseguramos que se incluyan los headers correctos
+  const headers = {
+    apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+    "Content-Type": "application/json",
+    "Accept": "application/json"
+  };
+  const { data, error } = await supabase
+    .from("user_images")
+    .select("image_url")
+    .eq("user_id", userId)
+    .eq("image_type", imageType)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (error && error.code !== "PGRST116") {
+    console.error(
+      `Error fetching user ${imageType} image for user ${userId}:`,
+      error
+    );
     return null;
   }
+  if (!data) {
+    console.info(`No active ${imageType} image found for user ${userId}.`);
+    return null;
+  }
+  return data.image_url;
 }

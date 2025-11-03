@@ -3,7 +3,13 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -24,12 +30,40 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Search, BookOpen, Users, Clock, Calendar, X, Loader2, Eye as EyeIcon } from "lucide-react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Search,
+  BookOpen,
+  Users,
+  Clock,
+  Calendar,
+  X,
+  Loader2,
+  Eye as EyeIcon,
+} from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { Course, createCourse, updateCourse, deleteCourse, getCourses } from "@/lib/courses";
-import { getStudentsForCourse, searchStudents, addStudentsToCourse } from "@/lib/students";
+import {
+  Course,
+  createCourse,
+  updateCourse,
+  deleteCourse,
+  getCourses,
+} from "@/lib/courses";
+import {
+  getStudentsForCourse,
+  searchStudents,
+  addStudentsToCourse,
+} from "@/lib/students";
 import { getTeachers } from "@/lib/teachers";
 type Student = {
   id: string;
@@ -65,7 +99,9 @@ export default function CourseManagement() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [studentsByCourse, setStudentsByCourse] = useState<{ [key: string]: Student[] }>({});
+  const [studentsByCourse, setStudentsByCourse] = useState<{
+    [key: string]: Student[];
+  }>({});
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [studentSearchTerm, setStudentSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Student[]>([]);
@@ -113,9 +149,9 @@ export default function CourseManagement() {
         })
       );
       const newStudentsByCourse = studentsData.reduce((acc, curr) => {
-        acc[curr.courseId] = curr.students.map(student => ({
+        acc[curr.courseId] = curr.students.map((student) => ({
           ...student,
-          course_id: curr.courseId
+          course_id: curr.courseId,
         }));
         return acc;
       }, {} as { [key: string]: Student[] });
@@ -146,13 +182,15 @@ export default function CourseManagement() {
     setIsStudentSearchLoading(true);
     try {
       const results = await searchStudents(query);
-      setSearchResults(results.map((value) => ({
-        id: value.id,
-        name: value.name,
-        documentId: value.documentId,
-        photoUrl: value.photoUrl,
-        course_id: (value as any).course_id || null
-      })));
+      setSearchResults(
+        results.map((value) => ({
+          id: value.id,
+          name: value.name,
+          documentId: value.documentId,
+          photoUrl: value.photoUrl,
+          course_id: (value as any).course_id || null,
+        }))
+      );
     } catch (error) {
       console.error("Error searching students:", error);
       setSearchResults([]);
@@ -166,11 +204,16 @@ export default function CourseManagement() {
       filtered = filtered.filter(
         (course) =>
           course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (course.description?.toLowerCase().includes(searchTerm.toLowerCase()) || false),
+          course.description
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          false
       );
     }
     if (filterLanguage !== "all") {
-      filtered = filtered.filter((course) => course.language === filterLanguage);
+      filtered = filtered.filter(
+        (course) => course.language === filterLanguage
+      );
     }
     if (filterLevel !== "all") {
       filtered = filtered.filter((course) => course.level === filterLevel);
@@ -196,7 +239,12 @@ export default function CourseManagement() {
     setSearchResults([]);
   };
   const handleCreate = async () => {
-    if (!formData.name || !formData.language || !formData.level || !formData.teacher_id) {
+    if (
+      !formData.name ||
+      !formData.language ||
+      !formData.level ||
+      !formData.teacher_id
+    ) {
       toast({
         title: "Error",
         description: "Por favor, completa todos los campos obligatorios.",
@@ -219,7 +267,7 @@ export default function CourseManagement() {
         description: formData.description,
         language: formData.language,
         level: formData.level,
-        code: formData.name.substring(0, 10).toUpperCase().replace(/\s/g, ''),
+        code: formData.name.substring(0, 10).toUpperCase().replace(/\s/g, ""),
         max_students: formData.max_students,
         duration_weeks: formData.duration_weeks,
         hours_per_week: formData.hours_per_week,
@@ -230,7 +278,10 @@ export default function CourseManagement() {
         room: "TBD",
       });
       if (newCourse && formData.assignedStudents.length > 0) {
-        await addStudentsToCourse(newCourse.id, formData.assignedStudents.map(s => s.id));
+        await addStudentsToCourse(
+          newCourse.id,
+          formData.assignedStudents.map((s) => s.id)
+        );
       }
       await loadCourses();
       setIsCreateDialogOpen(false);
@@ -243,7 +294,9 @@ export default function CourseManagement() {
       console.error("Error creating course:", error);
       toast({
         title: "Error",
-        description: `No se pudo crear el curso: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        description: `No se pudo crear el curso: ${
+          error instanceof Error ? error.message : "Error desconocido"
+        }`,
         variant: "destructive",
       });
     } finally {
@@ -275,7 +328,12 @@ export default function CourseManagement() {
     setIsPreviewDialogOpen(true);
   };
   const handleUpdate = async () => {
-    if (!editingCourse || !formData.name || !formData.language || !formData.level) {
+    if (
+      !editingCourse ||
+      !formData.name ||
+      !formData.language ||
+      !formData.level
+    ) {
       toast({
         title: "Error",
         description: "Por favor completa todos los campos requeridos.",
@@ -290,7 +348,10 @@ export default function CourseManagement() {
         ...courseData,
         enrolled_count: assignedStudents.length,
       });
-      await addStudentsToCourse(editingCourse.id, assignedStudents.map(s => s.id));
+      await addStudentsToCourse(
+        editingCourse.id,
+        assignedStudents.map((s) => s.id)
+      );
 
       await loadCourses();
       setIsEditDialogOpen(false);
@@ -332,16 +393,16 @@ export default function CourseManagement() {
     }
   };
   const handleAddStudentToForm = (student: Student) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      assignedStudents: [...prev.assignedStudents, student]
+      assignedStudents: [...prev.assignedStudents, student],
     }));
     setStudentSearchTerm("");
   };
   const handleRemoveStudentFromForm = (studentId: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      assignedStudents: prev.assignedStudents.filter(s => s.id !== studentId)
+      assignedStudents: prev.assignedStudents.filter((s) => s.id !== studentId),
     }));
   };
   const getLevelColor = (level: string) => {
@@ -364,19 +425,23 @@ export default function CourseManagement() {
     return flags[language as keyof typeof flags] || "🌐";
   };
   const isStudentAssigned = (student: Student) => {
-    return formData.assignedStudents.some(s => s.id === student.id);
+    return formData.assignedStudents.some((s) => s.id === student.id);
   };
   const getTeacherName = (teacherId: string | null) => {
-    const teacher = teachers.find(t => t.id === teacherId);
-    return teacher ? teacher.name : 'No asignado';
+    const teacher = teachers.find((t) => t.id === teacherId);
+    return teacher ? teacher.name : "No asignado";
   };
   return (
     <div className="space-y-6 p-6">
       {/* Header y botón de crear */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestión de Cursos</h1>
-          <p className="text-gray-600">Administra los cursos del centro de idiomas</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Gestión de Cursos
+          </h1>
+          <p className="text-gray-600">
+            Administra los cursos del centro de idiomas
+          </p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -388,7 +453,9 @@ export default function CourseManagement() {
           <DialogContent className="max-w-2xl overflow-y-auto max-h-[85vh]">
             <DialogHeader>
               <DialogTitle>Crear Nuevo Curso</DialogTitle>
-              <DialogDescription>Completa la información del nuevo curso</DialogDescription>
+              <DialogDescription>
+                Completa la información del nuevo curso
+              </DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -396,7 +463,9 @@ export default function CourseManagement() {
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   placeholder="Ej: Inglés Básico A1"
                 />
               </div>
@@ -404,9 +473,11 @@ export default function CourseManagement() {
                 <Label htmlFor="language">Idioma *</Label>
                 <Select
                   value={formData.language}
-                  onValueChange={(value) => setFormData({ ...formData, language: value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, language: value })
+                  }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="language">
                     <SelectValue placeholder="Selecciona idioma" />
                   </SelectTrigger>
                   <SelectContent>
@@ -417,8 +488,13 @@ export default function CourseManagement() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="level">Nivel *</Label>
-                <Select value={formData.level} onValueChange={(value) => setFormData({ ...formData, level: value })}>
-                  <SelectTrigger>
+                <Select
+                  value={formData.level}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, level: value })
+                  }
+                >
+                  <SelectTrigger id="level">
                     <SelectValue placeholder="Selecciona nivel" />
                   </SelectTrigger>
                   <SelectContent>
@@ -433,12 +509,14 @@ export default function CourseManagement() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="teacher">Profesor *</Label>
+                <Label id="teacher-label">Profesor *</Label>
                 <Select
                   value={formData.teacher_id}
-                  onValueChange={(value) => setFormData({ ...formData, teacher_id: value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, teacher_id: value })
+                  }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="teacher" aria-labelledby="teacher-label">
                     <SelectValue placeholder="Selecciona un profesor" />
                   </SelectTrigger>
                   <SelectContent>
@@ -456,7 +534,12 @@ export default function CourseManagement() {
                   id="max_students"
                   type="number"
                   value={formData.max_students}
-                  onChange={(e) => setFormData({ ...formData, max_students: Number.parseInt(e.target.value) })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      max_students: Number.parseInt(e.target.value),
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -465,7 +548,12 @@ export default function CourseManagement() {
                   id="hours_per_week"
                   type="number"
                   value={formData.hours_per_week}
-                  onChange={(e) => setFormData({ ...formData, hours_per_week: Number.parseInt(e.target.value) })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      hours_per_week: Number.parseInt(e.target.value),
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -474,7 +562,9 @@ export default function CourseManagement() {
                   id="start_date"
                   type="date"
                   value={formData.start_date}
-                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, start_date: e.target.value })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -483,20 +573,32 @@ export default function CourseManagement() {
                   id="end_date"
                   type="date"
                   value={formData.end_date}
-                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, end_date: e.target.value })
+                  }
                 />
               </div>
               <div className="col-span-2 space-y-2">
                 <Label htmlFor="days">Días</Label>
                 <div className="flex flex-wrap gap-2">
-                  {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"].map((day) => (
+                  {[
+                    "Lunes",
+                    "Martes",
+                    "Miércoles",
+                    "Jueves",
+                    "Viernes",
+                    "Sábado",
+                  ].map((day) => (
                     <div key={day} className="flex items-center space-x-2">
                       <input
                         type="checkbox"
                         id={`day-${day}`}
                         className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                       />
-                      <label htmlFor={`day-${day}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      <label
+                        htmlFor={`day-${day}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
                         {day}
                       </label>
                     </div>
@@ -507,7 +609,9 @@ export default function CourseManagement() {
                 <Label htmlFor="schedule">Horario</Label>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="start_time" className="text-xs">Hora inicio</Label>
+                    <Label htmlFor="start_time" className="text-xs">
+                      Hora inicio
+                    </Label>
                     <Input
                       id="start_time"
                       type="time"
@@ -515,12 +619,10 @@ export default function CourseManagement() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="end_time" className="text-xs">Hora fin</Label>
-                    <Input
-                      id="end_time"
-                      type="time"
-                      placeholder="Hora fin"
-                    />
+                    <Label htmlFor="end_time" className="text-xs">
+                      Hora fin
+                    </Label>
+                    <Input id="end_time" type="time" placeholder="Hora fin" />
                   </div>
                 </div>
               </div>
@@ -541,7 +643,7 @@ export default function CourseManagement() {
                   {debouncedSearchTerm && searchResults.length > 0 && (
                     <ul className="absolute z-10 w-full bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto mt-1">
                       {searchResults
-                        .filter(student => !isStudentAssigned(student))
+                        .filter((student) => !isStudentAssigned(student))
                         .map((student) => (
                           <li
                             key={student.id}
@@ -549,38 +651,58 @@ export default function CourseManagement() {
                             onClick={() => handleAddStudentToForm(student)}
                           >
                             <img
-                              src={student.photoUrl || "https://api.dicebear.com/7.x/notionists/svg?seed=placeholder"}
+                              src={
+                                student.photoUrl ||
+                                "https://api.dicebear.com/7.x/notionists/svg?seed=placeholder"
+                              }
                               alt={`Foto de ${student.name}`}
                               className="w-8 h-8 rounded-full"
                             />
                             <div>
                               <div className="font-medium">{student.name}</div>
-                              <div className="text-xs text-gray-500">Doc: {student.documentId}</div>
+                              <div className="text-xs text-gray-500">
+                                Doc: {student.documentId}
+                              </div>
                             </div>
                           </li>
                         ))}
                     </ul>
                   )}
-                  {debouncedSearchTerm && searchResults.length === 0 && !isStudentSearchLoading && (
-                    <ul className="absolute z-10 w-full bg-white border rounded-md shadow-lg mt-1">
-                      <li className="p-2 text-center text-gray-500">No se encontraron resultados</li>
-                    </ul>
-                  )}
+                  {debouncedSearchTerm &&
+                    searchResults.length === 0 &&
+                    !isStudentSearchLoading && (
+                      <ul className="absolute z-10 w-full bg-white border rounded-md shadow-lg mt-1">
+                        <li className="p-2 text-center text-gray-500">
+                          No se encontraron resultados
+                        </li>
+                      </ul>
+                    )}
                 </div>
                 <div className="space-y-2 mt-4">
-                  <p className="font-medium text-sm">Estudiantes asignados ({formData.assignedStudents.length}):</p>
+                  <p className="font-medium text-sm">
+                    Estudiantes asignados ({formData.assignedStudents.length}):
+                  </p>
                   <ul className="grid grid-cols-2 gap-2">
-                    {formData.assignedStudents.map(student => (
-                      <li key={student.id} className="flex items-center justify-between p-2 bg-gray-100 rounded-md">
+                    {formData.assignedStudents.map((student) => (
+                      <li
+                        key={student.id}
+                        className="flex items-center justify-between p-2 bg-gray-100 rounded-md"
+                      >
                         <div className="flex items-center gap-2">
-                          <img src={student.photoUrl} alt={`Foto de ${student.name}`} className="w-6 h-6 rounded-full" />
+                          <img
+                            src={student.photoUrl}
+                            alt={`Foto de ${student.name}`}
+                            className="w-6 h-6 rounded-full"
+                          />
                           <span className="text-sm">{student.name}</span>
                         </div>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6"
-                          onClick={() => handleRemoveStudentFromForm(student.id)}
+                          onClick={() =>
+                            handleRemoveStudentFromForm(student.id)
+                          }
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -591,7 +713,10 @@ export default function CourseManagement() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsCreateDialogOpen(false)}
+              >
                 Cancelar
               </Button>
               <Button onClick={handleCreate} disabled={isLoading}>
@@ -650,20 +775,29 @@ export default function CourseManagement() {
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl">{getLanguageFlag(course.language)}</span>
+                  <span className="text-2xl">
+                    {getLanguageFlag(course.language)}
+                  </span>
                   <div>
                     <CardTitle className="text-lg">{course.name}</CardTitle>
                     <CardDescription>{course.language}</CardDescription>
                   </div>
                 </div>
-                <Badge className={getLevelColor(course.level)}>{course.level}</Badge>
+                <Badge className={getLevelColor(course.level)}>
+                  {course.level}
+                </Badge>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {course.description && <p className="text-sm text-gray-600 line-clamp-2">{course.description}</p>}
+                {course.description && (
+                  <p className="text-sm text-gray-600 line-clamp-2">
+                    {course.description}
+                  </p>
+                )}
                 <div className="text-sm text-gray-700">
-                  <span className="font-semibold">Profesor:</span> {getTeacherName(course.teacher_id)}
+                  <span className="font-semibold">Profesor:</span>{" "}
+                  {getTeacherName(course.teacher_id)}
                 </div>
                 <div className="flex items-center gap-4 text-sm text-gray-500">
                   <div className="flex items-center gap-1">
@@ -672,7 +806,8 @@ export default function CourseManagement() {
                   </div>
                   <div className="flex items-center gap-1">
                     <Users className="h-4 w-4" />
-                    {studentsByCourse[course.id]?.length || 0} / {course.max_students}
+                    {studentsByCourse[course.id]?.length || 0} /{" "}
+                    {course.max_students}
                   </div>
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
@@ -681,18 +816,27 @@ export default function CourseManagement() {
                 </div>
                 {course.schedule && (
                   <div className="text-sm">
-                    <span className="font-medium">Horario:</span> {course.schedule}
+                    <span className="font-medium">Horario:</span>{" "}
+                    {course.schedule}
                   </div>
                 )}
                 {/* Sección de Estudiantes */}
                 <div className="space-y-2 pt-4 border-t mt-4">
-                  <h4 className="font-semibold text-gray-800">Estudiantes inscritos:</h4>
+                  <h4 className="font-semibold text-gray-800">
+                    Estudiantes inscritos:
+                  </h4>
                   <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
                     {studentsByCourse[course.id]?.length > 0 ? (
                       studentsByCourse[course.id]?.map((student) => (
-                        <li key={student.id} className="flex items-center gap-2">
+                        <li
+                          key={student.id}
+                          className="flex items-center gap-2"
+                        >
                           <img
-                            src={student.photoUrl || "https://api.dicebear.com/7.x/notionists/svg?seed=placeholder"}
+                            src={
+                              student.photoUrl ||
+                              "https://api.dicebear.com/7.x/notionists/svg?seed=placeholder"
+                            }
                             alt={`Foto de ${student.name}`}
                             className="w-6 h-6 rounded-full"
                           />
@@ -707,10 +851,18 @@ export default function CourseManagement() {
                 <div className="flex justify-between items-center pt-3 border-t">
                   <div className="flex gap-2">
                     {/* Botón de previsualización */}
-                    <Button variant="outline" size="sm" onClick={() => handlePreview(course)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePreview(course)}
+                    >
                       <EyeIcon className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(course)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(course)}
+                    >
                       <Edit className="h-4 w-4" />
                     </Button>
                     <AlertDialog>
@@ -723,7 +875,8 @@ export default function CourseManagement() {
                         <AlertDialogHeader>
                           <AlertDialogTitle>¿Eliminar curso?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Esta acción no se puede deshacer. Se eliminará permanentemente el curso "{course.name}".
+                            Esta acción no se puede deshacer. Se eliminará
+                            permanentemente el curso "{course.name}".
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -748,7 +901,9 @@ export default function CourseManagement() {
         <Card>
           <CardContent className="text-center py-12">
             <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron cursos</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No se encontraron cursos
+            </h3>
             <p className="text-gray-500">
               {searchTerm || filterLanguage !== "all" || filterLevel !== "all"
                 ? "Intenta ajustar los filtros de búsqueda"
@@ -762,7 +917,9 @@ export default function CourseManagement() {
         <DialogContent className="max-w-2xl overflow-y-auto max-h-[85vh]">
           <DialogHeader>
             <DialogTitle>Editar Curso</DialogTitle>
-            <DialogDescription>Modifica la información del curso</DialogDescription>
+            <DialogDescription>
+              Modifica la información del curso
+            </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -770,16 +927,20 @@ export default function CourseManagement() {
               <Input
                 id="edit-name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-language">Idioma *</Label>
               <Select
                 value={formData.language}
-                onValueChange={(value) => setFormData({ ...formData, language: value })}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, language: value })
+                }
               >
-                <SelectTrigger>
+                <SelectTrigger id="edit-language">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -790,9 +951,14 @@ export default function CourseManagement() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-level">Nivel *</Label>
-              <Select value={formData.level} onValueChange={(value) => setFormData({ ...formData, level: value })}>
-                <SelectTrigger>
-                  <SelectValue />
+              <Select
+                value={formData.level}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, level: value })
+                }
+              >
+                <SelectTrigger id="edit-level">
+                  <SelectValue placeholder="Selecciona nivel" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="1">1</SelectItem>
@@ -809,9 +975,11 @@ export default function CourseManagement() {
               <Label htmlFor="edit-teacher">Profesor *</Label>
               <Select
                 value={formData.teacher_id}
-                onValueChange={(value) => setFormData({ ...formData, teacher_id: value })}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, teacher_id: value })
+                }
               >
-                <SelectTrigger>
+                <SelectTrigger id="edit-teacher">
                   <SelectValue placeholder="Selecciona un profesor" />
                 </SelectTrigger>
                 <SelectContent>
@@ -831,7 +999,12 @@ export default function CourseManagement() {
                 id="edit-max_students"
                 type="number"
                 value={formData.max_students}
-                onChange={(e) => setFormData({ ...formData, max_students: Number.parseInt(e.target.value) })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    max_students: Number.parseInt(e.target.value),
+                  })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -840,7 +1013,12 @@ export default function CourseManagement() {
                 id="edit-duration_weeks"
                 type="number"
                 value={formData.duration_weeks}
-                onChange={(e) => setFormData({ ...formData, duration_weeks: Number.parseInt(e.target.value) })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    duration_weeks: Number.parseInt(e.target.value),
+                  })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -849,16 +1027,25 @@ export default function CourseManagement() {
                 id="edit-hours_per_week"
                 type="number"
                 value={formData.hours_per_week}
-                onChange={(e) => setFormData({ ...formData, hours_per_week: Number.parseInt(e.target.value) })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    hours_per_week: Number.parseInt(e.target.value),
+                  })
+                }
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-start_date">Cohorte - Fecha de Inicio *</Label>
+              <Label htmlFor="edit-start_date">
+                Cohorte - Fecha de Inicio *
+              </Label>
               <Input
                 id="edit-start_date"
                 type="date"
                 value={formData.start_date}
-                onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, start_date: e.target.value })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -867,7 +1054,9 @@ export default function CourseManagement() {
                 id="edit-end_date"
                 type="date"
                 value={formData.end_date}
-                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, end_date: e.target.value })
+                }
               />
             </div>
             <div className="col-span-2 space-y-2">
@@ -875,7 +1064,9 @@ export default function CourseManagement() {
               <Input
                 id="edit-schedule"
                 value={formData.schedule}
-                onChange={(e) => setFormData({ ...formData, schedule: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, schedule: e.target.value })
+                }
               />
             </div>
             {/* Sección para agregar estudiantes en el editor */}
@@ -895,7 +1086,7 @@ export default function CourseManagement() {
                 {debouncedSearchTerm && searchResults.length > 0 && (
                   <ul className="absolute z-10 w-full bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto mt-1">
                     {searchResults
-                      .filter(student => !isStudentAssigned(student))
+                      .filter((student) => !isStudentAssigned(student))
                       .map((student) => (
                         <li
                           key={student.id}
@@ -903,31 +1094,49 @@ export default function CourseManagement() {
                           onClick={() => handleAddStudentToForm(student)}
                         >
                           <img
-                            src={student.photoUrl || "https://api.dicebear.com/7.x/notionists/svg?seed=placeholder"}
+                            src={
+                              student.photoUrl ||
+                              "https://api.dicebear.com/7.x/notionists/svg?seed=placeholder"
+                            }
                             alt={`Foto de ${student.name}`}
                             className="w-8 h-8 rounded-full"
                           />
                           <div>
                             <div className="font-medium">{student.name}</div>
-                            <div className="text-xs text-gray-500">Doc: {student.documentId}</div>
+                            <div className="text-xs text-gray-500">
+                              Doc: {student.documentId}
+                            </div>
                           </div>
                         </li>
                       ))}
                   </ul>
                 )}
-                {debouncedSearchTerm && searchResults.length === 0 && !isStudentSearchLoading && (
-                  <ul className="absolute z-10 w-full bg-white border rounded-md shadow-lg mt-1">
-                    <li className="p-2 text-center text-gray-500">No se encontraron resultados</li>
-                  </ul>
-                )}
+                {debouncedSearchTerm &&
+                  searchResults.length === 0 &&
+                  !isStudentSearchLoading && (
+                    <ul className="absolute z-10 w-full bg-white border rounded-md shadow-lg mt-1">
+                      <li className="p-2 text-center text-gray-500">
+                        No se encontraron resultados
+                      </li>
+                    </ul>
+                  )}
               </div>
               <div className="space-y-2 mt-4">
-                <p className="font-medium text-sm">Estudiantes asignados ({formData.assignedStudents.length}):</p>
+                <p className="font-medium text-sm">
+                  Estudiantes asignados ({formData.assignedStudents.length}):
+                </p>
                 <ul className="grid grid-cols-2 gap-2">
-                  {formData.assignedStudents.map(student => (
-                    <li key={student.id} className="flex items-center justify-between p-2 bg-gray-100 rounded-md">
+                  {formData.assignedStudents.map((student) => (
+                    <li
+                      key={student.id}
+                      className="flex items-center justify-between p-2 bg-gray-100 rounded-md"
+                    >
                       <div className="flex items-center gap-2">
-                        <img src={student.photoUrl} alt={`Foto de ${student.name}`} className="w-6 h-6 rounded-full" />
+                        <img
+                          src={student.photoUrl}
+                          alt={`Foto de ${student.name}`}
+                          className="w-6 h-6 rounded-full"
+                        />
                         <span className="text-sm">{student.name}</span>
                       </div>
                       <Button
@@ -945,7 +1154,10 @@ export default function CourseManagement() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+            >
               Cancelar
             </Button>
             <Button onClick={handleUpdate} disabled={isLoading}>
@@ -961,19 +1173,25 @@ export default function CourseManagement() {
             <>
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-                  <span className="text-3xl">{getLanguageFlag(previewingCourse.language)}</span>
+                  <span className="text-3xl">
+                    {getLanguageFlag(previewingCourse.language)}
+                  </span>
                   {previewingCourse.name}
                 </DialogTitle>
                 <DialogDescription>Detalles del curso</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <Badge className={getLevelColor(previewingCourse.level)}>{previewingCourse.level}</Badge>
+                  <Badge className={getLevelColor(previewingCourse.level)}>
+                    {previewingCourse.level}
+                  </Badge>
                 </div>
                 {previewingCourse.description && (
                   <div>
                     <h4 className="font-semibold text-gray-800">Descripción</h4>
-                    <p className="text-sm text-gray-600">{previewingCourse.description}</p>
+                    <p className="text-sm text-gray-600">
+                      {previewingCourse.description}
+                    </p>
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
@@ -1003,39 +1221,60 @@ export default function CourseManagement() {
                   </div>
                 </div>
                 <div className="space-y-2 border-t pt-4">
-                  <h4 className="font-semibold text-gray-800">Estudiantes inscritos: ({studentsByCourse[previewingCourse.id]?.length || 0})</h4>
+                  <h4 className="font-semibold text-gray-800">
+                    Estudiantes inscritos: (
+                    {studentsByCourse[previewingCourse.id]?.length || 0})
+                  </h4>
                   <div className="relative overflow-x-auto">
                     <table className="w-full text-sm text-left text-gray-500">
                       <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                         <tr>
-                          <th scope="col" className="px-6 py-3">Estudiante</th>
-                          <th scope="col" className="px-6 py-3">Documento</th>
-                          <th scope="col" className="px-6 py-3">Estado</th>
+                          <th scope="col" className="px-6 py-3">
+                            Estudiante
+                          </th>
+                          <th scope="col" className="px-6 py-3">
+                            Documento
+                          </th>
+                          <th scope="col" className="px-6 py-3">
+                            Estado
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {studentsByCourse[previewingCourse.id]?.length > 0 ? (
-                          studentsByCourse[previewingCourse.id]?.map((student) => (
-                            <tr key={student.id} className="bg-white border-b hover:bg-gray-50">
-                              <td className="px-6 py-4 flex items-center gap-2">
-                                <img
-                                  src={student.photoUrl || "https://api.dicebear.com/7.x/notionists/svg?seed=placeholder"}
-                                  alt={`Foto de ${student.name}`}
-                                  className="w-6 h-6 rounded-full"
-                                />
-                                {student.name}
-                              </td>
-                              <td className="px-6 py-4">{student.documentId}</td>
-                              <td className="px-6 py-4">
-                                <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                                  Activo
-                                </span>
-                              </td>
-                            </tr>
-                          ))
+                          studentsByCourse[previewingCourse.id]?.map(
+                            (student) => (
+                              <tr
+                                key={student.id}
+                                className="bg-white border-b hover:bg-gray-50"
+                              >
+                                <td className="px-6 py-4 flex items-center gap-2">
+                                  <img
+                                    src={
+                                      student.photoUrl ||
+                                      "https://api.dicebear.com/7.x/notionists/svg?seed=placeholder"
+                                    }
+                                    alt={`Foto de ${student.name}`}
+                                    className="w-6 h-6 rounded-full"
+                                  />
+                                  {student.name}
+                                </td>
+                                <td className="px-6 py-4">
+                                  {student.documentId}
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                    Activo
+                                  </span>
+                                </td>
+                              </tr>
+                            )
+                          )
                         ) : (
                           <tr>
-                            <td colSpan={3} className="px-6 py-4 text-center">No hay estudiantes inscritos.</td>
+                            <td colSpan={3} className="px-6 py-4 text-center">
+                              No hay estudiantes inscritos.
+                            </td>
                           </tr>
                         )}
                       </tbody>
@@ -1044,7 +1283,12 @@ export default function CourseManagement() {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsPreviewDialogOpen(false)}>Cerrar</Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsPreviewDialogOpen(false)}
+                >
+                  Cerrar
+                </Button>
               </DialogFooter>
             </>
           )}

@@ -49,21 +49,44 @@ export const getAllUsers = async (): Promise<User[]> => {
     return data as User[]
 }
 
+// Dentro del módulo auth.ts
+
+// Helper para sanear cadenas (elimina NUL y recorta)
+const sanitizeString = (val?: string) => (typeof val === "string" ? val.replace(/\u0000/g, "").trim() : val);
+
 export const createUser = async (userData: UserCreateData, maxRetries = 3, initialDelay = 1000) => {
-    const { email, password, role, ...profileData } = userData;
+    // Sanear todos los campos de texto antes de insertar
+    const cleaned = {
+        name: sanitizeString(userData.name)!,
+        email: sanitizeString(userData.email)!,
+        password: sanitizeString(userData.password),
+        role: sanitizeString(userData.role)!,
+        document_number: sanitizeString(userData.document_number),
+        phone: sanitizeString(userData.phone),
+        academic_level: sanitizeString(userData.academic_level),
+        cohort: sanitizeString(userData.cohort),
+        status: userData.status,
+        photo: sanitizeString(userData.photo),
+    };
+
+    const { email, password, role, ...profileData } = cleaned;
 
     try {
         // Generar un ID único para el usuario
         const userId = crypto.randomUUID();
-        
+
         // Insertar directamente en la tabla users sin usar supabase.auth.signUp
-        const { data, error: insertError } = await supabase.from("users").insert({
-            id: userId,
-            email,
-            password, // Ahora puede ser de cualquier longitud
-            role,
-            ...profileData,
-        }).select().single();
+        const { data, error: insertError } = await supabase
+            .from("users")
+            .insert({
+                id: userId,
+                email,
+                password, // Puede ser cualquier longitud
+                role,
+                ...profileData,
+            })
+            .select()
+            .single();
 
         if (insertError) {
             console.error("Error creating user profile:", insertError);
@@ -78,7 +101,19 @@ export const createUser = async (userData: UserCreateData, maxRetries = 3, initi
 }
 
 export const updateUser = async (userId: string, updateData: UserUpdateData) => {
-    const { error } = await supabase.from("users").update(updateData).eq("id", userId)
+    // Sanear campos de actualización
+    const cleanedUpdate = {
+        name: sanitizeString(updateData.name),
+        email: sanitizeString(updateData.email),
+        document_number: sanitizeString(updateData.document_number),
+        phone: sanitizeString(updateData.phone),
+        academic_level: sanitizeString(updateData.academic_level),
+        cohort: sanitizeString(updateData.cohort),
+        status: updateData.status,
+        photo: sanitizeString(updateData.photo),
+    };
+
+    const { error } = await supabase.from("users").update(cleanedUpdate).eq("id", userId)
 
     if (error) {
         console.error("Update user error:", error)
