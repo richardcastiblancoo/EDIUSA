@@ -1218,7 +1218,9 @@ export default function CourseManagement() {
                   </span>
                   {previewingCourse.name}
                 </DialogTitle>
-                <DialogDescription>Detalles del curso</DialogDescription>
+                <DialogDescription>
+                  Vista previa del curso: {previewingCourse.name}
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">

@@ -5,8 +5,13 @@ import DashboardLayout from "@/components/layout/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
+import { createExam, Exam } from "@/lib/exams";
 import { getCourseAssignmentsByTeacher } from "@/lib/assignments";
-import { getStudentsForCourse, Student } from "@/lib/students";
+import {
+  getStudentsForCourse,
+  Student,
+  registerAttendance,
+} from "@/lib/students";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -247,54 +252,81 @@ const CreateExamWithStructureDialog = ({
   }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  setLoading(true);
 
-    if (!title || duration <= 0) {
+  if (!title || duration <= 0) {
+    toast({
+      title: "Campos Incompletos",
+      description: "El título y la duración son obligatorios.",
+      variant: "destructive",
+    });
+    setLoading(false);
+    return;
+  }
+
+  // Prepare exam data for Supabase
+  const examData: Partial<Exam> = {
+    course_id: courseId,
+    title,
+    description: instructions,
+    duration_minutes: duration,
+    total_questions: totalQuestions,
+    exam_type: "structured",
+    due_date: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
+    max_attempts: maxAttempts,
+    is_active: true,
+  };
+
+  console.log("Datos del Examen a enviar a Supabase:", examData);
+
+  try {
+    const newExam = await createExam(examData);
+
+    if (newExam) {
       toast({
-        title: "Campos Incompletos",
-        description: "El título y la duración son obligatorios.",
+        title: "Éxito",
+        description: `El examen "${newExam.title}" ha sido creado exitosamente y está disponible para los estudiantes.`,
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Hubo un error al crear el examen. Inténtalo de nuevo.",
         variant: "destructive",
       });
-      setLoading(false);
-      return;
     }
-
-    console.log("Estructura de Examen Final a enviar:", {
-      courseId,
-      title,
-      duration,
-      totalQuestions,
-      instructions,
-    });
-
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
+  } catch (error) {
+    console.error("Error creating exam:", error);
     toast({
-      title: "Éxito (Simulado)",
-      description: `Estructura del examen "${title}" creada. El siguiente paso sería la carga de preguntas.`,
+      title: "Error",
+      description: `Hubo un error inesperado al crear el examen: ${error instanceof Error ? error.message : "Error desconocido"}`,
+      variant: "destructive",
     });
+  }
 
-    setLoading(false);
-    setIsOpen(false);
-  };
+  setLoading(false);
+  setIsOpen(false);
+};
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button
-          variant="outline"
-          className="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-300 shadow-md"
+          variant="default"
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
         >
           <PlusCircle className="mr-2 h-4 w-4" /> Crear Nuevo Examen
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[1400px] max-h-[95vh] overflow-y-auto p-8 shadow-2xl">
+      <DialogContent
+        className="sm:max-w-[1400px] max-h-[95vh] overflow-y-auto p-8 shadow-2xl"
+        aria-describedby="create-exam-description"
+      >
         <DialogHeader>
           <DialogTitle className="text-3xl font-extrabold text-gray-800">
             ✨ Creación de Examen: {courseName}
           </DialogTitle>
-          <p className="text-base text-muted-foreground">
+          <p id="create-exam-description" className="text-base text-muted-foreground">
             Diseña la estructura del examen por secciones (Listening, Reading,
             etc.) y sube los recursos necesarios.
           </p>

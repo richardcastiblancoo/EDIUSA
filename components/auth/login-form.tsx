@@ -26,6 +26,33 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
+// Componente para el Efecto de Nieve
+const SnowfallEffect = () => {
+  // Genera un array de 100 copos de nieve (ajusta según rendimiento/necesidad)
+  const snowflakes = Array.from({ length: 100 }, (_, i) => i);
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-[2]">
+      {snowflakes.map((i) => (
+        <div 
+          key={i} 
+          className="snowflake"
+          // Establece estilos aleatorios para variar tamaño, posición, y duración de la animación
+          style={{
+            left: `${Math.random() * 100}vw`,
+            animationDelay: `${Math.random() * 15}s`,
+            animationDuration: `${Math.random() * 10 + 5}s`, // entre 5s y 15s
+            width: `${Math.random() * 3 + 1}px`, // entre 1px y 4px
+            height: `${Math.random() * 3 + 1}px`,
+            opacity: `${Math.random() * 0.8 + 0.2}`, // entre 0.2 y 1.0
+          }}
+        ></div>
+      ))}
+    </div>
+  );
+};
+
+
 // Componente de Estilos Globales
 const CustomStyles = () => (
   <style jsx global>{`
@@ -81,35 +108,54 @@ const CustomStyles = () => (
     .animate-floating {
       animation: floating-element 4s ease-in-out infinite;
     }
+    
+    /* --- Estilos para la Nieve --- */
+    @keyframes snowfall {
+        0% { transform: translateY(-100vh); }
+        100% { transform: translateY(100vh); }
+    }
+    
+    .snowflake {
+        position: absolute;
+        top: -50px; /* Inicia por encima de la vista */
+        background-color: #ffffff;
+        border-radius: 50%;
+        pointer-events: none;
+        animation: snowfall linear infinite;
+        /* Efecto de viento (opcional, para que caigan diagonalmente) */
+        /* Puede hacerse con otra animación o con un filtro */
+    }
+    /* --- Fin Estilos Nieve --- */
+
   `}</style>
 );
 
 // Componente para elementos interactivos 3D en la pantalla de carga
 const DynamicLoadingElements = () => (
     <div className="absolute inset-0 z-0 opacity-20">
-        {/* Mundo (Globe) */}
-        <Globe 
-            className="absolute top-1/4 left-1/4 h-20 w-20 text-white/50 animate-float-and-rotate"
-            style={{ animationDelay: '0s', filter: 'blur(1px)' }}
-        />
-        {/* Libro 1 */}
-        <BookOpen 
-            className="absolute bottom-1/4 right-1/4 h-16 w-16 text-yellow-300/60 animate-float-and-rotate"
-            style={{ animationDelay: '1.5s', transform: 'rotate(-20deg)' }}
-        />
-        {/* Letra 'E' */}
+      {/* Mundo (Globe) */}
+      <Globe 
+        className="absolute top-1/4 left-1/4 h-20 w-20 text-white/50 animate-float-and-rotate"
+        style={{ animationDelay: '0s', filter: 'blur(1px)' }}
+      />
+      {/* Libro 1 */}
+      <BookOpen 
+        className="absolute bottom-1/4 right-1/4 h-16 w-16 text-yellow-300/60 animate-float-and-rotate"
+        style={{ animationDelay: '1.5s', transform: 'rotate(-20deg)' }}
+      />
+      {/* Letra 'E' */}
+      <span 
+        className="absolute top-10 right-20 text-7xl font-extrabold text-red-400/70 animate-float-and-rotate"
+        style={{ animationDelay: '3s', transform: 'rotate(10deg)' }}
+      >
+        E
+      </span>
+        {/* Letra 'A' */}
         <span 
-            className="absolute top-10 right-20 text-7xl font-extrabold text-red-400/70 animate-float-and-rotate"
-            style={{ animationDelay: '3s', transform: 'rotate(10deg)' }}
+          className="absolute bottom-10 left-20 text-7xl font-extrabold text-green-400/70 animate-float-and-rotate"
+          style={{ animationDelay: '4.5s', transform: 'rotate(-15deg)' }}
         >
-            E
-        </span>
-         {/* Letra 'A' */}
-         <span 
-            className="absolute bottom-10 left-20 text-7xl font-extrabold text-green-400/70 animate-float-and-rotate"
-            style={{ animationDelay: '4.5s', transform: 'rotate(-15deg)' }}
-        >
-            A
+          A
         </span>
     </div>
 );
@@ -227,6 +273,9 @@ export default function LoginForm() {
       <div className="flex items-center justify-center min-h-screen loading-blue-bg relative overflow-hidden">
         <CustomStyles />
         
+        {/* Componente de Nieve Agregado AQUÍ */}
+        <SnowfallEffect />
+        
         {/* Elementos flotantes y 3D de la carga */}
         <DynamicLoadingElements />
         
@@ -254,8 +303,8 @@ export default function LoginForm() {
           
           {/* Contenedor de Texto Dinámico y Spinner */}
           <div className="opacity-0 [animation-delay:1.5s] animate-cinematic-fade-in w-full max-w-lg pt-4 flex items-center justify-center space-x-3"> 
-             <Loader2 className="h-6 w-6 text-yellow-300 animate-spin flex-shrink-0" />
-             <DynamicLoadingText phrases={loadingPhrases} intervalTime={phraseIntervalTime} />
+              <Loader2 className="h-6 w-6 text-yellow-300 animate-spin flex-shrink-0" />
+              <DynamicLoadingText phrases={loadingPhrases} intervalTime={phraseIntervalTime} />
           </div>
           
         </div>
@@ -267,12 +316,15 @@ export default function LoginForm() {
   // PANTALLA DE LOGIN PRINCIPAL (Nuevo Diseño)
   // -------------------------------------------------------------------
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 dark-blue-bg">
+    <div className="min-h-screen flex items-center justify-center p-4 dark-blue-bg relative overflow-hidden">
       <CustomStyles />
+      
+      {/* Componente de Nieve Agregado AQUÍ */}
+      <SnowfallEffect />
       
       {/* Contenedor Principal con Sombra Flotante */}
       <div 
-        className="w-full max-w-5xl rounded-3xl shadow-[0_35px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden flex transform transition-all duration-700 ease-out animate-cinematic-fade-in"
+        className="w-full max-w-5xl rounded-3xl shadow-[0_35px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden flex transform transition-all duration-700 ease-out animate-cinematic-fade-in relative z-10"
       >
         
         {/* Lado Izquierdo: Bienvenida e Ilustración (Texto Actualizado) */}
@@ -280,33 +332,33 @@ export default function LoginForm() {
             
             {/* Contenido de Bienvenida - TÍTULO Y DESCRIPCIÓN ACTUALIZADOS AQUÍ */}
             <div className="mb-10">
-                <div className="flex items-center space-x-3 mb-4">
-                    <img src="/ciusa.png" width={50} alt="Logo CIUSA" className="rounded-full shadow-lg" />
-                    <span className="text-sm font-semibold text-white/80">
-                        Escuela de Idiomas, Universidad Sergio Arboleda Caribe
-                    </span>
-                </div>
-                <h1 className="text-5xl font-extrabold text-white leading-tight">
+              <div className="flex items-center space-x-3 mb-4">
+                <img src="/ciusa.png" width={50} alt="Logo CIUSA" className="rounded-full shadow-lg" />
+                <span className="text-sm font-semibold text-white/80">
+                      Escuela de Idiomas, Universidad Sergio Arboleda Caribe
+                </span>
+              </div>
+              <h1 className="text-5xl font-extrabold text-white leading-tight">
                     Bienvenido a la Escuela de Idiomas
-                </h1>
-                <p className="text-xl text-gray-300 mt-4">
+              </h1>
+              <p className="text-xl text-gray-300 mt-4">
                     Plataforma integral para la gestión académica y administrativa de la Universidad Sergio Arboleda Caribe.
-                </p>
+              </p>
             </div>
             
             {/* Placeholder de Ilustración */}
             <div className="relative h-64 flex items-center justify-center">
-                {/* Simulamos la ilustración con un div y elementos flotantes */}
-                <div className="w-full h-full relative">
-                    {/* Nube/Mundo */}
-                    <div className="absolute top-0 left-1/4 w-24 h-24 rounded-full bg-blue-400/30 blur-xl animate-floating" style={{ animationDelay: '0s' }}></div>
-                    {/* Libro/Mascota 1 */}
-                    <div className="absolute bottom-4 left-10 w-16 h-16 bg-green-400 rounded-lg shadow-xl transform rotate-3 animate-floating" style={{ animationDelay: '0.5s' }}></div>
-                    {/* Lápiz/Mascota 2 */}
-                    <div className="absolute bottom-8 right-1/4 w-4 h-32 bg-yellow-400 rounded-full shadow-xl transform -rotate-12 animate-floating" style={{ animationDelay: '1s' }}></div>
-                    {/* Búho/Mascota 3 */}
-                    <div className="absolute top-10 right-10 w-20 h-20 bg-purple-400 rounded-full shadow-xl animate-floating" style={{ animationDelay: '1.5s' }}></div>
-                </div>
+              {/* Simulamos la ilustración con un div y elementos flotantes */}
+              <div className="w-full h-full relative">
+                {/* Nube/Mundo */}
+                <div className="absolute top-0 left-1/4 w-24 h-24 rounded-full bg-blue-400/30 blur-xl animate-floating" style={{ animationDelay: '0s' }}></div>
+                {/* Libro/Mascota 1 */}
+                <div className="absolute bottom-4 left-10 w-16 h-16 bg-green-400 rounded-lg shadow-xl transform rotate-3 animate-floating" style={{ animationDelay: '0.5s' }}></div>
+                {/* Lápiz/Mascota 2 */}
+                <div className="absolute bottom-8 right-1/4 w-4 h-32 bg-yellow-400 rounded-full shadow-xl transform -rotate-12 animate-floating" style={{ animationDelay: '1s' }}></div>
+                {/* Búho/Mascota 3 */}
+                <div className="absolute top-10 right-10 w-20 h-20 bg-purple-400 rounded-full shadow-xl animate-floating" style={{ animationDelay: '1.5s' }}></div>
+              </div>
             </div>
         </div>
         
