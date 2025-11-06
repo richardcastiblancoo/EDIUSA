@@ -6,8 +6,12 @@ export type Student = {
   id: string;
   name: string;
   email: string;
-  documentId: string;
+  documentId: string | null;
   photoUrl: string;
+  phone: string | null;
+  academicLevel: string | null; // Mapeado de 'academic_level'
+  // ¡Campo añadido!
+  status: "active" | "inactive" | "graduado" | "egresado" | null;
 };
 
 // Define una estructura para los detalles del estudiante, incluyendo su curso y profesor
@@ -15,7 +19,7 @@ export type StudentDetails = {
   id: string;
   name: string;
   email: string;
-  documentId: string;
+  documentId: string | null;
   photoUrl: string;
   course: {
     name: string;
@@ -46,14 +50,20 @@ export type GradeRecord = {
 };
 
 /**
- * Obtiene los estudiantes inscritos en un curso específico.
+ * Obtiene los estudiantes inscritos en un curso específico. (ACTUALIZADO)
+ * Se agregó el campo `status` a la consulta.
  * @param courseId El ID del curso.
  * @returns Una lista de objetos de estudiantes.
  */
-export async function getStudentsForCourse(courseId: string): Promise<Student[]> {
+export async function getStudentsForCourse(
+  courseId: string
+): Promise<Student[]> {
   const { data, error } = await supabase
     .from("enrollments")
-    .select("*, users!inner(id, name, email, document_number, photo)")
+    // Consulta: Se agregaron 'phone', 'academic_level' y 'status'
+    .select(
+      "*, users!inner(id, name, email, document_number, photo, phone, academic_level, status)"
+    )
     .eq("course_id", courseId);
 
   if (error) {
@@ -63,7 +73,8 @@ export async function getStudentsForCourse(courseId: string): Promise<Student[]>
 
   const studentsWithImages = await Promise.all(
     data.map(async (enrollment: any) => {
-      const photoUrl = await getUserImage(enrollment.users.id, "avatar") ||
+      const photoUrl =
+        (await getUserImage(enrollment.users.id, "avatar")) ||
         enrollment.users.photo ||
         "/placeholder-user.jpg";
 
@@ -73,6 +84,9 @@ export async function getStudentsForCourse(courseId: string): Promise<Student[]>
         email: enrollment.users.email,
         documentId: enrollment.users.document_number,
         photoUrl: photoUrl,
+        phone: enrollment.users.phone,
+        academicLevel: enrollment.users.academic_level,
+        status: enrollment.users.status, // Nuevo campo
       };
     })
   );
@@ -81,7 +95,8 @@ export async function getStudentsForCourse(courseId: string): Promise<Student[]>
 }
 
 /**
- * Obtiene todos los estudiantes asignados a un profesor, incluyendo enrollmentId y courseId.
+ * Obtiene todos los estudiantes asignados a un profesor, incluyendo enrollmentId y courseId. (ACTUALIZADO)
+ * Se agregó el campo `status` a la consulta.
  * @param teacherId El ID del profesor.
  * @returns Una lista de estudiantes con sus cursos.
  */
@@ -89,24 +104,31 @@ export async function getStudentsForTeacher(teacherId: string): Promise<any[]> {
   try {
     const { data: enrollments, error } = await supabase
       .from("enrollments")
-      .select(`
-        id,
-        course_id,
-        users!inner(id, name, email, document_number, photo),
-        courses!inner(teacher_id)
-      `)
+      .select(
+        `
+                id,
+                course_id,
+                // Campos de users: Se agregaron 'phone', 'academic_level' y 'status'
+                users!inner(id, name, email, document_number, photo, phone, academic_level, status),
+                courses!inner(teacher_id)
+            `
+      )
       .eq("courses.teacher_id", teacherId);
 
     if (error) throw error;
 
     // Eliminar duplicados y enriquecer con photoUrl
-    const studentsMap = new Map();
+    const studentsMap = new Map<
+      string,
+      Student & { enrollmentId: string; courseId: string }
+    >();
 
     await Promise.all(
       enrollments.map(async (enrollment: any) => {
         const studentId = enrollment.users.id;
         if (!studentsMap.has(studentId)) {
-          const photoUrl = await getUserImage(studentId, "avatar") ||
+          const photoUrl =
+            (await getUserImage(studentId, "avatar")) ||
             enrollment.users.photo ||
             "/placeholder-user.jpg";
 
@@ -118,6 +140,9 @@ export async function getStudentsForTeacher(teacherId: string): Promise<any[]> {
             documentId: enrollment.users.document_number,
             photoUrl: photoUrl,
             courseId: enrollment.course_id,
+            phone: enrollment.users.phone,
+            academicLevel: enrollment.users.academic_level,
+            status: enrollment.users.status, // Nuevo campo
           });
         }
       })
@@ -148,7 +173,7 @@ export async function registerAttendance(
       .select("*")
       .eq("enrollment_id", enrollmentId)
       .eq("lesson_id", lessonId)
-      .maybeSingle(); // Cambiado a maybeSingle()
+      .maybeSingle();
 
     let result;
 
@@ -169,7 +194,7 @@ export async function registerAttendance(
           enrollment_id: enrollmentId,
           lesson_id: lessonId,
           status,
-          id: crypto.randomUUID()
+          id: crypto.randomUUID(),
         })
         .select()
         .single();
@@ -202,7 +227,6 @@ export async function registerGrade(
       throw new Error("La calificación debe estar entre 0 y 100");
     }
 
-    // Usamos maybeSingle() para evitar el error 406 si no existe el registro
     const { data: existingRecord } = await supabase
       .from("grades")
       .select("*")
@@ -213,12 +237,11 @@ export async function registerGrade(
     let result;
 
     if (existingRecord) {
-      // Si existe, actualiza la nota
       const { data, error } = await supabase
         .from("grades")
         .update({
           score,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq("id", existingRecord.id)
         .select()
@@ -227,14 +250,13 @@ export async function registerGrade(
       if (error) throw error;
       result = data;
     } else {
-      // Si no existe, inserta una nueva nota
       const { data, error } = await supabase
         .from("grades")
         .insert({
           enrollment_id: enrollmentId,
           lesson_id: lessonId,
           score,
-          id: crypto.randomUUID()
+          id: crypto.randomUUID(),
         })
         .select()
         .single();
@@ -243,7 +265,6 @@ export async function registerGrade(
       result = data;
     }
 
-    // Obtener información del estudiante y la lección para la notificación
     const { data: enrollment } = await supabase
       .from("enrollments")
       .select("student_id, courses(name)")
@@ -256,11 +277,14 @@ export async function registerGrade(
       .eq("id", lessonId)
       .single();
 
-    // Enviar notificación si el navegador lo soporta
-    if ("Notification" in window && Notification.permission === "granted") {
+    if (
+      typeof window !== "undefined" &&
+      "Notification" in window &&
+      Notification.permission === "granted"
+    ) {
       new Notification("Nueva Calificación", {
         body: `Has recibido una calificación de ${score} en ${lesson?.title} del curso ${enrollment?.courses?.name}`,
-        icon: "/placeholder-logo.png"
+        icon: "/placeholder-logo.png",
       });
     }
 
@@ -321,22 +345,26 @@ export async function removeEnrollmentsForCourse(courseId: string) {
  * @param studentId El ID del estudiante.
  * @returns Un objeto de detalles del estudiante o null si no se encuentra.
  */
-export async function getStudentDetailsWithTeacher(studentId: string): Promise<StudentDetails | null> {
+export async function getStudentDetailsWithTeacher(
+  studentId: string
+): Promise<StudentDetails | null> {
   try {
     const { data, error } = await supabase
       .from("enrollments")
-      .select(`
-        users!inner(id, name, email, document_number, photo),
-        courses!inner(
-          name,
-          teachers:teacher_id(name)
-        )
-      `)
+      .select(
+        `
+                users!inner(id, name, email, document_number, photo),
+                courses!inner(
+                    name,
+                    teachers:teacher_id(name)
+                )
+            `
+      )
       .eq("student_id", studentId)
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') {
+      if (error.code === "PGRST116") {
         return null;
       }
       throw error;
@@ -347,7 +375,9 @@ export async function getStudentDetailsWithTeacher(studentId: string): Promise<S
       name: data.users.name,
       email: data.users.email,
       documentId: data.users.document_number,
-      photoUrl: data.users.photo || `https://api.dicebear.com/7.x/notionists/svg?seed=${data.users.id}`,
+      photoUrl:
+        data.users.photo ||
+        `https://api.dicebear.com/7.x/notionists/svg?seed=${data.users.id}`,
       course: {
         name: data.courses.name,
         teacher: data.courses.teachers || null,
@@ -360,7 +390,8 @@ export async function getStudentDetailsWithTeacher(studentId: string): Promise<S
 }
 
 /**
- * Busca estudiantes por nombre o número de documento.
+ * Busca estudiantes por nombre o número de documento. (ACTUALIZADO)
+ * Se agregó el campo `status` a la consulta de búsqueda.
  * @param query Término de búsqueda (nombre o documento)
  * @returns Lista de estudiantes que coinciden con la búsqueda
  */
@@ -372,9 +403,13 @@ export async function searchStudents(query: string): Promise<Student[]> {
   const searchTerm = query.toLowerCase().trim();
 
   try {
+    // Consulta para buscar por documento (exacto)
     let { data: documentMatch, error: documentError } = await supabase
       .from("users")
-      .select("id, name, email, document_number, photo")
+      // Selección de campos: Se agregaron 'phone', 'academic_level' y 'status'
+      .select(
+        "id, name, email, document_number, photo, phone, academic_level, status"
+      )
       .eq("role", "student")
       .eq("document_number", searchTerm)
       .limit(10);
@@ -382,23 +417,34 @@ export async function searchStudents(query: string): Promise<Student[]> {
     if (documentError) throw documentError;
 
     if (!documentMatch || documentMatch.length === 0) {
+      // Consulta para buscar por LIKE (nombre, documento, email)
       const { data, error } = await supabase
         .from("users")
-        .select("id, name, email, document_number, photo")
+        // Selección de campos: Se agregaron 'phone', 'academic_level' y 'status'
+        .select(
+          "id, name, email, document_number, photo, phone, academic_level, status"
+        )
         .eq("role", "student")
-        .or(`name.ilike.%${searchTerm}%,document_number.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+        .or(
+          `name.ilike.%${searchTerm}%,document_number.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`
+        )
         .limit(10);
 
       if (error) throw error;
       documentMatch = data;
     }
 
-    return documentMatch.map((user) => ({
+    return documentMatch.map((user: any) => ({
       id: user.id,
       name: user.name,
       email: user.email,
       documentId: user.document_number,
-      photoUrl: user.photo || `https://api.dicebear.com/7.x/notionists/svg?seed=${user.id}`,
+      photoUrl:
+        user.photo ||
+        `https://api.dicebear.com/7.x/notionists/svg?seed=${user.id}`,
+      phone: user.phone,
+      academicLevel: user.academic_level,
+      status: user.status, // Nuevo campo
     }));
   } catch (error) {
     console.error("Error searching students:", error);
@@ -412,7 +458,10 @@ export async function searchStudents(query: string): Promise<Student[]> {
  * @param studentIds Array con los IDs de los estudiantes a añadir.
  * @returns Un booleano indicando si la operación fue exitosa.
  */
-export async function addStudentsToCourse(courseId: string, studentIds: string[]): Promise<boolean> {
+export async function addStudentsToCourse(
+  courseId: string,
+  studentIds: string[]
+): Promise<boolean> {
   try {
     if (!studentIds.length) return true;
 
@@ -427,24 +476,24 @@ export async function addStudentsToCourse(courseId: string, studentIds: string[]
       return false;
     }
 
-    const existingStudentIds = existingEnrollments.map(e => e.student_id);
-    const newStudentIds = studentIds.filter(id => !existingStudentIds.includes(id));
+    const existingStudentIds = existingEnrollments.map((e) => e.student_id);
+    const newStudentIds = studentIds.filter(
+      (id) => !existingStudentIds.includes(id)
+    );
 
     if (newStudentIds.length === 0) {
       return true;
     }
 
-    const enrollments = newStudentIds.map(studentId => ({
+    const enrollments = newStudentIds.map((studentId) => ({
       id: crypto.randomUUID(),
       course_id: courseId,
       student_id: studentId,
       enrollment_date: new Date().toISOString(),
-      status: "active"
+      status: "active",
     }));
 
-    const { error } = await supabase
-      .from("enrollments")
-      .insert(enrollments);
+    const { error } = await supabase.from("enrollments").insert(enrollments);
 
     if (error) {
       console.error("Error al añadir estudiantes al curso:", error);
@@ -513,7 +562,10 @@ export async function getStudentAttendance(
     if (error) throw error;
     return data || [];
   } catch (error) {
-    console.error("Error al obtener registros de asistencia del estudiante:", error);
+    console.error(
+      "Error al obtener registros de asistencia del estudiante:",
+      error
+    );
     return [];
   }
 }
@@ -546,10 +598,7 @@ export async function getLessonsForCourse(courseId: string): Promise<any[]> {
  */
 export async function deleteGrade(gradeId: string): Promise<boolean> {
   try {
-    const { error } = await supabase
-      .from("grades")
-      .delete()
-      .eq("id", gradeId);
+    const { error } = await supabase.from("grades").delete().eq("id", gradeId);
 
     if (error) throw error;
     return true;
@@ -575,6 +624,61 @@ export async function deleteAttendance(attendanceId: string): Promise<boolean> {
     return true;
   } catch (error) {
     console.error("Error al eliminar el registro de asistencia:", error);
+    return false;
+  }
+}
+
+export async function removeStudentsFromCourse(
+  courseId: string,
+  studentIds: string[]
+): Promise<boolean> {
+  try {
+    if (!studentIds.length) return true;
+
+    const { data: enrollments, error: fetchError } = await supabase
+      .from("enrollments")
+      .select("id")
+      .eq("course_id", courseId)
+      .in("student_id", studentIds);
+
+    if (fetchError) {
+      console.error("Error al obtener inscripciones a eliminar:", fetchError);
+      return false;
+    }
+
+    const enrollmentIds = (enrollments || []).map((e: { id: string }) => e.id);
+    if (enrollmentIds.length === 0) return true;
+
+    const { error: attendanceError } = await supabase
+      .from("attendance")
+      .delete()
+      .in("enrollment_id", enrollmentIds);
+    if (attendanceError) {
+      console.error("Error al eliminar asistencia:", attendanceError);
+      return false;
+    }
+
+    const { error: gradesError } = await supabase
+      .from("grades")
+      .delete()
+      .in("enrollment_id", enrollmentIds);
+    if (gradesError) {
+      console.error("Error al eliminar notas:", gradesError);
+      return false;
+    }
+
+    const { error: enrollmentsDeleteError } = await supabase
+      .from("enrollments")
+      .delete()
+      .in("id", enrollmentIds);
+    if (enrollmentsDeleteError) {
+      console.error("Error al eliminar inscripciones:", enrollmentsDeleteError);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error al eliminar estudiantes del curso:", error);
     return false;
   }
 }

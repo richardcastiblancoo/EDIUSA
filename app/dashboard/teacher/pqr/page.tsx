@@ -1,12 +1,11 @@
-"use client"
+"use client";
 
 import { useAuth } from "@/lib/auth-context";
-import DashboardLayout from "@/components/layout/dashboard-layout"
-import PQRManagement from "@/components/teacher/pqr-management"
+import DashboardLayout from "@/components/layout/dashboard-layout";
+import PQRManagement from "@/components/teacher/pqr-management";
 
 export default function TeacherPQRPage() {
   const { user, loading } = useAuth();
-  
   return (
     <DashboardLayout userRole="teacher">
       {loading ? (
@@ -17,5 +16,5 @@ export default function TeacherPQRPage() {
         <PQRManagement teacherId={user.id} />
       ) : null}
     </DashboardLayout>
-  )
+  );
 }

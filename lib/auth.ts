@@ -10,6 +10,7 @@ export type User = SupabaseUser & {
     academic_level?: string;
     cohort?: string;
     status?: "active" | "inactive" | "graduado" | "egresado";
+    program_category?: string;
 }
 
 // Data types for creation and update
@@ -24,6 +25,7 @@ export type UserCreateData = {
     cohort?: string;
     status?: "active" | "inactive" | "graduado" | "egresado";
     photo?: string;
+    program_category?: string;
 }
 
 export type UserUpdateData = {
@@ -35,6 +37,7 @@ export type UserUpdateData = {
     cohort?: string;
     status?: "active" | "inactive" | "graduado" | "egresado";
     photo?: string;
+    program_category?: string;
 }
 
 // Functions
@@ -60,13 +63,14 @@ export const createUser = async (userData: UserCreateData, maxRetries = 3, initi
         name: sanitizeString(userData.name)!,
         email: sanitizeString(userData.email)!,
         password: sanitizeString(userData.password),
-        role: sanitizeString(userData.role)!,
+        role: (["coordinator", "teacher", "student", "assistant"].includes(sanitizeString(userData.role)?.toLowerCase() || "") ? sanitizeString(userData.role)?.toLowerCase() : "student")!,
         document_number: sanitizeString(userData.document_number),
         phone: sanitizeString(userData.phone),
         academic_level: sanitizeString(userData.academic_level),
         cohort: sanitizeString(userData.cohort),
         status: userData.status,
         photo: sanitizeString(userData.photo),
+        program_category: sanitizeString(userData.program_category),
     };
 
     const { email, password, role, ...profileData } = cleaned;
@@ -111,6 +115,7 @@ export const updateUser = async (userId: string, updateData: UserUpdateData) => 
         cohort: sanitizeString(updateData.cohort),
         status: updateData.status,
         photo: sanitizeString(updateData.photo),
+        program_category: sanitizeString(updateData.program_category),
     };
 
     const { error } = await supabase.from("users").update(cleanedUpdate).eq("id", userId)

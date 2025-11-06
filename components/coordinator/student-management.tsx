@@ -63,6 +63,17 @@ import {
   type User,
 } from "@/lib/auth";
 const ACADEMIC_LEVELS = ["1", "2", "3", "4", "5", "6", "7"];
+const PROGRAM_CATEGORIES = [
+  "Administración de Empresas y Transformación Digital",
+  "Contaduría Pública",
+  "Finanzas, Fintech y Comercio Exterior",
+  "Marketing y Negocios Internacionales",
+  "Comunicación Social y Periodismo",
+  "Diseño Digital",
+  "Psicología",
+  "Derecho",
+  "Ingeniería Industrial",
+];
 export default function StudentManagement() {
   const [students, setStudents] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -80,6 +91,7 @@ export default function StudentManagement() {
     academic_level: "",
     status: "active" as const,
     photo: "",
+    program_category: "",
   });
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -241,6 +253,7 @@ export default function StudentManagement() {
       academic_level: "",
       status: "active",
       photo: "",
+      program_category: "",
     });
     setPhotoFile(null);
     setPhotoPreview(null);
@@ -257,6 +270,7 @@ export default function StudentManagement() {
       // @ts-ignore
       status: student.status || "active",
       photo: (student as any).photo || "",
+      program_category: (student as any).program_category || "",
     });
     setPhotoPreview((student as any).photo || null);
     setPhotoFile(null);
@@ -666,6 +680,26 @@ export default function StudentManagement() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="program_category">Programa</Label>
+                <Select
+                  value={formData.program_category}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, program_category: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar programa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROGRAM_CATEGORIES.map((program) => (
+                      <SelectItem key={program} value={program}>
+                        {program}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -738,6 +772,13 @@ export default function StudentManagement() {
                   {/* @ts-ignore */}
                   <p className="text-sm font-medium">
                     {viewingStudent.academic_level || "-"}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Programa</Label>
+                  {/* @ts-ignore */}
+                  <p className="text-sm font-medium">
+                    {viewingStudent.program_category || "-"}
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -885,6 +926,26 @@ export default function StudentManagement() {
                     <SelectItem value="inactive">Inactivo</SelectItem>
                     <SelectItem value="graduado">Graduado</SelectItem>
                     <SelectItem value="egresado">Egresado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-program_category">Programa</Label>
+                <Select
+                  value={formData.program_category}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, program_category: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar programa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROGRAM_CATEGORIES.map((program) => (
+                      <SelectItem key={program} value={program}>
+                        {program}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

@@ -207,26 +207,11 @@ export default function DashboardLayout({
                 href: "/dashboard/teacher/courses",
                 icon: BookOpen,
               },
-              {
-                name: "Estudiantes",
-                href: "/dashboard/teacher/students",
-                icon: Users,
-              },
             ],
           },
           {
             title: "Gestión de Contenido",
             items: [
-              {
-                name: "Exámenes",
-                href: "/dashboard/teacher/exams",
-                icon: ClipboardList,
-              },
-              {
-                name: "Mis Lecciones",
-                href: "/dashboard/teacher/lessons",
-                icon: FileText,
-              },
               { name: "PQR", href: "/dashboard/teacher/pqr", icon: MessageSquare },
               profileItem,
             ],

@@ -7,13 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  FileText,
-  Loader2,
-  RefreshCw,
-  BookOpen,
-  Search,
-} from "lucide-react";
+import { FileText, Loader2, RefreshCw, BookOpen, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table,
@@ -179,8 +173,7 @@ export default function CourseReportDashboard() {
         "Sin profesor asignado";
     const { data: enrollments, error: enrErr } = await supabase
       .from("enrollments")
-      // Asumiendo que 'photo' es el campo de la URL de la imagen en la tabla 'users'
-      .select("id, student:users(id, name, document_number, photo)") 
+      .select("id, student:users(id, name, document_number, photo)")
       .eq("course_id", course.id);
     if (enrErr) {
       throw enrErr;
@@ -189,12 +182,12 @@ export default function CourseReportDashboard() {
       (enrollments || []).map(async (enr: any) => {
         const studentId = enr.student.document_number;
         const studentName = enr.student.name;
-        // Si el campo es 'photo', lo usamos
-        const photoUrl = enr.student.photo as string | null; 
-        
-        // Datos simulados
-        const overallAvgNotes = parseFloat((Math.random() * (5.0 - 1.0) + 1.0).toFixed(2));
-        const overallAttendanceRate = parseFloat((Math.random() * (100 - 50) + 50).toFixed(0));
+        const photoUrl = enr.student.photo as string | null;
+
+        // VALORES PREDETERMINADOS (simulación eliminada)
+        const overallAvgNotes = 0; // NOTA REAL DEBE SER CARGADA AQUÍ
+        const overallAttendanceRate = 0; // ASISTENCIA REAL DEBE SER CARGADA AQUÍ
+
         return {
           studentName,
           studentId,
@@ -443,7 +436,8 @@ export default function CourseReportDashboard() {
           {/* Encabezado del reporte */}
           <div className="flex flex-col sm:flex-row justify-between items-start pb-4 mb-4 space-y-3 sm:space-y-0">
             <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 bg-gray-100 flex items-center justify-center rounded-lg">
+              {/* Fondo gris eliminado aquí: `bg-gray-100` */}
+              <div className="w-16 h-16 flex items-center justify-center rounded-lg">
                 <img
                   src="/ciusa.png"
                   alt="Logo Institución"
@@ -470,7 +464,8 @@ export default function CourseReportDashboard() {
           </div>
           {/* Datos del Curso */}
           <div className="mb-6">
-            <div className="bg-gray-50 rounded-md p-3">
+            {/* 💡 Fondo gris eliminado aquí: `bg-gray-50` */}
+            <div className="rounded-md p-3">
               <h2 className="text-xl font-bold text-gray-900">
                 {currentReportData.courseName}
               </h2>
@@ -497,12 +492,18 @@ export default function CourseReportDashboard() {
                   <TableHeader>
                     {/* ✅ SIN ESPACIOS/SALTOS DE LÍNEA entre <TableRow> y <TableHead> */}
                     <TableRow className="text-gray-900 no-hover hover:bg-transparent border-b">
-                      <TableHead className="py-2 px-4 w-12"></TableHead> 
+                      <TableHead className="py-2 px-4 w-12"></TableHead>
                       <TableHead className="py-2 px-4">Estudiante</TableHead>
                       <TableHead className="py-2 px-4">ID / Cédula</TableHead>
-                      <TableHead className="text-right py-2 px-4">Nota Final</TableHead>
-                      <TableHead className="text-right py-2 px-4">Asistencia</TableHead>
-                      <TableHead className="text-center py-2 px-4">Estado</TableHead>
+                      <TableHead className="text-right py-2 px-4">
+                        Nota Final
+                      </TableHead>
+                      <TableHead className="text-right py-2 px-4">
+                        Asistencia
+                      </TableHead>
+                      <TableHead className="text-center py-2 px-4">
+                        Estado
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -510,7 +511,12 @@ export default function CourseReportDashboard() {
                       .sort((a, b) => b.overallAvgNotes - a.overallAvgNotes)
                       .map((student) => {
                         const studentPassed = student.isPassed;
-                        const initialLetters = student.studentName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                        const initialLetters = student.studentName
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .substring(0, 2)
+                          .toUpperCase();
 
                         return (
                           // ✅ SIN ESPACIOS/SALTOS DE LÍNEA entre <TableRow> y <TableCell>
@@ -520,9 +526,11 @@ export default function CourseReportDashboard() {
                           >
                             <TableCell className="py-2 px-4">
                               <Avatar className="h-8 w-8">
-                                <AvatarImage 
-                                  src={student.photoUrl || "/placeholder-user.jpg"} 
-                                  alt={student.studentName} 
+                                <AvatarImage
+                                  src={
+                                    student.photoUrl || "/placeholder-user.jpg"
+                                  }
+                                  alt={student.studentName}
                                 />
                                 <AvatarFallback className="bg-gray-200 text-gray-600 text-xs">
                                   {initialLetters}
@@ -538,20 +546,21 @@ export default function CourseReportDashboard() {
                             </TableCell>
                             <TableCell className="text-right py-2 px-4">
                               {/* Formato de nota a dos decimales */}
-                              {student.overallAvgNotes.toFixed(2)} 
+                              {student.overallAvgNotes.toFixed(2)}
                             </TableCell>
                             <TableCell className="text-right py-2 px-4">
                               {student.overallAttendanceRate.toFixed(0)}%
                             </TableCell>
+                            {/* Lógica de estado modificada: Reprobado -> En Curso */}
                             <TableCell className="text-center py-2 px-4">
                               <span
                                 className={`text-sm font-semibold ${
                                   studentPassed
-                                    ? "text-green-600"
-                                    : "text-red-600"
+                                    ? "text-green-600" // Aprobado
+                                    : "text-blue-600" // En Curso
                                 }`}
                               >
-                                {studentPassed ? "Aprobado" : "Reprobado"}
+                                {studentPassed ? "Aprobado" : "En Curso"}
                               </span>
                             </TableCell>
                           </TableRow>

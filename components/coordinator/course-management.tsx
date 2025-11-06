@@ -63,6 +63,7 @@ import {
   getStudentsForCourse,
   searchStudents,
   addStudentsToCourse,
+  removeStudentsFromCourse,
 } from "@/lib/students";
 import { getTeachers } from "@/lib/teachers";
 type Student = {
@@ -114,13 +115,15 @@ export default function CourseManagement() {
     language: "",
     level: "",
     duration_weeks: 12,
-    hours_per_week: 4,
     max_students: 20,
     teacher_id: "",
     schedule: "",
     start_date: "",
     end_date: "",
-    assignedStudents: [] as Student[],
+    days: [],
+    start_time: "",
+    end_time: "",
+    assignedStudents: [],
   });
   const debouncedSearchTerm = useDebounce(studentSearchTerm, 500);
   useEffect(() => {
@@ -186,7 +189,7 @@ export default function CourseManagement() {
         results.map((value) => ({
           id: value.id,
           name: value.name,
-          documentId: value.documentId,
+          documentId: value.documentId ?? "",
           photoUrl: value.photoUrl,
           course_id: (value as any).course_id || null,
         }))
@@ -207,7 +210,7 @@ export default function CourseManagement() {
           course.description
             ?.toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
-          false
+          course.level?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     if (filterLanguage !== "all") {
@@ -227,12 +230,13 @@ export default function CourseManagement() {
       language: "",
       level: "",
       duration_weeks: 12,
-      hours_per_week: 4,
-      max_students: 20,
       teacher_id: "",
       schedule: "",
       start_date: "",
       end_date: "",
+      days: [],
+      start_time: "",
+      end_time: "",
       assignedStudents: [],
     });
     setStudentSearchTerm("");
@@ -264,18 +268,19 @@ export default function CourseManagement() {
     try {
       const newCourse = await createCourse({
         name: formData.name,
-        description: formData.description,
         language: formData.language,
         level: formData.level,
         code: formData.name.substring(0, 10).toUpperCase().replace(/\s/g, ""),
         max_students: formData.max_students,
-        duration_weeks: formData.duration_weeks,
-        hours_per_week: formData.hours_per_week,
         teacher_id: formData.teacher_id,
-        schedule: formData.schedule,
+        schedule: `${formData.days.join(", ")} | ${formData.start_time} - ${
+          formData.end_time
+        }`,
         start_date: formData.start_date,
         end_date: formData.end_date,
         room: "TBD",
+        description: formData.description,
+        duration_weeks: formData.duration_weeks,
       });
       if (newCourse && formData.assignedStudents.length > 0) {
         await addStudentsToCourse(
@@ -305,18 +310,27 @@ export default function CourseManagement() {
   };
   const handleEdit = (course: Course) => {
     setEditingCourse(course);
+    const [daysPart, timePart] = (course.schedule || "")
+      .split("|")
+      .map((s) => s.trim());
+    const parsedDays = daysPart ? daysPart.split(", ").filter(Boolean) : [];
+    const [startTime, endTime] = timePart
+      ? timePart.split(" - ").map((s) => s.trim())
+      : ["", ""];
     setFormData({
       name: course.name,
       description: course.description || "",
       language: course.language,
       level: course.level,
       duration_weeks: course.duration_weeks || 12,
-      hours_per_week: course.hours_per_week || 4,
       max_students: course.max_students || 20,
       teacher_id: course.teacher_id || "",
       schedule: course.schedule || "",
       start_date: course.start_date || "",
       end_date: course.end_date || "",
+      days: parsedDays,
+      start_time: startTime,
+      end_time: endTime,
       assignedStudents: studentsByCourse[course.id] || [],
     });
     setIsEditDialogOpen(true);
@@ -343,16 +357,45 @@ export default function CourseManagement() {
     }
     setIsLoading(true);
     try {
-      const { assignedStudents, ...courseData } = formData;
-      await updateCourse(editingCourse.id, {
-        ...courseData,
-        enrolled_count: assignedStudents.length,
-      });
-      await addStudentsToCourse(
-        editingCourse.id,
-        assignedStudents.map((s) => s.id)
+      const { assignedStudents } = formData;
+
+      // Diferencias: estudiantes actuales vs. los asignados en el editor
+      const currentStudentIds = (studentsByCourse[editingCourse.id] || []).map(
+        (s) => s.id
+      );
+      const newAssignedIds = assignedStudents.map((s) => s.id);
+
+      const toRemove = currentStudentIds.filter(
+        (id) => !newAssignedIds.includes(id)
       );
 
+      // Primero eliminar los que fueron removidos en el editor
+      if (toRemove.length > 0) {
+        await removeStudentsFromCourse(editingCourse.id, toRemove);
+      }
+
+      // Luego agregar los nuevos que no estaban previamente
+      if (newAssignedIds.length > 0) {
+        await addStudentsToCourse(editingCourse.id, newAssignedIds);
+      }
+
+      const updatePayload = {
+        name: formData.name,
+        language: formData.language,
+        level: formData.level,
+        code: formData.name.substring(0, 10).toUpperCase().replace(/\s/g, ""),
+        max_students: formData.max_students,
+        teacher_id: formData.teacher_id,
+        schedule: `${formData.days.join(", ")} | ${formData.start_time} - ${
+          formData.end_time
+        }`,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        room: editingCourse?.room || "TBD",
+        enrolled_count: assignedStudents.length,
+      };
+
+      await updateCourse(editingCourse.id, updatePayload);
       await loadCourses();
       setIsEditDialogOpen(false);
       setEditingCourse(null);
@@ -528,34 +571,39 @@ export default function CourseManagement() {
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="max_students">Máximo Estudiantes</Label>
-                <Input
-                  id="max_students"
-                  type="number"
-                  value={formData.max_students}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      max_students: Number.parseInt(e.target.value),
-                    })
-                  }
-                />
+                <Label>Días</Label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    "Lunes",
+                    "Martes",
+                    "Miércoles",
+                    "Jueves",
+                    "Viernes",
+                    "Sábado",
+                  ].map((day) => (
+                    <Button
+                      key={day}
+                      type="button"
+                      variant={
+                        formData.days.includes(day) ? "default" : "outline"
+                      }
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          days: prev.days.includes(day)
+                            ? prev.days.filter((d) => d !== day)
+                            : [...prev.days, day],
+                        }))
+                      }
+                    >
+                      {day}
+                    </Button>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="hours_per_week">Horas por día</Label>
-                <Input
-                  id="hours_per_week"
-                  type="number"
-                  value={formData.hours_per_week}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      hours_per_week: Number.parseInt(e.target.value),
-                    })
-                  }
-                />
-              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="start_date">Fecha de Inicio *</Label>
                 <Input
@@ -578,33 +626,7 @@ export default function CourseManagement() {
                   }
                 />
               </div>
-              <div className="col-span-2 space-y-2">
-                <Label htmlFor="days">Días</Label>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    "Lunes",
-                    "Martes",
-                    "Miércoles",
-                    "Jueves",
-                    "Viernes",
-                    "Sábado",
-                  ].map((day) => (
-                    <div key={day} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={`day-${day}`}
-                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                      <label
-                        htmlFor={`day-${day}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {day}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
+
               <div className="col-span-2 space-y-2">
                 <Label htmlFor="schedule">Horario</Label>
                 <div className="grid grid-cols-2 gap-4">
@@ -615,6 +637,10 @@ export default function CourseManagement() {
                     <Input
                       id="start_time"
                       type="time"
+                      value={formData.start_time}
+                      onChange={(e) =>
+                        setFormData({ ...formData, start_time: e.target.value })
+                      }
                       placeholder="Hora inicio"
                     />
                   </div>
@@ -622,7 +648,15 @@ export default function CourseManagement() {
                     <Label htmlFor="end_time" className="text-xs">
                       Hora fin
                     </Label>
-                    <Input id="end_time" type="time" placeholder="Hora fin" />
+                    <Input
+                      id="end_time"
+                      type="time"
+                      value={formData.end_time}
+                      onChange={(e) =>
+                        setFormData({ ...formData, end_time: e.target.value })
+                      }
+                      placeholder="Hora fin"
+                    />
                   </div>
                 </div>
               </div>
@@ -756,6 +790,7 @@ export default function CourseManagement() {
                 <SelectValue placeholder="Filtrar por nivel" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">Todos los niveles</SelectItem>
                 <SelectItem value="1">1</SelectItem>
                 <SelectItem value="2">2</SelectItem>
                 <SelectItem value="3">3</SelectItem>
@@ -800,18 +835,10 @@ export default function CourseManagement() {
                   {getTeacherName(course.teacher_id)}
                 </div>
                 <div className="flex items-center gap-4 text-sm text-gray-500">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    {course.duration_weeks}w
-                  </div>
+
                   <div className="flex items-center gap-1">
                     <Users className="h-4 w-4" />
-                    {studentsByCourse[course.id]?.length || 0} /{" "}
-                    {course.max_students}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    {course.hours_per_week}h/sem
+                    {studentsByCourse[course.id]?.length || 0}
                   </div>
                 </div>
                 {course.schedule && (
@@ -993,48 +1020,39 @@ export default function CourseManagement() {
                 </SelectContent>
               </Select>
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="edit-max_students">Máximo Estudiantes</Label>
-              <Input
-                id="edit-max_students"
-                type="number"
-                value={formData.max_students}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    max_students: Number.parseInt(e.target.value),
-                  })
-                }
-              />
+              <Label htmlFor="edit-days">Días</Label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  "Lunes",
+                  "Martes",
+                  "Miércoles",
+                  "Jueves",
+                  "Viernes",
+                  "Sábado",
+                ].map((day) => (
+                  <Button
+                    key={day}
+                    type="button"
+                    variant={
+                      formData.days.includes(day) ? "default" : "outline"
+                    }
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        days: prev.days.includes(day)
+                          ? prev.days.filter((d) => d !== day)
+                          : [...prev.days, day],
+                      }))
+                    }
+                  >
+                    {day}
+                  </Button>
+                ))}
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-duration_weeks">Duración (semanas)</Label>
-              <Input
-                id="edit-duration_weeks"
-                type="number"
-                value={formData.duration_weeks}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    duration_weeks: Number.parseInt(e.target.value),
-                  })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-hours_per_week">Horas por semana</Label>
-              <Input
-                id="edit-hours_per_week"
-                type="number"
-                value={formData.hours_per_week}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    hours_per_week: Number.parseInt(e.target.value),
-                  })
-                }
-              />
-            </div>
+
             <div className="space-y-2">
               <Label htmlFor="edit-start_date">
                 Cohorte - Fecha de Inicio *
@@ -1059,15 +1077,37 @@ export default function CourseManagement() {
                 }
               />
             </div>
+            
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="edit-schedule">Horario (texto)</Label>
-              <Input
-                id="edit-schedule"
-                value={formData.schedule}
-                onChange={(e) =>
-                  setFormData({ ...formData, schedule: e.target.value })
-                }
-              />
+              <Label htmlFor="edit-schedule">Horario</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-start_time" className="text-xs">
+                    Hora inicio
+                  </Label>
+                  <Input
+                    id="edit-start_time"
+                    type="time"
+                    value={formData.start_time}
+                    onChange={(e) =>
+                      setFormData({ ...formData, start_time: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-end_time" className="text-xs">
+                    Hora fin
+                  </Label>
+                  <Input
+                    id="edit-end_time"
+                    type="time"
+                    value={formData.end_time}
+                    onChange={(e) =>
+                      setFormData({ ...formData, end_time: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
             </div>
             {/* Sección para agregar estudiantes en el editor */}
             <div className="col-span-2 space-y-2">
@@ -1186,14 +1226,6 @@ export default function CourseManagement() {
                     {previewingCourse.level}
                   </Badge>
                 </div>
-                {previewingCourse.description && (
-                  <div>
-                    <h4 className="font-semibold text-gray-800">Descripción</h4>
-                    <p className="text-sm text-gray-600">
-                      {previewingCourse.description}
-                    </p>
-                  </div>
-                )}
                 <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
                   <div className="space-y-1">
                     <p className="font-medium">Idioma:</p>
@@ -1208,16 +1240,16 @@ export default function CourseManagement() {
                     <p>{getTeacherName(previewingCourse.teacher_id)}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="font-medium">Máx. Estudiantes:</p>
-                    <p>{previewingCourse.max_students}</p>
+                    <p className="font-medium">Número de estudiantes:</p>
+                    <p>{studentsByCourse[previewingCourse.id]?.length || 0}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="font-medium">Duración:</p>
-                    <p>{previewingCourse.duration_weeks} semanas</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="font-medium">Horas/semana:</p>
-                    <p>{previewingCourse.hours_per_week}h</p>
+                    <p className="font-medium">Días:</p>
+                    <p>
+                      {(previewingCourse.schedule || "")
+                        .split("|")[0]
+                        ?.trim() || "—"}
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-2 border-t pt-4">

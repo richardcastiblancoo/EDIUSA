@@ -180,7 +180,7 @@ const CSVUploadDialog = ({
             name,
             email,
             password,
-            role: role as UserRole,
+            role: (["coordinator", "teacher", "student", "assistant"].includes(role as UserRole) ? role : "student") as UserRole,
             phone: phone || undefined,
             document_number: document_number || undefined,
           };

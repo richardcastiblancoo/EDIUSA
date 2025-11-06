@@ -273,3 +273,50 @@ USING (
     AND role IN ('teacher', 'coordinator')
   )
 );
+
+
+--------------------------
+-- =====================================================
+-- 🧩 CREAR TABLA DE CATEGORÍAS DE PROGRAMAS
+-- =====================================================
+CREATE TABLE IF NOT EXISTS program_categories (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name VARCHAR(255) UNIQUE NOT NULL,         -- Nombre de la categoría (ej: Ingeniería)
+  description TEXT,                          -- Descripción opcional
+  status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive')), -- Estado
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- ⚙️ CREAR FUNCIÓN Y TRIGGER PARA updated_at
+-- =====================================================
+CREATE OR REPLACE FUNCTION update_program_categories_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_program_categories_timestamp
+BEFORE UPDATE ON program_categories
+FOR EACH ROW
+EXECUTE FUNCTION update_program_categories_timestamp();
+
+-- =====================================================
+-- 📘 INSERTAR CATEGORÍAS DE PROGRAMAS
+-- =====================================================
+INSERT INTO program_categories (name, description)
+VALUES
+  ('Administración de Empresas y Transformación Digital', 'Programa orientado a la gestión empresarial moderna y la transformación digital.'),
+  ('Contaduría Pública', 'Formación en contabilidad, auditoría y finanzas empresariales.'),
+  ('Finanzas, Fintech y Comercio Exterior', 'Enfocado en finanzas internacionales, tecnología financiera y comercio global.'),
+  ('Marketing y Negocios Internacionales', 'Especialización en marketing estratégico y comercio internacional.'),
+  ('Comunicación Social y Periodismo', 'Formación en medios, comunicación digital y periodismo moderno.'),
+  ('Diseño Digital', 'Programa centrado en el diseño gráfico, UX/UI y medios digitales.'),
+  ('Psicología', 'Estudios enfocados en el comportamiento humano, terapias y desarrollo personal.'),
+  ('Derecho', 'Formación en legislación, jurisprudencia y ética profesional.'),
+  ('Ingeniería Industrial', 'Optimización de procesos productivos, gestión de operaciones y eficiencia organizacional.');
+ALTER TABLE users
+ADD COLUMN program_category TEXT;

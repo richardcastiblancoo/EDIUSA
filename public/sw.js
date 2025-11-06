@@ -1,4 +1,4 @@
-const CACHE_NAME = "centro-idiomas-v1"
+const CACHE_NAME = "Escuela de Idiomas, Universidad Sergio Arboleda Caribe-v1"
 const urlsToCache = ["/", "/dashboard/student", "/dashboard/teacher", "/dashboard/coordinator", "/manifest.json"]
 
 self.addEventListener("install", (event) => {

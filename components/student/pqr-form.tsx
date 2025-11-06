@@ -7,7 +7,6 @@ import { deletePQR, createPQR, getPQRsByStudent } from "@/lib/pqrs";
 import { getStudentCourses } from "@/lib/courses";
 import type { PQR } from "@/lib/supabase";
 import type { CourseWithTeacher } from "@/lib/courses";
-
 import {
   Card,
   CardContent,
@@ -19,7 +18,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -46,11 +51,17 @@ import {
   ArrowLeft,
   ArrowRight,
   Trash2,
-  // === CORRECCIÓN APLICADA AQUÍ ===
-  Users, 
+  Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import DashboardLayout from "@/components/layout/dashboard-layout";
 
@@ -58,7 +69,6 @@ interface PQRFormProps {
   studentId: string;
 }
 
-// Animation variants for Framer Motion
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
@@ -82,11 +92,13 @@ export default function PQRForm({ studentId }: PQRFormProps) {
   });
   const [submitting, setSubmitting] = useState(false);
   const [selectedPqr, setSelectedPqr] = useState<PQR | null>(null);
-  const [alert, setAlert] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [alert, setAlert] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [studentName, setStudentName] = useState("");
 
-  // New state for pagination
   const [currentPage, setCurrentPage] = useState(1);
   const pqrsPerPage = 6;
   const totalPages = Math.ceil(pqrs.length / pqrsPerPage);
@@ -101,11 +113,10 @@ export default function PQRForm({ studentId }: PQRFormProps) {
         ]);
         setPqrs(pqrsData);
         setCourses(coursesData);
-        
+
         if (pqrsData.length > 0 && pqrsData[0].students?.name) {
           setStudentName(pqrsData[0].students.name);
         }
-
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -120,7 +131,9 @@ export default function PQRForm({ studentId }: PQRFormProps) {
     }
   }, [studentId]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -146,23 +159,29 @@ export default function PQRForm({ studentId }: PQRFormProps) {
     e.preventDefault();
     setAlert(null);
     if (!formData.courseId || !formData.subject || !formData.message) {
-      setAlert({ message: "Por favor completa todos los campos requeridos.", type: "error" });
+      setAlert({
+        message: "Por favor completa todos los campos requeridos.",
+        type: "error",
+      });
       return;
     }
 
     setSubmitting(true);
     try {
-      const selectedCourse = courses.find((course) => course.id === formData.courseId);
+      const selectedCourse = courses.find(
+        (course) => course.id === formData.courseId
+      );
       if (!selectedCourse) {
         throw new Error("No se pudo encontrar el curso seleccionado");
       }
 
-      const teacherId = formData.recipient === "teacher" ? selectedCourse.teacher_id : null;
+      const teacherId =
+        formData.recipient === "teacher" ? selectedCourse.teacher_id : null;
 
       if (formData.recipient === "teacher" && !teacherId) {
         throw new Error("Este curso no tiene un profesor asignado");
       }
-      
+
       const isCoordinator = formData.recipient === "coordinator";
 
       await createPQR(
@@ -188,12 +207,15 @@ export default function PQRForm({ studentId }: PQRFormProps) {
       if ("Notification" in window && Notification.permission === "granted") {
         new Notification("Nuevo PQR", {
           body: `Se ha enviado un nuevo PQR: ${formData.subject}`,
-          icon: "/placeholder-logo.png"
+          icon: "/placeholder-logo.png",
         });
       }
     } catch (error: any) {
       console.error("Error al enviar PQR:", error);
-      setAlert({ message: error.message || "Error al enviar el PQR. Inténtalo de nuevo.", type: "error" });
+      setAlert({
+        message: error.message || "Error al enviar el PQR. Inténtalo de nuevo.",
+        type: "error",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -207,12 +229,18 @@ export default function PQRForm({ studentId }: PQRFormProps) {
     if (!selectedPqr) return;
 
     try {
-      if (selectedPqr.status !== 'pending' && selectedPqr.status !== 'in_progress') {
-        setAlert({ message: "Solo se pueden eliminar PQRs pendientes o en progreso.", type: "error" });
+      if (
+        selectedPqr.status !== "pending" &&
+        selectedPqr.status !== "in_progress"
+      ) {
+        setAlert({
+          message: "Solo se pueden eliminar PQRs pendientes o en progreso.",
+          type: "error",
+        });
         setIsDeleteAlertOpen(false);
         return;
       }
-      
+
       const success = await deletePQR(selectedPqr.id);
       if (success) {
         const updatedPqrs = await getPQRsByStudent(studentId);
@@ -233,11 +261,11 @@ export default function PQRForm({ studentId }: PQRFormProps) {
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case "pending":
-        return "warning"; 
+        return "warning";
       case "in_progress":
         return "default";
       case "resolved":
-        return "success"; 
+        return "success";
       case "closed":
         return "secondary";
       default:
@@ -246,8 +274,9 @@ export default function PQRForm({ studentId }: PQRFormProps) {
   };
 
   const getRecipientName = (pqr: PQR) => {
-    return pqr.is_coordinator ? "Coordinador" : (pqr.teachers?.name || "Profesor (No asignado)");
-  }
+    // Si no hay teacher_id, el destinatario es el coordinador
+    return pqr.teacher_id ? (pqr.teachers?.name || "Profesor") : "Coordinador";
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -266,14 +295,17 @@ export default function PQRForm({ studentId }: PQRFormProps) {
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' });
+    return date.toLocaleDateString("es-ES", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   };
 
   const getStatusCount = (status: string) => {
     return pqrs.filter((pqr) => pqr.status === status).length;
   };
 
-  // Logic for pagination
   const indexOfLastPqr = currentPage * pqrsPerPage;
   const indexOfFirstPqr = indexOfLastPqr - pqrsPerPage;
   const currentPqrs = pqrs.slice(indexOfFirstPqr, indexOfLastPqr);
@@ -302,12 +334,13 @@ export default function PQRForm({ studentId }: PQRFormProps) {
     <DashboardLayout userRole="student">
       <div className="space-y-6">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Peticiones, Quejas y Reclamos</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Peticiones, Quejas y Reclamos
+          </h2>
           <p className="text-muted-foreground">
             Envía tus inquietudes a coordinadores y profesores.
           </p>
         </div>
-
         <AnimatePresence>
           {alert && (
             <motion.div
@@ -335,9 +368,8 @@ export default function PQRForm({ studentId }: PQRFormProps) {
             </motion.div>
           )}
         </AnimatePresence>
-
         <motion.div
-          className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+          className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" /* Modificado de lg:grid-cols-4 a lg:grid-cols-3 */
           initial="hidden"
           animate="visible"
           variants={{
@@ -351,11 +383,15 @@ export default function PQRForm({ studentId }: PQRFormProps) {
           <motion.div variants={cardVariants}>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Pendientes
+                </CardTitle>
                 <AlertCircle className="h-4 w-4 text-orange-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{getStatusCount("pending")}</div>
+                <div className="text-2xl font-bold">
+                  {getStatusCount("pending")}
+                </div>
                 <p className="text-xs text-muted-foreground">Sin respuesta</p>
               </CardContent>
             </Card>
@@ -363,27 +399,22 @@ export default function PQRForm({ studentId }: PQRFormProps) {
           <motion.div variants={cardVariants}>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">En Proceso</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  En Proceso
+                </CardTitle>
                 <CircleDashed className="h-4 w-4 text-blue-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{getStatusCount("in_progress")}</div>
-                <p className="text-xs text-muted-foreground">Siendo gestionados</p>
+                <div className="text-2xl font-bold">
+                  {getStatusCount("in_progress")}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Siendo gestionados
+                </p>
               </CardContent>
             </Card>
           </motion.div>
-          <motion.div variants={cardVariants}>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Resueltos</CardTitle>
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{getStatusCount("resolved")}</div>
-                <p className="text-xs text-muted-foreground">Con respuesta</p>
-              </CardContent>
-            </Card>
-          </motion.div>
+          {/* Tarjeta "Resueltos" ELIMINADA */}
           <motion.div variants={cardVariants}>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -391,15 +422,21 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                 <XCircle className="h-4 w-4 text-gray-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{getStatusCount("closed")}</div>
+                <div className="text-2xl font-bold">
+                  {getStatusCount("closed")}
+                </div>
                 <p className="text-xs text-muted-foreground">Finalizados</p>
               </CardContent>
             </Card>
           </motion.div>
         </motion.div>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <motion.div initial="hidden" animate="visible" variants={cardVariants} className="lg:col-span-1">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={cardVariants}
+            className="lg:col-span-1"
+          >
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -414,32 +451,36 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="course">Curso</Label>
-                    <Select value={formData.courseId} onValueChange={handleCourseChange}>
+                    <Select
+                      value={formData.courseId}
+                      onValueChange={handleCourseChange}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecciona un curso" />
                       </SelectTrigger>
                       <SelectContent>
                         {courses.map((course) => (
                           <SelectItem key={course.id} value={course.id}>
-                            {course.name} - {course.teachers?.name || "Sin profesor"}
+                            {course.name} -{" "}
+                            {course.teachers?.name || "Sin profesor"}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                     {formData.courseId && (
                       <p className="text-sm text-muted-foreground mt-1">
-                        Curso seleccionado: {courses.find(c => c.id === formData.courseId)?.name || ""}
+                        Curso seleccionado:{" "}
+                        {courses.find((c) => c.id === formData.courseId)
+                          ?.name || ""}
                       </p>
                     )}
                   </div>
-                  
                   <div className="space-y-2">
                     <Label htmlFor="student">Estudiante</Label>
                     <p className="text-sm font-medium">
                       {studentName || "Cargando nombre..."}
                     </p>
                   </div>
-
                   <div className="space-y-2">
                     <Label>Dirigido a</Label>
                     <RadioGroup
@@ -457,7 +498,6 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                       </div>
                     </RadioGroup>
                   </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="subject">Asunto</Label>
                     <Input
@@ -468,7 +508,6 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                       placeholder="Escribe un asunto breve"
                     />
                   </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="message">Mensaje</Label>
                     <Textarea
@@ -480,8 +519,11 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                       rows={5}
                     />
                   </div>
-
-                  <Button type="submit" className="w-full" disabled={submitting}>
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={submitting}
+                  >
                     <Send className="mr-2 h-4 w-4" />
                     {submitting ? "Enviando..." : "Enviar PQR"}
                   </Button>
@@ -489,8 +531,12 @@ export default function PQRForm({ studentId }: PQRFormProps) {
               </CardContent>
             </Card>
           </motion.div>
-
-          <motion.div initial="hidden" animate="visible" variants={cardVariants} className="lg:col-span-2">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={cardVariants}
+            className="lg:col-span-2"
+          >
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -509,6 +555,7 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                         <TableRow>
                           <TableHead>Asunto</TableHead>
                           <TableHead>Curso</TableHead>
+                          <TableHead>Destinatario</TableHead>
                           <TableHead>Estudiante</TableHead>
                           <TableHead>Estado</TableHead>
                           <TableHead className="text-right">Fecha</TableHead>
@@ -519,23 +566,29 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                           <TableRow
                             key={pqr.id}
                             onClick={() => handleSelectPqr(pqr)}
-                            className={`cursor-pointer ${selectedPqr?.id === pqr.id ? "bg-accent" : ""}`}
+                            className={`cursor-pointer ${
+                              selectedPqr?.id === pqr.id ? "bg-accent" : ""
+                            }`}
                           >
-                            <TableCell className="font-medium">{pqr.subject}</TableCell>
+                            <TableCell className="font-medium">
+                              {pqr.subject}
+                            </TableCell>
                             <TableCell>{pqr.courses?.name || "N/A"}</TableCell>
+                            <TableCell>{getRecipientName(pqr)}</TableCell>
                             <TableCell>{pqr.students?.name || "N/A"}</TableCell>
                             <TableCell>
-                              <Badge variant={getStatusBadgeVariant(pqr.status)} className="flex items-center gap-1 w-fit">
+                              <Badge variant="outline" className="flex items-center gap-1">
                                 {getStatusIcon(pqr.status)}
-                                {pqr.status.replace(/_/g, ' ').toUpperCase()}
+                                <span className="capitalize">{pqr.status.replace("_", " ")}</span>
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-right">{formatTimeAgo(pqr.created_at)}</TableCell>
+                            <TableCell className="text-right">
+                              {new Date(pqr.created_at).toLocaleDateString()}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
-                    {/* Pagination Controls */}
                     {pqrs.length > pqrsPerPage && (
                       <div className="flex justify-end items-center gap-2 mt-4">
                         <Button
@@ -575,12 +628,15 @@ export default function PQRForm({ studentId }: PQRFormProps) {
             </Card>
           </motion.div>
         </div>
-
         <AnimatePresence>
           {selectedPqr && (
             <motion.div
               key="pqr-detail-card"
-              variants={detailCardVariants}
+              variants={{
+                hidden: { opacity: 0, x: 100 },
+                visible: { opacity: 1, x: 0, transition: { duration: 0.5, ease: "easeOut" } },
+                exit: { opacity: 0, x: 100, transition: { duration: 0.3, ease: "easeIn" } },
+              }}
               initial="hidden"
               animate="visible"
               exit="exit"
@@ -598,29 +654,32 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <h4 className="font-semibold text-lg">{selectedPqr.subject}</h4>
-                    
+                    <h4 className="font-semibold text-lg">
+                      {selectedPqr.subject}
+                    </h4>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="h-4 w-4" />
-                      <span>Creado: {new Date(selectedPqr.created_at).toLocaleDateString()}</span>
+                      <span>
+                        Creado:{" "}
+                        {new Date(selectedPqr.created_at).toLocaleDateString()}
+                      </span>
                     </div>
-                    
-                    {/* === DETALLE DE ESTUDIANTE Y CURSO CORREGIDO === */}
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Users className="h-4 w-4" />
-                      <span><strong>Enviado por:</strong> {selectedPqr.students?.name || "No disponible"}</span>
+                      <span>
+                        <strong>Enviado por:</strong>{" "}
+                        {selectedPqr.students?.name || "No disponible"}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MessageSquare className="h-4 w-4" />
                       <span>Curso: {selectedPqr.courses?.name || "N/A"}</span>
                     </div>
-                    {/* ----------------------------------------------- */}
-
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MessageSquare className="h-4 w-4" />
                       <span>Destinatario: {getRecipientName(selectedPqr)}</span>
                     </div>
-                    
+
                     <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md text-sm">
                       {selectedPqr.message}
                     </div>
@@ -636,8 +695,11 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                   )}
 
                   <div className="flex justify-end gap-2 mt-4">
-                    {selectedPqr.status !== 'closed' && (
-                      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+                    {selectedPqr.status !== "closed" && (
+                      <AlertDialog
+                        open={isDeleteAlertOpen}
+                        onOpenChange={setIsDeleteAlertOpen}
+                      >
                         <AlertDialogTrigger asChild>
                           <Button variant="destructive">
                             <Trash2 className="mr-2 h-4 w-4" />
@@ -646,20 +708,27 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+                            <AlertDialogTitle>
+                              ¿Estás absolutamente seguro?
+                            </AlertDialogTitle>
                             <AlertDialogDescription>
-                              Esta acción no se puede deshacer. Esto eliminará permanentemente
-                              tu PQR de nuestros servidores.
+                              Esta acción no se puede deshacer. Esto eliminará
+                              permanentemente tu PQR de nuestros servidores.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDelete}>Continuar</AlertDialogAction>
+                            <AlertDialogAction onClick={handleDelete}>
+                              Continuar
+                            </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
                     )}
-                    <Button variant="outline" onClick={() => setSelectedPqr(null)}>
+                    <Button
+                      variant="outline"
+                      onClick={() => setSelectedPqr(null)}
+                    >
                       Cerrar
                     </Button>
                   </div>

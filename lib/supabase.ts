@@ -98,7 +98,7 @@ export interface PQR {
   teacher_id: string;
   subject: string;
   message: string;
-  status: "pending" | "in_progress" | "resolved" | "closed";
+  status: "pending" | "in_progress" | "closed";
   teacher_response?: string;
   coordinator_response?: string;
   resolved_at?: string;
