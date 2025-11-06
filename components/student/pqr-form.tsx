@@ -369,7 +369,7 @@ export default function PQRForm({ studentId }: PQRFormProps) {
           )}
         </AnimatePresence>
         <motion.div
-          className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" /* Modificado de lg:grid-cols-4 a lg:grid-cols-3 */
+          className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
           initial="hidden"
           animate="visible"
           variants={{
@@ -380,7 +380,7 @@ export default function PQRForm({ studentId }: PQRFormProps) {
             },
           }}
         >
-          <motion.div variants={cardVariants}>
+          <motion.div variants={cardVariants} whileHover={{ scale: 1.03, boxShadow: "0px 5px 10px rgba(0, 0, 0, 0.1)" }}>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
@@ -396,7 +396,7 @@ export default function PQRForm({ studentId }: PQRFormProps) {
               </CardContent>
             </Card>
           </motion.div>
-          <motion.div variants={cardVariants}>
+          <motion.div variants={cardVariants} whileHover={{ scale: 1.03, boxShadow: "0px 5px 10px rgba(0, 0, 0, 0.1)" }}>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
@@ -414,8 +414,7 @@ export default function PQRForm({ studentId }: PQRFormProps) {
               </CardContent>
             </Card>
           </motion.div>
-          {/* Tarjeta "Resueltos" ELIMINADA */}
-          <motion.div variants={cardVariants}>
+          <motion.div variants={cardVariants} whileHover={{ scale: 1.03, boxShadow: "0px 5px 10px rgba(0, 0, 0, 0.1)" }}>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Cerrados</CardTitle>
@@ -563,12 +562,14 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                       </TableHeader>
                       <TableBody>
                         {currentPqrs.map((pqr) => (
-                          <TableRow
+                          <motion.tr
                             key={pqr.id}
                             onClick={() => handleSelectPqr(pqr)}
                             className={`cursor-pointer ${
                               selectedPqr?.id === pqr.id ? "bg-accent" : ""
                             }`}
+                            whileHover={{ scale: 1.02, backgroundColor: "rgba(0,0,0,0.05)" }} // Animación de hover para las filas
+                            transition={{ duration: 0.1 }}
                           >
                             <TableCell className="font-medium">
                               {pqr.subject}
@@ -585,7 +586,7 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                             <TableCell className="text-right">
                               {new Date(pqr.created_at).toLocaleDateString()}
                             </TableCell>
-                          </TableRow>
+                          </motion.tr>
                         ))}
                       </TableBody>
                     </Table>
