@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     siteName: "Escuela de Idiomas, Universidad Sergio Arboleda Caribe ",
     images: [
       {
-        url: "/ciusa.png",
+        url: "/ciusa-2.webp",
         width: 1200,
         height: 630,
         alt: "Escuela de Idiomas, Universidad Sergio Arboleda Caribe ",
@@ -42,7 +42,7 @@ export default function RootLayout({
     <html lang="es">
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <link rel="icon" href="/ciusa.png" />
+        <link rel="icon" href="/ciusa-2.webp" />
         <meta
           name="description"
           content="Sistema de gestión académica para el Centro de Idiomas de la Universidad Sergio Arboleda. Plataforma integral para la gestión académica y administrativa del Centro de Idiomas de la Universidad Sergio Arboleda. Gestión de estudiantes y profesores Administración de cursos y exámenes Seguimiento académico integral."
@@ -65,7 +65,7 @@ export default function RootLayout({
           name="apple-mobile-web-app-title"
           content="Escuela de Idiomas, Universidad Sergio Arboleda Caribe "
         />
-        <link rel="apple-touch-icon" href="/icon-192x192.png" />
+        <link rel="apple-touch-icon" href="/ciusa-2.webp" />
       </head>
       <body className={inter.className}>
         <AuthProvider>

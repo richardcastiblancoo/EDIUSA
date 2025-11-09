@@ -1,7 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { getUserImage } from "@/lib/images";
 
-// Definición de tipos para el estudiante, incluyendo campos de la tabla `users`
 export type Student = {
   id: string;
   name: string;
@@ -9,12 +8,10 @@ export type Student = {
   documentId: string | null;
   photoUrl: string;
   phone: string | null;
-  academicLevel: string | null; // Mapeado de 'academic_level'
-  // ¡Campo añadido!
+  academicLevel: string | null;
   status: "active" | "inactive" | "graduado" | "egresado" | null;
 };
 
-// Define una estructura para los detalles del estudiante, incluyendo su curso y profesor
 export type StudentDetails = {
   id: string;
   name: string;
@@ -29,9 +26,7 @@ export type StudentDetails = {
   } | null;
 };
 
-// Definición de tipos para asistencia y notas
 export type AttendanceStatus = "Presente" | "Ausente" | "Tarde";
-
 export type AttendanceRecord = {
   id?: string;
   enrollment_id: string;
@@ -60,12 +55,10 @@ export async function getStudentsForCourse(
 ): Promise<Student[]> {
   const { data, error } = await supabase
     .from("enrollments")
-    // Consulta: Se agregaron 'phone', 'academic_level' y 'status'
     .select(
       "*, users!inner(id, name, email, document_number, photo, phone, academic_level, status)"
     )
     .eq("course_id", courseId);
-
   if (error) {
     console.error("Error al obtener estudiantes:", error);
     return [];
@@ -77,7 +70,6 @@ export async function getStudentsForCourse(
         (await getUserImage(enrollment.users.id, "avatar")) ||
         enrollment.users.photo ||
         "/placeholder-user.jpg";
-
       return {
         id: enrollment.users.id,
         name: enrollment.users.name,
@@ -90,7 +82,6 @@ export async function getStudentsForCourse(
       };
     })
   );
-
   return studentsWithImages as Student[];
 }
 
@@ -116,8 +107,6 @@ export async function getStudentsForTeacher(teacherId: string): Promise<any[]> {
       .eq("courses.teacher_id", teacherId);
 
     if (error) throw error;
-
-    // Eliminar duplicados y enriquecer con photoUrl
     const studentsMap = new Map<
       string,
       Student & { enrollmentId: string; courseId: string }
@@ -131,7 +120,6 @@ export async function getStudentsForTeacher(teacherId: string): Promise<any[]> {
             (await getUserImage(studentId, "avatar")) ||
             enrollment.users.photo ||
             "/placeholder-user.jpg";
-
           studentsMap.set(studentId, {
             id: studentId,
             enrollmentId: enrollment.id,
@@ -174,9 +162,7 @@ export async function registerAttendance(
       .eq("enrollment_id", enrollmentId)
       .eq("lesson_id", lessonId)
       .maybeSingle();
-
     let result;
-
     if (existingRecord) {
       const { data, error } = await supabase
         .from("attendance")
@@ -184,7 +170,6 @@ export async function registerAttendance(
         .eq("id", existingRecord.id)
         .select()
         .single();
-
       if (error) throw error;
       result = data;
     } else {
@@ -198,11 +183,9 @@ export async function registerAttendance(
         })
         .select()
         .single();
-
       if (error) throw error;
       result = data;
     }
-
     return result;
   } catch (error) {
     console.error("Error al registrar asistencia:", error);
@@ -233,9 +216,7 @@ export async function registerGrade(
       .eq("enrollment_id", enrollmentId)
       .eq("lesson_id", lessonId)
       .maybeSingle();
-
     let result;
-
     if (existingRecord) {
       const { data, error } = await supabase
         .from("grades")
@@ -246,7 +227,6 @@ export async function registerGrade(
         .eq("id", existingRecord.id)
         .select()
         .single();
-
       if (error) throw error;
       result = data;
     } else {
@@ -260,23 +240,19 @@ export async function registerGrade(
         })
         .select()
         .single();
-
       if (error) throw error;
       result = data;
     }
-
     const { data: enrollment } = await supabase
       .from("enrollments")
       .select("student_id, courses(name)")
       .eq("id", enrollmentId)
       .single();
-
     const { data: lesson } = await supabase
       .from("lessons")
       .select("title")
       .eq("id", lessonId)
       .single();
-
     if (
       typeof window !== "undefined" &&
       "Notification" in window &&
@@ -287,7 +263,6 @@ export async function registerGrade(
         icon: "/placeholder-logo.png",
       });
     }
-
     return result;
   } catch (error) {
     console.error("Error al registrar nota:", error);
@@ -300,12 +275,12 @@ export async function registerGrade(
  * @param courseId El ID del curso cuyas inscripciones se eliminarán.
  * @returns El resultado de la operación.
  */
+
 export async function removeEnrollmentsForCourse(courseId: string) {
   const { data: enrollments, error: fetchError } = await supabase
     .from("enrollments")
     .select("id")
     .eq("course_id", courseId);
-
   if (fetchError) {
     throw fetchError;
   }
@@ -362,7 +337,6 @@ export async function getStudentDetailsWithTeacher(
       )
       .eq("student_id", studentId)
       .single();
-
     if (error) {
       if (error.code === "PGRST116") {
         return null;
@@ -403,24 +377,18 @@ export async function searchStudents(query: string): Promise<Student[]> {
   const searchTerm = query.toLowerCase().trim();
 
   try {
-    // Consulta para buscar por documento (exacto)
     let { data: documentMatch, error: documentError } = await supabase
       .from("users")
-      // Selección de campos: Se agregaron 'phone', 'academic_level' y 'status'
       .select(
         "id, name, email, document_number, photo, phone, academic_level, status"
       )
       .eq("role", "student")
       .eq("document_number", searchTerm)
       .limit(10);
-
     if (documentError) throw documentError;
-
     if (!documentMatch || documentMatch.length === 0) {
-      // Consulta para buscar por LIKE (nombre, documento, email)
       const { data, error } = await supabase
         .from("users")
-        // Selección de campos: Se agregaron 'phone', 'academic_level' y 'status'
         .select(
           "id, name, email, document_number, photo, phone, academic_level, status"
         )
@@ -429,7 +397,6 @@ export async function searchStudents(query: string): Promise<Student[]> {
           `name.ilike.%${searchTerm}%,document_number.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`
         )
         .limit(10);
-
       if (error) throw error;
       documentMatch = data;
     }
@@ -458,33 +425,29 @@ export async function searchStudents(query: string): Promise<Student[]> {
  * @param studentIds Array con los IDs de los estudiantes a añadir.
  * @returns Un booleano indicando si la operación fue exitosa.
  */
+
 export async function addStudentsToCourse(
   courseId: string,
   studentIds: string[]
 ): Promise<boolean> {
   try {
     if (!studentIds.length) return true;
-
     const { data: existingEnrollments, error: checkError } = await supabase
       .from("enrollments")
       .select("student_id")
       .eq("course_id", courseId)
       .in("student_id", studentIds);
-
     if (checkError) {
       console.error("Error al verificar inscripciones existentes:", checkError);
       return false;
     }
-
     const existingStudentIds = existingEnrollments.map((e) => e.student_id);
     const newStudentIds = studentIds.filter(
       (id) => !existingStudentIds.includes(id)
     );
-
     if (newStudentIds.length === 0) {
       return true;
     }
-
     const enrollments = newStudentIds.map((studentId) => ({
       id: crypto.randomUUID(),
       course_id: courseId,
@@ -492,14 +455,11 @@ export async function addStudentsToCourse(
       enrollment_date: new Date().toISOString(),
       status: "active",
     }));
-
     const { error } = await supabase.from("enrollments").insert(enrollments);
-
     if (error) {
       console.error("Error al añadir estudiantes al curso:", error);
       return false;
     }
-
     return true;
   } catch (error) {
     console.error("Error al añadir estudiantes al curso:", error);
@@ -513,6 +473,7 @@ export async function addStudentsToCourse(
  * @param lessonId ID de la lección (opcional)
  * @returns Lista de registros de calificaciones
  */
+
 export async function getStudentGrades(
   enrollmentId: string,
   lessonId?: string
@@ -522,13 +483,10 @@ export async function getStudentGrades(
       .from("grades")
       .select("*")
       .eq("enrollment_id", enrollmentId);
-
     if (lessonId) {
       query = query.eq("lesson_id", lessonId);
     }
-
     const { data, error } = await query;
-
     if (error) throw error;
     return data || [];
   } catch (error) {
@@ -543,6 +501,7 @@ export async function getStudentGrades(
  * @param lessonId ID de la lección (opcional)
  * @returns Lista de registros de asistencia
  */
+
 export async function getStudentAttendance(
   enrollmentId: string,
   lessonId?: string
@@ -552,13 +511,10 @@ export async function getStudentAttendance(
       .from("attendance")
       .select("*")
       .eq("enrollment_id", enrollmentId);
-
     if (lessonId) {
       query = query.eq("lesson_id", lessonId);
     }
-
     const { data, error } = await query;
-
     if (error) throw error;
     return data || [];
   } catch (error) {
@@ -575,6 +531,7 @@ export async function getStudentAttendance(
  * @param courseId ID del curso.
  * @returns Lista de lecciones.
  */
+
 export async function getLessonsForCourse(courseId: string): Promise<any[]> {
   try {
     const { data, error } = await supabase
@@ -582,7 +539,6 @@ export async function getLessonsForCourse(courseId: string): Promise<any[]> {
       .select("id, title") // Changed 'name' to 'title'
       .eq("course_id", courseId)
       .order("created_at", { ascending: true });
-
     if (error) throw error;
     return data || [];
   } catch (error) {
@@ -596,10 +552,10 @@ export async function getLessonsForCourse(courseId: string): Promise<any[]> {
  * @param gradeId ID de la calificación a eliminar
  * @returns true si se eliminó correctamente, false si hubo un error
  */
+
 export async function deleteGrade(gradeId: string): Promise<boolean> {
   try {
     const { error } = await supabase.from("grades").delete().eq("id", gradeId);
-
     if (error) throw error;
     return true;
   } catch (error) {
@@ -613,13 +569,13 @@ export async function deleteGrade(gradeId: string): Promise<boolean> {
  * @param attendanceId ID del registro de asistencia a eliminar
  * @returns true si se eliminó correctamente, false si hubo un error
  */
+
 export async function deleteAttendance(attendanceId: string): Promise<boolean> {
   try {
     const { error } = await supabase
       .from("attendance")
       .delete()
       .eq("id", attendanceId);
-
     if (error) throw error;
     return true;
   } catch (error) {
@@ -627,28 +583,23 @@ export async function deleteAttendance(attendanceId: string): Promise<boolean> {
     return false;
   }
 }
-
 export async function removeStudentsFromCourse(
   courseId: string,
   studentIds: string[]
 ): Promise<boolean> {
   try {
     if (!studentIds.length) return true;
-
     const { data: enrollments, error: fetchError } = await supabase
       .from("enrollments")
       .select("id")
       .eq("course_id", courseId)
       .in("student_id", studentIds);
-
     if (fetchError) {
       console.error("Error al obtener inscripciones a eliminar:", fetchError);
       return false;
     }
-
     const enrollmentIds = (enrollments || []).map((e: { id: string }) => e.id);
     if (enrollmentIds.length === 0) return true;
-
     const { error: attendanceError } = await supabase
       .from("attendance")
       .delete()
@@ -657,7 +608,6 @@ export async function removeStudentsFromCourse(
       console.error("Error al eliminar asistencia:", attendanceError);
       return false;
     }
-
     const { error: gradesError } = await supabase
       .from("grades")
       .delete()
@@ -666,7 +616,6 @@ export async function removeStudentsFromCourse(
       console.error("Error al eliminar notas:", gradesError);
       return false;
     }
-
     const { error: enrollmentsDeleteError } = await supabase
       .from("enrollments")
       .delete()
@@ -675,7 +624,6 @@ export async function removeStudentsFromCourse(
       console.error("Error al eliminar inscripciones:", enrollmentsDeleteError);
       return false;
     }
-
     return true;
   } catch (error) {
     console.error("Error al eliminar estudiantes del curso:", error);

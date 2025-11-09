@@ -291,7 +291,7 @@ export default function DashboardLayout({
               className="flex items-center space-x-3 transition-opacity duration-300"
             >
               <img
-                src="/ciusa.png"
+                src="/ciusa-2.webp"
                 width={70}
                 height={70}
                 alt="logo ediusa"

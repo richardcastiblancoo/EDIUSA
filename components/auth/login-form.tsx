@@ -285,7 +285,7 @@ export default function LoginForm() {
           <div className="relative flex flex-col items-center justify-center space-y-4">
             {/* Logo y Títulos Fijos */}
             <img 
-              src="/ciusa.png" 
+              src="/ciusa-2.webp" 
               alt="Logo CIUSA" 
               width={120} 
               // Animación cinematográfica
@@ -333,7 +333,7 @@ export default function LoginForm() {
             {/* Contenido de Bienvenida - TÍTULO Y DESCRIPCIÓN ACTUALIZADOS AQUÍ */}
             <div className="mb-10">
               <div className="flex items-center space-x-3 mb-4">
-                <img src="/ciusa.png" width={50} alt="Logo CIUSA" className="rounded-full shadow-lg" />
+                <img src="/ciusa-2.webp" width={100} height={70} alt="Logo CIUSA" />
                 <span className="text-sm font-semibold text-white/80">
                       Escuela de Idiomas, Universidad Sergio Arboleda Caribe
                 </span>

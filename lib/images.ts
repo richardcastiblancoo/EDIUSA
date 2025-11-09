@@ -1,4 +1,5 @@
 import { supabase } from "./supabase"
+
 export interface UserImage {
   id: string
   user_id: string
