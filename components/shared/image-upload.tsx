@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Importado AlertTitle
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; 
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,7 +32,6 @@ import {
   Trash2,
 } from "lucide-react";
 import { uploadImage, deleteUserImage } from "@/lib/images";
-import { createClient } from "@supabase/supabase-js";
 interface ImageUploadProps {
   userId: string;
   imageType: "avatar" | "logo" | "banner";
@@ -117,8 +116,8 @@ export default function ImageUpload({
       const uploadedUrl = await uploadImage(selectedFile, userId, imageType);
       if (uploadedUrl) {
         setImageUrl(uploadedUrl);
-        setPreviewUrl(null); // Limpiar preview después de subir exitosamente
-        setSelectedFile(null); // Limpiar archivo seleccionado
+        setPreviewUrl(null); 
+        setSelectedFile(null); 
         setMessage({ type: "success", text: "Imagen guardada exitosamente." });
         onImageUpdate?.(uploadedUrl);
       } else {
@@ -167,7 +166,6 @@ export default function ImageUpload({
       <CardContent className="space-y-4">
         {message && (
           <Alert variant={message.type === "error" ? "destructive" : "default"}>
-            {/* Usar AlertTitle si es relevante, si no solo AlertDescription */}
             {message.type === "error" && <AlertTitle>Error</AlertTitle>}
             {message.type === "success" && <AlertTitle>Éxito</AlertTitle>}
             <AlertDescription>{message.text}</AlertDescription>
@@ -214,7 +212,6 @@ export default function ImageUpload({
               Seleccionar Imagen
             </Button>
             {(imageUrl || selectedFile) && (
-              // Usamos AlertDialogTrigger para abrir el diálogo
               <AlertDialog
                 open={showConfirmDialog}
                 onOpenChange={setShowConfirmDialog}
@@ -255,7 +252,6 @@ export default function ImageUpload({
             )}
           </div>
         </div>
-        {/* Botón de Guardar Cambios movido al final, como en el original, para coherencia */}
         <div className="flex justify-end space-x-2 mt-4">
           {selectedFile && (
             <Button
@@ -277,7 +273,6 @@ export default function ImageUpload({
             </Button>
           )}
         </div>
-        {/* Hidden input for file selection */}
         <input
           ref={fileInputRef}
           type="file"
@@ -285,7 +280,6 @@ export default function ImageUpload({
           onChange={handleFileSelect}
           className="hidden"
         />
-
         <div className="text-xs text-muted-foreground">
           <p>Formatos soportados: JPG, PNG, GIF</p>
           <p>Tamaño máximo: 1MB</p>
@@ -299,12 +293,10 @@ export default function ImageUpload({
 }
 
 import { supabase } from "@/lib/supabase";
-
 export async function getUserImage(
   userId: string,
   imageType: "avatar" | "logo" | "banner"
 ): Promise<string | null> {
-  // Aseguramos que se incluyan los headers correctos
   const headers = {
     apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
     "Content-Type": "application/json",

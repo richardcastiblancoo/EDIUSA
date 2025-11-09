@@ -11,7 +11,6 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!loading && user) {
-      // Redirect based on user role
       switch (user.role) {
         case "coordinator":
           router.push("/dashboard/coordinator")

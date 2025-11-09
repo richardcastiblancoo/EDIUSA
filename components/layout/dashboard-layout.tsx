@@ -22,10 +22,9 @@ import {
   Sun,
   Moon,
   ChevronLeft,
-  ChevronRight,
   User,
   X,
-  Bot, // Usaremos el icono de Bot (o MessageSquare) para el asistente IA
+  Bot,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import Link from "next/link";
@@ -36,12 +35,11 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 
-// --- Nuevos Tipos para la Navegación por Categorías ---
 type NavigationItem = {
   name: string;
   href: string;
   icon: React.ElementType;
-  isBeta?: boolean; // Nueva propiedad para la etiqueta Beta
+  isBeta?: boolean;
 };
 
 type NavigationSection = {
@@ -60,9 +58,7 @@ export default function DashboardLayout({
 }: DashboardLayoutProps) {
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window !== "undefined") {
-      return (
-        (localStorage.getItem("theme") as "light" | "dark") || "light"
-      );
+      return (localStorage.getItem("theme") as "light" | "dark") || "light";
     }
     return "light";
   });
@@ -70,28 +66,22 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-
   const { user, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const role =
     userRole ??
     (user?.role as "coordinator" | "teacher" | "student" | undefined);
-
-  // 1. Aplica y guarda el tema
   useEffect(() => {
     document.body.classList.remove("light", "dark");
     document.body.classList.add(theme);
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  // 2. Limpieza al desmontar (SOLUCIÓN para el modo oscuro persistente)
   useEffect(() => {
-    // Esta función de limpieza se ejecuta cuando el componente se desmonta (ej. al hacer log out)
     return () => {
-        // Asegura que al salir del layout, el body vuelve a 'light'
-        document.body.classList.remove("dark");
-        document.body.classList.add("light");
+      document.body.classList.remove("dark");
+      document.body.classList.add("light");
     };
   }, []);
 
@@ -105,12 +95,8 @@ export default function DashboardLayout({
     loadUserAvatar();
   }, [user?.id]);
 
-  // 3. Resetear el localStorage en handleSignOut (SOLUCIÓN para el modo oscuro persistente)
   const handleSignOut = async () => {
-    // Asegura que la próxima vez que se cargue la página de login (o cualquier otra),
-    // el tema por defecto sea 'light'
     localStorage.setItem("theme", "light");
-    
     await signOut();
     router.push("/");
   };
@@ -119,9 +105,7 @@ export default function DashboardLayout({
     setTheme(theme === "light" ? "dark" : "light");
   };
 
-  // --- Navegación Agrupada por Secciones (useMemo modificado) ---
   const navigationSections: NavigationSection[] = useMemo(() => {
-    // Items base para todos los roles
     const baseItems: NavigationItem[] = [
       {
         name: "Dashboard",
@@ -129,21 +113,17 @@ export default function DashboardLayout({
         icon: Home,
       },
       { name: "Perfil", href: "/profile", icon: User },
-      // Nuevo elemento de IA con etiqueta Beta
-      { 
-        name: "Asistente IA", 
+      {
+        name: "Asistente IA",
         href: "/dashboard/ai-assistant",
         icon: Bot,
         isBeta: true,
       },
     ];
-    
-    // Dividir los items base para las secciones
+
     const dashboardItem = baseItems[0];
     const profileItem = baseItems[1];
     const aiAssistantItem = baseItems[2];
-
-
     switch (role) {
       case "coordinator":
         return [
@@ -212,7 +192,11 @@ export default function DashboardLayout({
           {
             title: "Gestión de Contenido",
             items: [
-              { name: "PQR", href: "/dashboard/teacher/pqr", icon: MessageSquare },
+              {
+                name: "PQR",
+                href: "/dashboard/teacher/pqr",
+                icon: MessageSquare,
+              },
               profileItem,
             ],
           },
@@ -251,25 +235,27 @@ export default function DashboardLayout({
                 href: "/dashboard/student/exams",
                 icon: ClipboardList,
               },
-              { name: "PQR", href: "/dashboard/student/pqr", icon: MessageSquare },
+              {
+                name: "PQR",
+                href: "/dashboard/student/pqr",
+                icon: MessageSquare,
+              },
               profileItem,
             ],
           },
         ];
       default:
-        // Caso por defecto: solo dashboard, perfil, y IA.
         return [{ title: "General", items: baseItems }];
     }
   }, [role]);
 
-  // Aplanar la navegación para el cálculo del título de la página
-  const navigationItems = navigationSections.flatMap((section) => section.items);
-
+  const navigationItems = navigationSections.flatMap(
+    (section) => section.items
+  );
   const currentNav = navigationItems.find(
     (i) => pathname === i.href || pathname.startsWith(i.href + "/")
   );
   const pageTitle = currentNav?.name ?? "Panel";
-
   const roleLabel =
     role === "coordinator"
       ? "Coordinador"
@@ -278,18 +264,14 @@ export default function DashboardLayout({
       : role === "student"
       ? "Estudiante"
       : "Usuario";
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex">
-      {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden transition-opacity duration-300"
           onClick={() => setSidebarOpen(false)}
         />
       )}
-
-      {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex flex-col transition-all duration-500 ease-in-out
         ${sidebarCollapsed ? "w-20" : "w-64"} 
@@ -298,13 +280,18 @@ export default function DashboardLayout({
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0`}
       >
-        {/* Logo + toggle - MODIFICADO AQUÍ */}
-        <div className={`flex items-center h-16 px-4 border-b border-gray-200 dark:border-slate-800 ${sidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
+        <div
+          className={`flex items-center h-16 px-4 border-b border-gray-200 dark:border-slate-800 ${
+            sidebarCollapsed ? "justify-center" : "justify-between"
+          }`}
+        >
           {!sidebarCollapsed && (
-            <Link href="/" className="flex items-center space-x-3 transition-opacity duration-300">
-              {/* Logo más grande */}
+            <Link
+              href="/"
+              className="flex items-center space-x-3 transition-opacity duration-300"
+            >
               <img
-                src="/ciusa.png" 
+                src="/ciusa.png"
                 width={70}
                 height={70}
                 alt="logo ediusa"
@@ -315,9 +302,6 @@ export default function DashboardLayout({
               </span>
             </Link>
           )}
-          
-          {/* El logo pequeño fue ELIMINADO para ocultarlo totalmente cuando está colapsado */}
-          
           <Button
             variant="ghost"
             size="sm"
@@ -329,10 +313,10 @@ export default function DashboardLayout({
                 : "Colapsar barra lateral"
             }
           >
-            <ChevronLeft 
-                className={`h-5 w-5 text-gray-500 transition-transform duration-300 ${
-                    sidebarCollapsed ? "rotate-180" : "rotate-0"
-                }`} 
+            <ChevronLeft
+              className={`h-5 w-5 text-gray-500 transition-transform duration-300 ${
+                sidebarCollapsed ? "rotate-180" : "rotate-0"
+              }`}
             />
           </Button>
           <Button
@@ -344,12 +328,9 @@ export default function DashboardLayout({
             <X className="h-5 w-5 text-gray-500" />
           </Button>
         </div>
-
-        {/* Navigation - CON SECCIONES Y EFECTOS */}
         <nav className="mt-4 px-2 flex-1 overflow-y-auto custom-scrollbar">
           {navigationSections.map((section, index) => (
             <div key={section.title} className="mb-4">
-              {/* Título de la sección solo cuando NO está colapsado */}
               {!sidebarCollapsed && (
                 <h3 className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 transition-opacity duration-300">
                   {section.title}
@@ -375,23 +356,22 @@ export default function DashboardLayout({
                           ${sidebarCollapsed ? "w-full" : "w-auto"}`}
                         title={sidebarCollapsed ? item.name : undefined}
                       >
-                        {/* Icono con efecto de escala al pasar el cursor (solo si no está activo) */}
                         <item.icon
                           className={`h-5 w-5 shrink-0 transition-transform duration-200 
                             ${!sidebarCollapsed ? "mr-3" : ""}`}
-                            style={item.isBeta ? { color: '#8b5cf6' } : {}} // Color morado para el icono IA
+                          style={item.isBeta ? { color: "#8b5cf6" } : {}} // Color morado para el icono IA
                         />
-                        {/* Texto con animación de opacidad */}
                         {!sidebarCollapsed && (
-                            <span className={`transition-opacity duration-300 flex items-center justify-between w-full`}>
-                              <span>{item.name}</span>
-                              {/* Etiqueta BETA */}
-                              {item.isBeta && (
-                                <span className="ml-2 px-2 py-0.5 text-xs font-bold rounded-full bg-purple-500 text-white dark:bg-purple-700/70 dark:text-purple-300 border border-purple-600/50 shadow-sm animate-pulse-slow">
-                                  BETA
-                                </span>
-                              )}
-                            </span>
+                          <span
+                            className={`transition-opacity duration-300 flex items-center justify-between w-full`}
+                          >
+                            <span>{item.name}</span>
+                            {item.isBeta && (
+                              <span className="ml-2 px-2 py-0.5 text-xs font-bold rounded-full bg-purple-500 text-white dark:bg-purple-700/70 dark:text-purple-300 border border-purple-600/50 shadow-sm animate-pulse-slow">
+                                BETA
+                              </span>
+                            )}
+                          </span>
                         )}
                       </Link>
                     </li>
@@ -401,8 +381,6 @@ export default function DashboardLayout({
             </div>
           ))}
         </nav>
-
-        {/* Perfil abajo con animaciones */}
         <div className="border-t border-gray-200 dark:border-slate-800 p-3">
           <Popover>
             <PopoverTrigger asChild>
@@ -428,14 +406,11 @@ export default function DashboardLayout({
                 )}
               </button>
             </PopoverTrigger>
-
-            {/* El Popover usa animaciones internas de Shadcn/Radix */}
             <PopoverContent
               align="start"
               side="top"
               className="w-72 p-4 rounded-xl bg-white dark:bg-slate-900 shadow-2xl border border-gray-200 dark:border-slate-800"
             >
-              {/* Contenido del popover sin cambios */}
               <div className="flex items-center gap-3">
                 <Avatar className="h-14 w-14">
                   <AvatarImage src={avatarUrl || ""} />
@@ -452,8 +427,6 @@ export default function DashboardLayout({
                   </p>
                 </div>
               </div>
-
-              {/* Acciones */}
               <div className="mt-4 space-y-2">
                 <Button
                   variant="secondary"
@@ -488,14 +461,11 @@ export default function DashboardLayout({
           </Popover>
         </div>
       </aside>
-
-      {/* Main content */}
       <div
         className={`flex-1 flex flex-col transition-all duration-500 ease-in-out ${
           sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
         }`}
       >
-        {/* Top bar (Sticky) */}
         <header className="sticky top-0 z-30 bg-white dark:bg-slate-900 shadow-md border-b border-gray-200 dark:border-slate-800">
           <div className="flex items-center justify-between h-16 px-4 sm:px-6 gap-4">
             <div className="flex items-center gap-3 min-w-0">
@@ -513,8 +483,6 @@ export default function DashboardLayout({
             </div>
           </div>
         </header>
-
-        {/* Page content */}
         <main className="p-4 sm:p-6 flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-950">
           {children}
         </main>

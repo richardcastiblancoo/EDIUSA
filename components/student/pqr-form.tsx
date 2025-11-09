@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-
 import { deletePQR, createPQR, getPQRsByStudent } from "@/lib/pqrs";
 import { getStudentCourses } from "@/lib/courses";
 import type { PQR } from "@/lib/supabase";
@@ -275,7 +274,7 @@ export default function PQRForm({ studentId }: PQRFormProps) {
 
   const getRecipientName = (pqr: PQR) => {
     // Si no hay teacher_id, el destinatario es el coordinador
-    return pqr.teacher_id ? (pqr.teachers?.name || "Profesor") : "Coordinador";
+    return pqr.teacher_id ? pqr.teachers?.name || "Profesor" : "Coordinador";
   };
 
   const getStatusIcon = (status: string) => {
@@ -380,7 +379,13 @@ export default function PQRForm({ studentId }: PQRFormProps) {
             },
           }}
         >
-          <motion.div variants={cardVariants} whileHover={{ scale: 1.03, boxShadow: "0px 5px 10px rgba(0, 0, 0, 0.1)" }}>
+          <motion.div
+            variants={cardVariants}
+            whileHover={{
+              scale: 1.03,
+              boxShadow: "0px 5px 10px rgba(0, 0, 0, 0.1)",
+            }}
+          >
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
@@ -396,7 +401,13 @@ export default function PQRForm({ studentId }: PQRFormProps) {
               </CardContent>
             </Card>
           </motion.div>
-          <motion.div variants={cardVariants} whileHover={{ scale: 1.03, boxShadow: "0px 5px 10px rgba(0, 0, 0, 0.1)" }}>
+          <motion.div
+            variants={cardVariants}
+            whileHover={{
+              scale: 1.03,
+              boxShadow: "0px 5px 10px rgba(0, 0, 0, 0.1)",
+            }}
+          >
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
@@ -414,7 +425,13 @@ export default function PQRForm({ studentId }: PQRFormProps) {
               </CardContent>
             </Card>
           </motion.div>
-          <motion.div variants={cardVariants} whileHover={{ scale: 1.03, boxShadow: "0px 5px 10px rgba(0, 0, 0, 0.1)" }}>
+          <motion.div
+            variants={cardVariants}
+            whileHover={{
+              scale: 1.03,
+              boxShadow: "0px 5px 10px rgba(0, 0, 0, 0.1)",
+            }}
+          >
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Cerrados</CardTitle>
@@ -568,7 +585,10 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                             className={`cursor-pointer ${
                               selectedPqr?.id === pqr.id ? "bg-accent" : ""
                             }`}
-                            whileHover={{ scale: 1.02, backgroundColor: "rgba(0,0,0,0.05)" }} // Animación de hover para las filas
+                            whileHover={{
+                              scale: 1.02,
+                              backgroundColor: "rgba(0,0,0,0.05)",
+                            }} // Animación de hover para las filas
                             transition={{ duration: 0.1 }}
                           >
                             <TableCell className="font-medium">
@@ -578,9 +598,14 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                             <TableCell>{getRecipientName(pqr)}</TableCell>
                             <TableCell>{pqr.students?.name || "N/A"}</TableCell>
                             <TableCell>
-                              <Badge variant="outline" className="flex items-center gap-1">
+                              <Badge
+                                variant="outline"
+                                className="flex items-center gap-1"
+                              >
                                 {getStatusIcon(pqr.status)}
-                                <span className="capitalize">{pqr.status.replace("_", " ")}</span>
+                                <span className="capitalize">
+                                  {pqr.status.replace("_", " ")}
+                                </span>
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
@@ -635,8 +660,16 @@ export default function PQRForm({ studentId }: PQRFormProps) {
               key="pqr-detail-card"
               variants={{
                 hidden: { opacity: 0, x: 100 },
-                visible: { opacity: 1, x: 0, transition: { duration: 0.5, ease: "easeOut" } },
-                exit: { opacity: 0, x: 100, transition: { duration: 0.3, ease: "easeIn" } },
+                visible: {
+                  opacity: 1,
+                  x: 0,
+                  transition: { duration: 0.5, ease: "easeOut" },
+                },
+                exit: {
+                  opacity: 0,
+                  x: 100,
+                  transition: { duration: 0.3, ease: "easeIn" },
+                },
               }}
               initial="hidden"
               animate="visible"
