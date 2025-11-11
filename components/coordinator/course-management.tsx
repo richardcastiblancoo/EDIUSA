@@ -939,7 +939,7 @@ export default function CourseManagement() {
           </CardContent>
         </Card>
       )}
-      {/* Edit Dialog */}
+      {/* Edit Dialog - REORGANIZADO */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl overflow-y-auto max-h-[85vh]">
           <DialogHeader>
@@ -948,251 +948,267 @@ export default function CourseManagement() {
               Modifica la información del curso
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Nombre del Curso *</Label>
-              <Input
-                id="edit-name"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-language">Idioma *</Label>
-              <Select
-                value={formData.language}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, language: value })
-                }
-              >
-                <SelectTrigger id="edit-language">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Inglés">🇺🇸 Inglés</SelectItem>
-                  <SelectItem value="Francés">🇫🇷 Francés</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-level">Nivel *</Label>
-              <Select
-                value={formData.level}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, level: value })
-                }
-              >
-                <SelectTrigger id="edit-level">
-                  <SelectValue placeholder="Selecciona nivel" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1</SelectItem>
-                  <SelectItem value="2">2</SelectItem>
-                  <SelectItem value="3">3</SelectItem>
-                  <SelectItem value="4">4</SelectItem>
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="6">6</SelectItem>
-                  <SelectItem value="7">7</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-teacher">Profesor *</Label>
-              <Select
-                value={formData.teacher_id}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, teacher_id: value })
-                }
-              >
-                <SelectTrigger id="edit-teacher">
-                  <SelectValue placeholder="Selecciona un profesor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teachers.map((teacher) => (
-                    <SelectItem key={teacher.id} value={teacher.id}>
-                      <div className="flex items-center gap-2">
-                        {teacher.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-days">Días</Label>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  "Lunes",
-                  "Martes",
-                  "Miércoles",
-                  "Jueves",
-                  "Viernes",
-                  "Sábado",
-                ].map((day) => (
-                  <Button
-                    key={day}
-                    type="button"
-                    variant={
-                      formData.days.includes(day) ? "default" : "outline"
+          
+          <div className="space-y-6">
+            {/* Información Básica */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900">Información Básica</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Nombre del Curso *</Label>
+                  <Input
+                    id="edit-name"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
                     }
-                    onClick={() =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        days: prev.days.includes(day)
-                          ? prev.days.filter((d) => d !== day)
-                          : [...prev.days, day],
-                      }))
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-language">Idioma *</Label>
+                  <Select
+                    value={formData.language}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, language: value })
                     }
                   >
-                    {day}
-                  </Button>
-                ))}
+                    <SelectTrigger id="edit-language">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Inglés">🇺🇸 Inglés</SelectItem>
+                      <SelectItem value="Francés">🇫🇷 Francés</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-level">Nivel *</Label>
+                  <Select
+                    value={formData.level}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, level: value })
+                    }
+                  >
+                    <SelectTrigger id="edit-level">
+                      <SelectValue placeholder="Selecciona nivel" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1</SelectItem>
+                      <SelectItem value="2">2</SelectItem>
+                      <SelectItem value="3">3</SelectItem>
+                      <SelectItem value="4">4</SelectItem>
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="6">6</SelectItem>
+                      <SelectItem value="7">7</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-teacher">Profesor *</Label>
+                  <Select
+                    value={formData.teacher_id}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, teacher_id: value })
+                    }
+                  >
+                    <SelectTrigger id="edit-teacher">
+                      <SelectValue placeholder="Selecciona un profesor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teachers.map((teacher) => (
+                        <SelectItem key={teacher.id} value={teacher.id}>
+                          <div className="flex items-center gap-2">
+                            {teacher.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="edit-start_date">
-                Cohorte - Fecha de Inicio *
-              </Label>
-              <Input
-                id="edit-start_date"
-                type="date"
-                value={formData.start_date}
-                onChange={(e) =>
-                  setFormData({ ...formData, start_date: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-end_date">Cohorte - Fecha de Fin *</Label>
-              <Input
-                id="edit-end_date"
-                type="date"
-                value={formData.end_date}
-                onChange={(e) =>
-                  setFormData({ ...formData, end_date: e.target.value })
-                }
-              />
-            </div>
-            
-            <div className="col-span-2 space-y-2">
-              <Label htmlFor="edit-schedule">Horario</Label>
+            {/* Fechas del Curso */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900">Fechas del Curso</h3>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="edit-start_time" className="text-xs">
-                    Hora inicio
-                  </Label>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-start_date">Fecha de Inicio *</Label>
                   <Input
-                    id="edit-start_time"
-                    type="time"
-                    value={formData.start_time}
+                    id="edit-start_date"
+                    type="date"
+                    value={formData.start_date}
                     onChange={(e) =>
-                      setFormData({ ...formData, start_time: e.target.value })
+                      setFormData({ ...formData, start_date: e.target.value })
                     }
                   />
                 </div>
-                <div>
-                  <Label htmlFor="edit-end_time" className="text-xs">
-                    Hora fin
-                  </Label>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-end_date">Fecha de Fin *</Label>
                   <Input
-                    id="edit-end_time"
-                    type="time"
-                    value={formData.end_time}
+                    id="edit-end_date"
+                    type="date"
+                    value={formData.end_date}
                     onChange={(e) =>
-                      setFormData({ ...formData, end_time: e.target.value })
+                      setFormData({ ...formData, end_date: e.target.value })
                     }
                   />
                 </div>
               </div>
             </div>
-            {/* Sección para agregar estudiantes en el editor */}
-            <div className="col-span-2 space-y-2">
-              <Label>Asignar Estudiantes</Label>
-              <div className="relative">
-                <Input
-                  placeholder="Buscar por nombre o documento..."
-                  value={studentSearchTerm}
-                  onChange={(e) => setStudentSearchTerm(e.target.value)}
-                />
-                {isStudentSearchLoading && (
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                    <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                  </div>
-                )}
-                {debouncedSearchTerm && searchResults.length > 0 && (
-                  <ul className="absolute z-10 w-full bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto mt-1">
-                    {searchResults
-                      .filter((student) => !isStudentAssigned(student))
-                      .map((student) => (
-                        <li
-                          key={student.id}
-                          className="p-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
-                          onClick={() => handleAddStudentToForm(student)}
-                        >
-                          <img
-                            src={
-                              student.photoUrl ||
-                              "https://api.dicebear.com/7.x/notionists/svg?seed=placeholder"
-                            }
-                            alt={`Foto de ${student.name}`}
-                            className="w-8 h-8 rounded-full"
-                          />
-                          <div>
-                            <div className="font-medium">{student.name}</div>
-                            <div className="text-xs text-gray-500">
-                              Doc: {student.documentId}
-                            </div>
-                          </div>
-                        </li>
-                      ))}
-                  </ul>
-                )}
-                {debouncedSearchTerm &&
-                  searchResults.length === 0 &&
-                  !isStudentSearchLoading && (
-                    <ul className="absolute z-10 w-full bg-white border rounded-md shadow-lg mt-1">
-                      <li className="p-2 text-center text-gray-500">
-                        No se encontraron resultados
-                      </li>
-                    </ul>
-                  )}
-              </div>
-              <div className="space-y-2 mt-4">
-                <p className="font-medium text-sm">
-                  Estudiantes asignados ({formData.assignedStudents.length}):
-                </p>
-                <ul className="grid grid-cols-2 gap-2">
-                  {formData.assignedStudents.map((student) => (
-                    <li
-                      key={student.id}
-                      className="flex items-center justify-between p-2 bg-gray-100 rounded-md"
-                    >
-                      <div className="flex items-center gap-2">
-                        <img
-                          src={student.photoUrl}
-                          alt={`Foto de ${student.name}`}
-                          className="w-6 h-6 rounded-full"
-                        />
-                        <span className="text-sm">{student.name}</span>
-                      </div>
+
+            {/* Horario */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900">Horario</h3>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Días de Clase</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      "Lunes",
+                      "Martes",
+                      "Miércoles",
+                      "Jueves",
+                      "Viernes",
+                      "Sábado",
+                    ].map((day) => (
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => handleRemoveStudentFromForm(student.id)}
+                        key={day}
+                        type="button"
+                        variant={
+                          formData.days.includes(day) ? "default" : "outline"
+                        }
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            days: prev.days.includes(day)
+                              ? prev.days.filter((d) => d !== day)
+                              : [...prev.days, day],
+                          }))
+                        }
                       >
-                        <X className="h-4 w-4" />
+                        {day}
                       </Button>
-                    </li>
-                  ))}
-                </ul>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-start_time">Hora de Inicio</Label>
+                    <Input
+                      id="edit-start_time"
+                      type="time"
+                      value={formData.start_time}
+                      onChange={(e) =>
+                        setFormData({ ...formData, start_time: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-end_time">Hora de Fin</Label>
+                    <Input
+                      id="edit-end_time"
+                      type="time"
+                      value={formData.end_time}
+                      onChange={(e) =>
+                        setFormData({ ...formData, end_time: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Estudiantes Asignados */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900">Estudiantes Asignados</h3>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Buscar Estudiantes</Label>
+                  <div className="relative">
+                    <Input
+                      placeholder="Buscar por nombre o documento..."
+                      value={studentSearchTerm}
+                      onChange={(e) => setStudentSearchTerm(e.target.value)}
+                    />
+                    {isStudentSearchLoading && (
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                      </div>
+                    )}
+                    {debouncedSearchTerm && searchResults.length > 0 && (
+                      <ul className="absolute z-10 w-full bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto mt-1">
+                        {searchResults
+                          .filter((student) => !isStudentAssigned(student))
+                          .map((student) => (
+                            <li
+                              key={student.id}
+                              className="p-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
+                              onClick={() => handleAddStudentToForm(student)}
+                            >
+                              <img
+                                src={
+                                  student.photoUrl ||
+                                  "https://api.dicebear.com/7.x/notionists/svg?seed=placeholder"
+                                }
+                                alt={`Foto de ${student.name}`}
+                                className="w-8 h-8 rounded-full"
+                              />
+                              <div>
+                                <div className="font-medium">{student.name}</div>
+                                <div className="text-xs text-gray-500">
+                                  Doc: {student.documentId}
+                                </div>
+                              </div>
+                            </li>
+                          ))}
+                      </ul>
+                    )}
+                    {debouncedSearchTerm &&
+                      searchResults.length === 0 &&
+                      !isStudentSearchLoading && (
+                        <ul className="absolute z-10 w-full bg-white border rounded-md shadow-lg mt-1">
+                          <li className="p-2 text-center text-gray-500">
+                            No se encontraron resultados
+                          </li>
+                        </ul>
+                      )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="font-medium text-sm">
+                    Estudiantes asignados ({formData.assignedStudents.length}):
+                  </p>
+                  <ul className="grid grid-cols-2 gap-2">
+                    {formData.assignedStudents.map((student) => (
+                      <li
+                        key={student.id}
+                        className="flex items-center justify-between p-2 bg-gray-100 rounded-md"
+                      >
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={student.photoUrl}
+                            alt={`Foto de ${student.name}`}
+                            className="w-6 h-6 rounded-full"
+                          />
+                          <span className="text-sm">{student.name}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => handleRemoveStudentFromForm(student.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
+          
           <DialogFooter>
             <Button
               variant="outline"

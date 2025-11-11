@@ -42,7 +42,12 @@ import {
   Phone,
   GraduationCap,
   X,
+  FileText,
+  Music,
+  Eye,
+  EyeOff,
 } from "lucide-react";
+import { Lesson, createNewLesson, getLessonsForCourse } from "@/lib/lessons";
 
 interface Course {
   id: string;
@@ -152,6 +157,350 @@ const calculateTotals = (sections: ExamSection[]) => {
     maxScoreBase += section.max_score;
   });
   return { totalQuestions, maxScoreBase: parseFloat(maxScoreBase.toFixed(2)) };
+};
+
+// Diálogo para crear lecciones
+const CreateLessonDialog = ({
+  courseId,
+  courseName,
+}: {
+  courseId: string;
+  courseName: string;
+}) => {
+  const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newLesson, setNewLesson] = useState({
+    title: "",
+    description: "",
+    pdfFile: null as File | null,
+    audioFile: null as File | null,
+  });
+
+  const handleInputChange = (field: string, value: string) => {
+    setNewLesson(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleFileUpload = (field: 'pdfFile' | 'audioFile', file: File | null) => {
+    setNewLesson(prev => ({
+      ...prev,
+      [field]: file
+    }));
+  };
+
+  const handleCreateLesson = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+
+    try {
+      if (!newLesson.title.trim()) {
+        toast({
+          title: "Error",
+          description: "El título es obligatorio",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const createdLesson = await createNewLesson(
+        courseId,
+        newLesson.title,
+        newLesson.description,
+        newLesson.pdfFile,
+        newLesson.audioFile
+      );
+
+      if (createdLesson) {
+        toast({
+          title: "Éxito",
+          description: "Lección creada correctamente",
+        });
+        setNewLesson({
+          title: "",
+          description: "",
+          pdfFile: null,
+          audioFile: null,
+        });
+        setIsOpen(false);
+      } else {
+        throw new Error("No se pudo crear la lección");
+      }
+    } catch (error) {
+      console.error("Error creando lección:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo crear la lección",
+        variant: "destructive",
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="default" className="w-full bg-green-600 hover:bg-green-700">
+          <PlusCircle className="mr-2 h-4 w-4" /> Crear Nueva Lección
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold">
+            Crear Nueva Lección
+          </DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Curso: {courseName}
+          </p>
+        </DialogHeader>
+
+        <form onSubmit={handleCreateLesson} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="title">Título de la Lección</Label>
+            <Input
+              id="title"
+              value={newLesson.title}
+              onChange={(e) => handleInputChange("title", e.target.value)}
+              placeholder="Ej: Introducción al Presente Simple"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Descripción</Label>
+            <Textarea
+              id="description"
+              value={newLesson.description}
+              onChange={(e) => handleInputChange("description", e.target.value)}
+              placeholder="Describe el contenido de esta lección..."
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Material PDF (Opcional)
+            </Label>
+            <Input
+              type="file"
+              accept=".pdf"
+              onChange={(e) => handleFileUpload("pdfFile", e.target.files ? e.target.files[0] : null)}
+              className="file:text-blue-600 file:font-semibold"
+            />
+            {newLesson.pdfFile && (
+              <div className="flex items-center justify-between bg-blue-50 p-2 rounded-md border border-blue-300">
+                <span className="text-sm text-blue-800 truncate">
+                  {newLesson.pdfFile.name}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleFileUpload("pdfFile", null)}
+                  className="h-6 w-6 text-red-500 hover:bg-red-100"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Music className="h-4 w-4" />
+              Audio de la Lección (Opcional)
+            </Label>
+            <Input
+              type="file"
+              accept="audio/*"
+              onChange={(e) => handleFileUpload("audioFile", e.target.files ? e.target.files[0] : null)}
+              className="file:text-purple-600 file:font-semibold"
+            />
+            {newLesson.audioFile && (
+              <div className="flex items-center justify-between bg-purple-50 p-2 rounded-md border border-purple-300">
+                <span className="text-sm text-purple-800 truncate">
+                  {newLesson.audioFile.name}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleFileUpload("audioFile", null)}
+                  className="h-6 w-6 text-red-500 hover:bg-red-100"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="submit"
+              disabled={creating}
+              className="w-full"
+            >
+              {creating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle className="mr-2 h-4 w-4" />
+              )}
+              Crear Lección
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Diálogo para ver lecciones existentes
+const ViewLessonsDialog = ({
+  courseId,
+  courseName,
+}: {
+  courseId: string;
+  courseName: string;
+}) => {
+  const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const loadLessons = async () => {
+    setLoading(true);
+    try {
+      const lessonsData = await getLessonsForCourse(courseId);
+      setLessons(lessonsData);
+    } catch (error) {
+      console.error("Error cargando lecciones:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar las lecciones",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      loadLessons();
+    }
+  }, [isOpen, courseId]);
+
+  const togglePublishStatus = async (lessonId: string, currentStatus: boolean) => {
+    try {
+      // Aquí implementarías la función para cambiar el estado de publicación
+      // Por ahora solo actualizamos localmente
+      setLessons(prev => 
+        prev.map(lesson => 
+          lesson.id === lessonId 
+            ? { ...lesson, is_published: !currentStatus }
+            : lesson
+        )
+      );
+      
+      toast({
+        title: "Éxito",
+        description: `Lección ${!currentStatus ? 'publicada' : 'ocultada'} correctamente`,
+      });
+    } catch (error) {
+      console.error("Error cambiando estado:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo cambiar el estado de la lección",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="w-full">
+          <BookOpen className="mr-2 h-4 w-4" /> Ver Lecciones
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold">
+            Lecciones del Curso
+          </DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            {courseName} - {lessons.length} lección{lessons.length !== 1 ? 'es' : ''}
+          </p>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : lessons.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              No hay lecciones creadas para este curso.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {lessons.map((lesson) => (
+                <Card key={lesson.id} className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-2 flex-1">
+                      <h4 className="font-semibold text-lg">{lesson.title}</h4>
+                      {lesson.description && (
+                        <p className="text-sm text-muted-foreground">
+                          {lesson.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        {lesson.pdf_url && (
+                          <span className="flex items-center gap-1">
+                            <FileText className="h-3 w-3" />
+                            PDF
+                          </span>
+                        )}
+                        {lesson.audio_url && (
+                          <span className="flex items-center gap-1">
+                            <Music className="h-3 w-3" />
+                            Audio
+                          </span>
+                        )}
+                        <span>Orden: {lesson.order_index}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={lesson.is_published ? "default" : "secondary"}
+                        className="flex items-center gap-1"
+                      >
+                        {lesson.is_published ? (
+                          <Eye className="h-3 w-3" />
+                        ) : (
+                          <EyeOff className="h-3 w-3" />
+                        )}
+                        {lesson.is_published ? "Publicada" : "Oculta"}
+                      </Badge>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => togglePublishStatus(lesson.id, lesson.is_published)}
+                      >
+                        {lesson.is_published ? "Ocultar" : "Publicar"}
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 };
 
 const CreateExamWithStructureDialog = ({
@@ -1184,26 +1533,27 @@ export default function TeacherCoursesPage() {
                   </div>
 
                   <div className="pt-2 space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <Link
-                        href={`/teacher/courses/${course.id}/lessons`}
-                        passHref
-                      >
-                        <Button variant="outline" className="w-full">
-                          <BookOpen className="mr-2 h-4 w-4" /> Lecciones
-                        </Button>
-                      </Link>
-
-                      <CreateExamWithStructureDialog
+                    <div className="grid grid-cols-1 gap-3">
+                      <CreateLessonDialog
+                        courseId={course.id}
+                        courseName={course.name}
+                      />
+                      <ViewLessonsDialog
                         courseId={course.id}
                         courseName={course.name}
                       />
                     </div>
 
-                    <StudentListDialog
-                      courseId={course.id}
-                      courseName={course.name}
-                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <CreateExamWithStructureDialog
+                        courseId={course.id}
+                        courseName={course.name}
+                      />
+                      <StudentListDialog
+                        courseId={course.id}
+                        courseName={course.name}
+                      />
+                    </div>
 
                     <AttendanceDialog
                       courseName={course.name}

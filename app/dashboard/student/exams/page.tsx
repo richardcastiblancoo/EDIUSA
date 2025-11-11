@@ -21,11 +21,12 @@ import {
   Clock,
   FileText,
   CheckCircle,
+  AlertTriangle,
 } from "lucide-react";
 import ExamInterface from "@/components/exam/exam-interface";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Definiciones de tipo mínimas necesarias (Añadidas para que la lógica de score funcione)
+// Definiciones de tipo mínimas necesarias
 interface Submission {
   score: number | null;
 }
@@ -48,30 +49,19 @@ interface Exam {
   courses?: Course;
 }
 
-// Función auxiliar de ejemplo que causaba el error original (simulando que está definida en otro lugar o se importa)
-// Asegúrate de que esta función (y `convertToScaleFive`) está definida y es accesible.
 const calculateAverageScore = (studentExams: Exam[]) => {
-  // Simulación de la lógica que causaba el error (Líneas 90-94)
   const scores = studentExams
     .filter((exam: Exam) => exam.exam_submissions?.[0]?.score !== null)
-    // LÍNEA 91 CORREGIDA: Usamos encadenamiento opcional para mayor seguridad.
-    // También podría ser `.map((exam: Exam) => exam.exam_submissions![0].score as number)`
-    // si estamos seguros por el filtro, pero el encadenamiento es más seguro.
     .map((exam: Exam) => exam.exam_submissions?.[0]?.score);
 
-  // Filtramos cualquier posible `undefined` o `null` que pudiera haber escapado.
   const numericScores = scores.filter((score): score is number => score !== null && score !== undefined); 
   
   if (numericScores.length > 0) {
     const rawAverage = numericScores.reduce((a, b) => a + b, 0) / numericScores.length;
-    // Debes definir 'convertToScaleFive' o eliminar esta línea si no es relevante.
-    // const finalAverage = convertToScaleFive(rawAverage as number); 
-    // return finalAverage;
     return rawAverage.toFixed(2);
   }
   return 0;
 };
-
 
 export default function StudentExamsPage() {
   const { user } = useAuth();
@@ -88,12 +78,8 @@ export default function StudentExamsPage() {
 
   const loadExams = async () => {
     setIsLoading(true);
-    // Asegúrate de que `getStudentExams` devuelve `Exam[]` o similar
     const exams = user ? (await getStudentExams(user.id)) as Exam[] : [];
     setAvailableExams(exams);
-    // Aquí podrías llamar a calculateAverageScore(exams) si necesitas el promedio.
-    // const average = calculateAverageScore(exams);
-    // console.log("Promedio de exámenes completados:", average);
     setIsLoading(false);
   };
 
@@ -115,7 +101,6 @@ export default function StudentExamsPage() {
     transition: { duration: 0.3, ease: "easeInOut" },
   };
 
-  // Lógica para mostrar los intentos restantes
   const getAttemptsDisplay = (exam: Exam) => {
     const completedAttempts = exam.exam_submissions?.length || 0;
     const maxAttempts = exam.max_attempts;
@@ -124,17 +109,17 @@ export default function StudentExamsPage() {
     if (remainingAttempts <= 0) {
       return (
         <div className="flex items-center gap-2 text-red-600 font-medium">
-          <CheckCircle className="h-4 w-4" />
+          <AlertTriangle className="h-4 w-4" />
           <span>Intentos agotados</span>
         </div>
       );
     }
     return (
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">
+        <span className="text-sm text-gray-600">
           Intentos restantes:
         </span>
-        <span className="font-semibold">{remainingAttempts}</span>
+        <span className="font-semibold text-gray-900">{remainingAttempts}</span>
       </div>
     );
   };
@@ -154,65 +139,70 @@ export default function StudentExamsPage() {
             <ExamInterface
               exam={{ ...selectedExam, subject: selectedExam.courses?.name || "", course: selectedExam.courses || { name: "" } }}
               onComplete={handleExamComplete}
-              // Asegúrate de pasar el prop `student` si es requerido por ExamInterface
             />
           </motion.div>
         ) : (
           <motion.div key="exams-list" {...fadeInScale} transition={{ duration: 0.3, ease: "easeInOut" }}>
             <div className="space-y-6">
               <div>
-                <h2 className="text-3xl font-bold tracking-tight">Exámenes</h2>
-                <p className="text-muted-foreground">
-                  Gestiona y realiza tus exámenes
+                <h2 className="text-3xl font-bold tracking-tight text-gray-900">Exámenes</h2>
+                <p className="text-gray-600 mt-2">
+                  Gestiona y realiza tus exámenes asignados
                 </p>
               </div>
 
               {/* Security Notice */}
-              <Alert>
-                <Camera className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Importante:</strong> Durante los exámenes se activará
+              <Alert className="bg-blue-50 border-blue-200">
+                <Camera className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800">
+                  <strong className="font-semibold">Importante:</strong> Durante los exámenes se activará
                   automáticamente la cámara, micrófono y captura de pantalla
                   para garantizar la integridad académica.
                 </AlertDescription>
               </Alert>
 
               {/* Monitoring Features */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Monitor className="h-5 w-5" />
+              <Card className="shadow-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-gray-900">
+                    <Monitor className="h-5 w-5 text-gray-700" />
                     Sistema de Monitoreo
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-gray-600">
                     Funciones de seguridad activas durante los exámenes
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-4 md:grid-cols-3">
-                    <div className="flex items-center gap-3 p-3 border rounded-lg">
-                      <Camera className="h-8 w-8 text-blue-600" />
+                    <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg bg-white hover:shadow-md transition-shadow">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <Camera className="h-6 w-6 text-blue-600" />
+                      </div>
                       <div>
-                        <p className="font-medium">Cámara Web</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="font-semibold text-gray-900">Cámara Web</p>
+                        <p className="text-sm text-gray-600">
                           Monitoreo visual continuo
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 p-3 border rounded-lg">
-                      <Mic className="h-8 w-8 text-green-600" />
+                    <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg bg-white hover:shadow-md transition-shadow">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <Mic className="h-6 w-6 text-green-600" />
+                      </div>
                       <div>
-                        <p className="font-medium">Audio</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="font-semibold text-gray-900">Audio</p>
+                        <p className="text-sm text-gray-600">
                           Grabación de sonido ambiente
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 p-3 border rounded-lg">
-                      <Monitor className="h-8 w-8 text-purple-600" />
+                    <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg bg-white hover:shadow-md transition-shadow">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <Monitor className="h-6 w-6 text-purple-600" />
+                      </div>
                       <div>
-                        <p className="font-medium">Pantalla</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="font-semibold text-gray-900">Pantalla</p>
+                        <p className="text-sm text-gray-600">
                           Captura de actividad
                         </p>
                       </div>
@@ -224,17 +214,19 @@ export default function StudentExamsPage() {
               {/* Exams List */}
               <div className="grid gap-4">
                 {isLoading ? (
-                  <Card>
-                    <CardContent className="text-center py-10 animate-pulse">
-                      <p className="text-muted-foreground">
-                        Cargando exámenes...
-                      </p>
+                  <Card className="shadow-sm">
+                    <CardContent className="text-center py-12">
+                      <div className="animate-pulse">
+                        <div className="h-4 bg-gray-200 rounded w-1/3 mx-auto mb-2"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/4 mx-auto"></div>
+                      </div>
                     </CardContent>
                   </Card>
                 ) : availableExams.length === 0 ? (
-                  <Card>
-                    <CardContent className="text-center py-10">
-                      <p>No tienes exámenes asignados en este momento.</p>
+                  <Card className="shadow-sm text-center py-12">
+                    <CardContent>
+                      <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600">No tienes exámenes asignados en este momento.</p>
                     </CardContent>
                   </Card>
                 ) : (
@@ -245,42 +237,37 @@ export default function StudentExamsPage() {
                       exam.max_attempts - completedAttempts;
                     const isAvailable = exam.is_active && remainingAttempts > 0;
                     
-                    // Manejo seguro de la calificación
                     const lastSubmission = exam.exam_submissions && exam.exam_submissions.length > 0
                         ? exam.exam_submissions[0] 
                         : null;
                     const score = lastSubmission?.score;
 
                     return (
-                      <Card key={exam.id}>
+                      <Card key={exam.id} className="shadow-sm hover:shadow-md transition-shadow">
                         <CardHeader>
                           <div className="flex justify-between items-start">
                             <div>
-                              <CardTitle className="flex items-center gap-2">
-                                <FileText className="h-5 w-5" />
+                              <CardTitle className="flex items-center gap-2 text-gray-900">
+                                <FileText className="h-5 w-5 text-gray-700" />
                                 {exam.title}
                               </CardTitle>
-                              <CardDescription>
+                              <CardDescription className="text-gray-600 mt-1">
                                 {exam.courses?.name} - {exam.courses?.level}
                               </CardDescription>
                             </div>
                             <div className="flex flex-col items-end gap-2">
                               <Badge
-                                variant={
-                                  exam.is_active ? "default" : "secondary"
-                                }
+                                variant={exam.is_active ? "default" : "secondary"}
+                                className={exam.is_active ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-gray-100 text-gray-600"}
                               >
-                                {exam.is_active
-                                  ? "Disponible"
-                                  : "No disponible"}
+                                {exam.is_active ? "Disponible" : "No disponible"}
                               </Badge>
                               {score !== null && score !== undefined && (
                                 <Badge
                                   variant="outline"
-                                  className="font-semibold"
+                                  className="font-semibold border-blue-200 text-blue-700 bg-blue-50"
                                 >
-                                  Calificación:{" "}
-                                  {score}%
+                                  Calificación: {score}%
                                 </Badge>
                               )}
                             </div>
@@ -289,40 +276,48 @@ export default function StudentExamsPage() {
                         <CardContent>
                           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-4">
                             <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">
+                              <Clock className="h-4 w-4 text-gray-600" />
+                              <span className="text-sm text-gray-700">
                                 {exam.duration_minutes} minutos
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <FileText className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">
+                              <FileText className="h-4 w-4 text-gray-600" />
+                              <span className="text-sm text-gray-700">
                                 {exam.total_questions} preguntas
                               </span>
                             </div>
                             <div className="text-sm">
-                              <span className="text-muted-foreground">
+                              <span className="text-gray-600">
                                 Tipo:{" "}
                               </span>
-                              {exam.exam_type}
+                              <span className="text-gray-900 font-medium">{exam.exam_type}</span>
                             </div>
                             <div className="text-sm">
-                              <span className="text-muted-foreground">
+                              <span className="text-gray-600">
                                 Vence:{" "}
                               </span>
-                              {new Date(exam.due_date).toLocaleDateString()}
+                              <span className="text-gray-900 font-medium">{new Date(exam.due_date).toLocaleDateString()}</span>
                             </div>
                           </div>
 
-                          <div className="flex justify-between items-center">
+                          <div className="flex justify-between items-center pt-2">
                             {getAttemptsDisplay(exam)}
 
                             {isAvailable ? (
-                              <Button onClick={() => handleStartExam(exam)}>
+                              <Button 
+                                onClick={() => handleStartExam(exam)}
+                                className="bg-gray-900 text-white hover:bg-gray-800 shadow-sm"
+                              >
                                 Iniciar Examen
                               </Button>
                             ) : (
-                              <Button disabled>Iniciar Examen</Button>
+                              <Button 
+                                disabled
+                                className="bg-gray-100 text-gray-400 cursor-not-allowed shadow-sm"
+                              >
+                                Iniciar Examen
+                              </Button>
                             )}
                           </div>
                         </CardContent>
@@ -338,4 +333,3 @@ export default function StudentExamsPage() {
     </DashboardLayout>
   );
 }
-

@@ -60,13 +60,17 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsRight,
+  Calendar,
+  IdCard,
+  GraduationCap,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { getUserImage } from "@/lib/images";
-type EnglishLevel = "1" | "2" | "3" | "4" | "5" | "6" | "7";
-const ENGLISH_LEVELS: EnglishLevel[] = ["1", "2", "3", "4", "5", "6", "7"];
+
+type EnglishLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+const ENGLISH_LEVELS: EnglishLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
 interface User {
   id: string;
@@ -121,7 +125,7 @@ export default function TeachersManagement() {
     phone: "",
     document: "",
     status: "active" as "active" | "inactive",
-    english_certificate: "1" as EnglishLevel,
+    english_certificate: "A1" as EnglishLevel,
   });
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -145,13 +149,13 @@ export default function TeachersManagement() {
   const [selectedEnglishLevel, setSelectedEnglishLevel] = useState<
     EnglishLevel | "all"
   >("all");
+
   const fetchTeachers = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("users")
       .select("*")
       .eq("role", "teacher");
-
     if (error) {
       console.error("Error fetching teachers:", error);
       toast({
@@ -164,7 +168,6 @@ export default function TeachersManagement() {
       const mappedTeachers = await Promise.all(
         data.map(async (dbUser: User) => {
           const imageUrl = await getUserImage(dbUser.id, "avatar");
-
           return {
             id: dbUser.id,
             name: dbUser.name,
@@ -253,7 +256,7 @@ export default function TeachersManagement() {
         phone: teacher.phone ?? "",
         document: teacher.document ?? "",
         status: teacher.status,
-        english_certificate: teacher.english_level ?? "1",
+        english_certificate: teacher.english_level ?? "A1",
       });
       setIsDialogOpen(true);
     }
@@ -432,7 +435,7 @@ export default function TeachersManagement() {
           teachers.map((teacher) => (
             <Card
               key={teacher.id}
-              className="shadow-lg hover:shadow-xl transition-shadow duration-300"
+              className="shadow-sm hover:shadow-md transition-shadow duration-300 border"
             >
               <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
                 <div className="flex items-center space-x-3">
@@ -446,39 +449,35 @@ export default function TeachersManagement() {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <CardTitle className="text-lg font-bold">
+                    <CardTitle className="text-base font-semibold">
                       {teacher.name}
                     </CardTitle>
-                    <CardDescription className="text-sm">
+                    <CardDescription className="text-xs">
                       ID: {teacher.document || "N/A"}
                     </CardDescription>
                   </div>
                 </div>
                 {getStatusBadge(teacher.status)}
               </CardHeader>
-              <CardContent className="p-4 pt-2 border-t border-b">
+              <CardContent className="p-4 pt-2">
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Email:</span>
                     <a
                       href={`mailto:${teacher.email}`}
-                      className="text-blue-600 hover:underline flex items-center gap-1 max-w-[60%] truncate justify-end"
+                      className="text-blue-600 hover:underline text-right max-w-[60%] truncate"
                     >
-                      <Mail className="h-3 w-3 sm:hidden" /> {teacher.email}
+                      {teacher.email}
                     </a>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Teléfono:</span>
-                    <a
-                      href={`tel:${teacher.phone}`}
-                      className="text-gray-900 flex items-center gap-1 justify-end"
-                    >
-                      <Phone className="h-3 w-3 sm:hidden" />{" "}
+                    <span className="text-gray-900 text-right">
                       {teacher.phone || "N/A"}
-                    </a>
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Certificado:</span>
+                    <span className="text-muted-foreground">Nivel:</span>
                     <Badge variant="outline">
                       {teacher.english_level || "N/A"}
                     </Badge>
@@ -490,6 +489,7 @@ export default function TeachersManagement() {
                   variant="outline"
                   size="sm"
                   onClick={() => handleOpenDialog(teacher)}
+                  className="flex-1"
                 >
                   <Edit className="h-4 w-4 mr-1" /> Editar
                 </Button>
@@ -498,7 +498,6 @@ export default function TeachersManagement() {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleOpenPreviewDialog(teacher)}
-                    className="text-blue-600"
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
@@ -532,22 +531,22 @@ export default function TeachersManagement() {
     <div className="flex-1 space-y-6 p-4 md:p-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900">
             Gestión de Profesores
           </h2>
-          <p className="text-gray-600">
-            Gestiona, edita y elimina los perfiles de los docentes. Utiliza los
-            filtros para encontrar rápidamente a un profesor específico.
+          <p className="text-gray-600 mt-1">
+            Administre los perfiles de los docentes del colegio
           </p>
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-        <Card className="hover:scale-[1.02] transition-transform duration-300">
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total de Profesores
             </CardTitle>
-            <BookOpen className="h-4 w-4 text-purple-600" />
+            <BookOpen className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
@@ -556,43 +555,44 @@ export default function TeachersManagement() {
             </p>
           </CardContent>
         </Card>
-        <Card className="hover:scale-[1.02] transition-transform duration-300">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Activos</CardTitle>
-            <UserCheck className="h-4 w-4 text-green-600" />
+            <UserCheck className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.active}</div>
             <p className="text-xs text-muted-foreground">
-              Profesores activos en el sistema
+              Profesores activos
             </p>
           </CardContent>
         </Card>
-        <Card className="hover:scale-[1.02] transition-transform duration-300">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Inactivos</CardTitle>
-            <UserX className="h-4 w-4 text-red-600" />
+            <UserX className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.inactive}</div>
             <p className="text-xs text-muted-foreground">
-              Profesores sin asignación
+              Profesores inactivos
             </p>
           </CardContent>
         </Card>
       </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>Listado de Profesores</CardTitle>
+          <CardTitle>Lista de Profesores</CardTitle>
           <CardDescription>
-            Tarjetas de información de todos los profesores registrados.
+            Gestione la información de los docentes del colegio
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="mb-4 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
             <Input
               type="text"
-              placeholder="Filtrar por documento..."
+              placeholder="Buscar por documento..."
               value={filterDocument}
               onChange={(e) => setFilterDocument(e.target.value)}
               className="max-w-xs flex-grow"
@@ -604,13 +604,13 @@ export default function TeachersManagement() {
               }
             >
               <SelectTrigger className="w-full sm:max-w-[200px]">
-                <SelectValue placeholder="Filtrar por certificado" />
+                <SelectValue placeholder="Filtrar por nivel" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="all">Todos los niveles</SelectItem>
                 {ENGLISH_LEVELS.map((level) => (
                   <SelectItem key={level} value={level}>
-                    {level}
+                    Nivel {level}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -628,21 +628,22 @@ export default function TeachersManagement() {
           )}
         </CardContent>
       </Card>
+
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>
-              {currentTeacher ? "Editar Profesor" : "Añadir Nuevo Profesor"}
+              {currentTeacher ? "Editar Profesor" : "Agregar Profesor"}
             </DialogTitle>
             <DialogDescription>
               {currentTeacher
-                ? "Modifica los datos del profesor."
-                : "Completa los campos para añadir un nuevo profesor."}
+                ? "Modifique los datos del profesor."
+                : "Complete la información del nuevo profesor."}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSaveTeacher} className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Nombre</Label>
+              <Label htmlFor="name">Nombre completo</Label>
               <Input
                 id="name"
                 name="name"
@@ -652,7 +653,7 @@ export default function TeachersManagement() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="document">Documento</Label>
+              <Label htmlFor="document">Documento de identidad</Label>
               <Input
                 id="document"
                 name="document"
@@ -662,7 +663,7 @@ export default function TeachersManagement() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Correo electrónico</Label>
               <Input
                 id="email"
                 name="email"
@@ -682,7 +683,7 @@ export default function TeachersManagement() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="english_certificate">Certificado de Inglés</Label>
+              <Label htmlFor="english_certificate">Nivel de inglés</Label>
               <Select
                 value={formData.english_certificate}
                 onValueChange={(value: string) =>
@@ -693,12 +694,12 @@ export default function TeachersManagement() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un certificado" />
+                  <SelectValue placeholder="Seleccione el nivel" />
                 </SelectTrigger>
                 <SelectContent>
                   {ENGLISH_LEVELS.map((level) => (
                     <SelectItem key={level} value={level}>
-                      {level}
+                      Nivel {level}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -713,7 +714,7 @@ export default function TeachersManagement() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un estado" />
+                  <SelectValue placeholder="Seleccione el estado" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="active">Activo</SelectItem>
@@ -730,104 +731,143 @@ export default function TeachersManagement() {
                 Cancelar
               </Button>
               <Button type="submit">
-                {currentTeacher ? "Guardar Cambios" : "Añadir Profesor"}
+                {currentTeacher ? "Guardar cambios" : "Agregar profesor"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
+
       <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[450px]">
           <DialogHeader>
-            <DialogTitle>Detalles de {teacherToPreview?.name}</DialogTitle>
+            <DialogTitle>Información del Profesor</DialogTitle>
             <DialogDescription>
-              Información detallada del profesor.
+              Detalles completos del perfil docente
             </DialogDescription>
           </DialogHeader>
           {teacherToPreview && (
             <div className="grid gap-4 py-4">
-              <div className="flex justify-center mb-4">
-                <Avatar className="h-24 w-24">
+              <div className="flex flex-col items-center text-center space-y-4">
+                <Avatar className="h-20 w-20">
                   <AvatarImage
                     src={teacherToPreview.imageUrl || ""}
                     alt={teacherToPreview.name}
                   />
-                  <AvatarFallback>
+                  <AvatarFallback className="text-lg">
                     {teacherToPreview.name.substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">
+                    {teacherToPreview.name}
+                  </h3>
+                  <div className="flex justify-center">
+                    {getStatusBadge(teacherToPreview.status)}
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between border-b pb-2">
-                <Label className="font-medium text-muted-foreground">
-                  Nombre:
-                </Label>
-                <span className="font-semibold text-right">
-                  {teacherToPreview.name}
-                </span>
-              </div>
-              <div className="flex justify-between border-b pb-2">
-                <Label className="font-medium text-muted-foreground">
-                  Documento:
-                </Label>
-                <span className="font-semibold text-right">
-                  {teacherToPreview.document || "N/A"}
-                </span>
-              </div>
-              <div className="flex justify-between border-b pb-2">
-                <Label className="font-medium text-muted-foreground">
-                  Email:
-                </Label>
-                <span className="font-semibold text-right truncate max-w-[50%]">
-                  {teacherToPreview.email}
-                </span>
-              </div>
-              <div className="flex justify-between border-b pb-2">
-                <Label className="font-medium text-muted-foreground">
-                  Teléfono:
-                </Label>
-                <span className="font-semibold text-right">
-                  {teacherToPreview.phone || "N/A"}
-                </span>
-              </div>
-              <div className="flex justify-between border-b pb-2">
-                <Label className="font-medium text-muted-foreground">
-                  Certificado:
-                </Label>
-                <Badge variant="outline">
-                  {teacherToPreview.english_level || "N/A"}
-                </Badge>
-              </div>
-              <div className="flex justify-between">
-                <Label className="font-medium text-muted-foreground">
-                  Estado:
-                </Label>
-                {getStatusBadge(teacherToPreview.status)}
+
+              <div className="space-y-4 border-t pt-4">
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="flex items-center gap-3">
+                    <IdCard className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">
+                        Documento
+                      </Label>
+                      <p className="font-medium">
+                        {teacherToPreview.document || "No especificado"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">
+                        Email
+                      </Label>
+                      <p className="font-medium">{teacherToPreview.email}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Phone className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">
+                        Teléfono
+                      </Label>
+                      <p className="font-medium">
+                        {teacherToPreview.phone || "No especificado"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <GraduationCap className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">
+                        Nivel de inglés
+                      </Label>
+                      <p className="font-medium">
+                        {teacherToPreview.english_level || "No especificado"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">
+                        Fecha de registro
+                      </Label>
+                      <p className="font-medium">
+                        {new Date(teacherToPreview.created_at).toLocaleDateString('es-ES')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button onClick={() => setIsPreviewDialogOpen(false)}>
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsPreviewDialogOpen(false)}
+            >
               Cerrar
             </Button>
+            {teacherToPreview && (
+              <Button 
+                onClick={() => {
+                  setIsPreviewDialogOpen(false);
+                  handleOpenDialog(teacherToPreview);
+                }}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Editar
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       <AlertDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+            <AlertDialogTitle>¿Está seguro de eliminar?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Esto eliminará permanentemente
-              al profesor de tu base de datos.
+              Esta acción no se puede deshacer. Se eliminará permanentemente al profesor del sistema.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete}>
-              Continuar
+              Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

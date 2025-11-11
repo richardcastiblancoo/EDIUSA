@@ -14,6 +14,7 @@ import { Clock, Calendar, Users, BookOpen, Loader2, User } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { getStudentCourses, Course } from "@/lib/courses";
 import { useAuth } from "@/lib/auth-context";
+
 type CourseWithTeacher = Course & {
   teachers: {
     name: string;
@@ -26,6 +27,7 @@ const useStudentCourses = () => {
   const [courses, setCourses] = useState<CourseWithTeacher[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchCourses = async () => {
       if (!user) {
@@ -37,6 +39,7 @@ const useStudentCourses = () => {
         setIsLoading(false);
         return;
       }
+
       setIsLoading(true);
       setError(null);
       try {
@@ -56,10 +59,13 @@ const useStudentCourses = () => {
         setIsLoading(false);
       }
     };
+
     fetchCourses();
   }, [user, toast]);
+
   return { courses, isLoading, error, user };
 };
+
 const CourseCard = ({
   course,
   index,
@@ -69,146 +75,201 @@ const CourseCard = ({
 }) => {
   const getLevelColor = (level: string) => {
     const colors: Record<string, string> = {
-      A1: "bg-green-100 text-green-800",
-      A2: "bg-green-200 text-green-900",
-      B1: "bg-yellow-100 text-yellow-800",
-      B2: "bg-yellow-200 text-yellow-900",
-      C1: "bg-orange-100 text-orange-800",
-      C2: "bg-red-100 text-red-800",
+      A1: "bg-gray-100 text-gray-900 border border-gray-300",
+      A2: "bg-gray-200 text-gray-900 border border-gray-400",
+      B1: "bg-gray-300 text-gray-900 border border-gray-500",
+      B2: "bg-gray-400 text-gray-900 border border-gray-600",
+      C1: "bg-gray-600 text-white border border-gray-700",
+      C2: "bg-gray-800 text-white border border-gray-900",
     };
-    return colors[level] || "bg-gray-100 text-gray-800";
-  };
-
-  const getLanguageFlag = (language: string) => {
-    const flags: Record<string, string> = {
-      Inglés: "🇺🇸",
-      Francés: "🇫🇷",
-    };
-    return flags[language] || "🌐";
+    return colors[level] || "bg-gray-100 text-gray-900 border border-gray-300";
   };
 
   return (
     <Card
       className="
-        hover:shadow-lg hover:scale-[1.02] transition-all duration-300 ease-in-out
+        group hover:shadow-lg hover:scale-[1.02] transition-all duration-300 ease-in-out
+        border border-gray-200 bg-white overflow-hidden
         animate-fade-in animate-slide-up
       "
       style={{ animationDelay: `${index * 0.08}s` }}
     >
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">{getLanguageFlag(course.language)}</span>
-            <div>
-              <CardTitle className="text-lg">{course.name}</CardTitle>
-              <CardDescription>{course.language}</CardDescription>
-            </div>
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between mb-3">
+          <div className="space-y-1">
+            <CardTitle className="text-xl font-bold text-gray-900 group-hover:text-gray-700 transition-colors">
+              {course.name}
+            </CardTitle>
+            <CardDescription className="text-sm font-medium text-gray-600">
+              {course.language}
+            </CardDescription>
           </div>
-          <Badge className={getLevelColor(course.level)}>{course.level}</Badge>
+          <Badge 
+            variant="outline" 
+            className={`${getLevelColor(course.level)} font-semibold text-xs px-3 py-1`}
+          >
+            {course.level}
+          </Badge>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
+
         {course.description && (
-          <p className="text-sm text-gray-600 line-clamp-2">
+          <p className="text-sm text-gray-600 leading-relaxed line-clamp-2">
             {course.description}
           </p>
         )}
-        <div className="flex items-center gap-2 text-sm text-gray-700">
-          <User className="h-4 w-4" />
-          <span className="font-semibold">Profesor:</span>{" "}
-          {course.teachers?.name || "No asignado"}
-        </div>
-        <div className="flex items-center gap-4 text-sm text-gray-500">
-          <div className="flex items-center gap-1">
-            <Clock className="h-4 w-4" />
-            {course.duration_weeks}w
+      </CardHeader>
+
+      <CardContent className="space-y-4 pt-0">
+        {/* Información del profesor */}
+        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+          <div className="flex items-center justify-center w-8 h-8 bg-gray-900 rounded-full">
+            <User className="h-4 w-4 text-white" />
           </div>
-          <div className="flex items-center gap-1">
-            <Users className="h-4 w-4" />
-            {course.enrolled_count} / {course.max_students}
-          </div>
-          <div className="flex items-center gap-1">
-            <Calendar className="h-4 w-4" />
-            {course.hours_per_week}h/sem
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-gray-500">Profesor</p>
+            <p className="text-sm font-semibold text-gray-900 truncate">
+              {course.teachers?.name || "Por asignar"}
+            </p>
           </div>
         </div>
+
+        {/* Información del curso */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-center gap-3 text-sm text-gray-700">
+            <div className="flex items-center justify-center w-8 h-8 bg-gray-100 rounded-lg border border-gray-200">
+              <Clock className="h-4 w-4 text-gray-700" />
+            </div>
+            <div>
+              <p className="font-semibold">Duración</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3 text-sm text-gray-700">
+            <div className="flex items-center justify-center w-8 h-8 bg-gray-100 rounded-lg border border-gray-200">
+              <Calendar className="h-4 w-4 text-gray-700" />
+            </div>
+            <div>
+              <p className="font-semibold">Horas</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Horario */}
         {course.schedule && (
-          <div className="text-sm">
-            <span className="font-medium">Horario:</span> {course.schedule}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-sm">
+              <Clock className="h-4 w-4 text-gray-700" />
+              <span className="font-semibold text-gray-900">Horario:</span>
+              <span className="text-gray-700">{course.schedule}</span>
+            </div>
           </div>
         )}
+
+        {/* Estado del curso */}
+        <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">
+              {course.enrolled_count} estudiantes
+            </span>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
 };
 
 const SkeletonCard = () => (
-  <Card className="animate-pulse">
-    <CardHeader>
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <div className="h-6 w-6 bg-gray-200 rounded-full"></div>{" "}
-          <div>
-            <div className="h-4 w-32 bg-gray-200 rounded mb-1"></div>{" "}
-            <div className="h-3 w-20 bg-gray-200 rounded"></div>{" "}
-          </div>
+  <Card className="animate-pulse overflow-hidden border border-gray-200">
+    <CardHeader className="pb-3">
+      <div className="flex items-start justify-between mb-3">
+        <div className="space-y-2">
+          <div className="h-6 w-40 bg-gray-200 rounded"></div>
+          <div className="h-4 w-24 bg-gray-200 rounded"></div>
         </div>
-        <div className="h-5 w-12 bg-gray-200 rounded-full"></div> {/* Nivel */}
+        <div className="h-6 w-16 bg-gray-200 rounded-full"></div>
+      </div>
+      <div className="space-y-2">
+        <div className="h-4 w-full bg-gray-200 rounded"></div>
+        <div className="h-4 w-5/6 bg-gray-200 rounded"></div>
       </div>
     </CardHeader>
-    <CardContent className="space-y-3">
-      <div className="h-3 w-full bg-gray-200 rounded"></div> {/* Descripción */}
-      <div className="h-3 w-5/6 bg-gray-200 rounded"></div> {/* Descripción */}
-      <div className="flex items-center gap-2 text-sm text-gray-700">
-        <div className="h-4 w-4 bg-gray-200 rounded-full"></div>
-        <div className="h-3 w-24 bg-gray-200 rounded"></div> {/* Profesor */}
+    <CardContent className="space-y-4 pt-0">
+      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+        <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+        <div className="space-y-1 flex-1">
+          <div className="h-3 w-16 bg-gray-200 rounded"></div>
+          <div className="h-4 w-24 bg-gray-200 rounded"></div>
+        </div>
       </div>
-      <div className="flex items-center gap-4 text-sm text-gray-500">
-        <div className="h-4 w-12 bg-gray-200 rounded"></div> {/* Duración */}
-        <div className="h-4 w-16 bg-gray-200 rounded"></div> {/* Estudiantes */}
-        <div className="h-4 w-16 bg-gray-200 rounded"></div> {/* Horas */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-gray-200 rounded-lg"></div>
+          <div className="space-y-1">
+            <div className="h-4 w-16 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-gray-200 rounded-lg"></div>
+          <div className="space-y-1">
+            <div className="h-4 w-12 bg-gray-200 rounded"></div>
+          </div>
+        </div>
       </div>
-      <div className="h-3 w-full bg-gray-200 rounded"></div> {/* Horario */}
+      <div className="h-12 bg-gray-200 rounded-lg"></div>
+      <div className="flex justify-between pt-3">
+        <div className="h-4 w-24 bg-gray-200 rounded"></div>
+      </div>
     </CardContent>
   </Card>
 );
+
 export default function StudentCoursesPage() {
   const { courses, isLoading, error } = useStudentCourses();
+
   const renderContent = () => {
     if (isLoading) {
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 3 }).map((_, i) => (
+          {Array.from({ length: 6 }).map((_, i) => (
             <SkeletonCard key={i} />
           ))}
         </div>
       );
     }
+
     if (error) {
       return (
-        <Card className="col-span-full border-red-500 bg-red-50 text-red-800 animate-fade-in">
-          <CardContent className="py-8 text-center">
-            <h3 className="text-lg font-medium">{error}</h3>
-            <p className="mt-2 text-sm">
+        <Card className="col-span-full border-gray-300 bg-gray-50 text-gray-900 animate-fade-in">
+          <CardContent className="py-12 text-center">
+            <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <BookOpen className="h-8 w-8 text-gray-600" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">{error}</h3>
+            <p className="text-sm text-gray-600">
               Por favor, verifica tu conexión o intenta recargar la página.
             </p>
           </CardContent>
         </Card>
       );
     }
+
     if (courses.length === 0) {
       return (
-        <Card className="col-span-full text-center py-12 animate-scale-in">
-          <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4 animate-bounce-subtle" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+        <Card className="col-span-full text-center py-16 animate-scale-in bg-gray-50 border-gray-200">
+          <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
+            <BookOpen className="h-10 w-10 text-gray-600" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-3">
             No tienes cursos inscritos
           </h3>
-          <p className="text-gray-500">
-            Puedes inscribirte a nuevos cursos con un administrador.
-          </p>
+          <div className="text-gray-600 max-w-md mx-auto">
+            Actualmente no estás inscrito en ningún curso. Contacta con la administración para inscribirte en los cursos disponibles.
+          </div>
         </Card>
       );
     }
+
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {courses.map((course, index) => (
@@ -217,14 +278,14 @@ export default function StudentCoursesPage() {
       </div>
     );
   };
+
   return (
     <DashboardLayout userRole="student">
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="animate-fade-in-down">
-          {" "}
-          <h2 className="text-3xl font-bold tracking-tight">Mis Cursos</h2>
-          <p className="text-muted-foreground">
-            Cursos en los que estás inscrito
+          <h2 className="text-3xl font-bold tracking-tight text-gray-900">Mis Cursos</h2>
+          <p className="text-gray-600 text-lg mt-2">
+            Gestiona y revisa todos tus cursos universitarios
           </p>
         </div>
         {renderContent()}

@@ -168,7 +168,11 @@ const CSVUploadDialog = ({
     reader.onload = async (event) => {
       const csvText = event.target?.result as string;
       const lines = csvText.split("\n").filter((line) => line.trim() !== "");
-      const cleanField = (s: string) => s.replace(/\u0000/g, "").trim().replace(/"/g, "");
+      const cleanField = (s: string) =>
+        s
+          .replace(/\u0000/g, "")
+          .trim()
+          .replace(/"/g, "");
 
       const usersData = lines
         .slice(1) // Omitir la primera línea (cabecera)
@@ -180,7 +184,11 @@ const CSVUploadDialog = ({
             name,
             email,
             password,
-            role: (["coordinator", "teacher", "student", "assistant"].includes(role as UserRole) ? role : "student") as UserRole,
+            role: (["coordinator", "teacher", "student", "assistant"].includes(
+              role as UserRole
+            )
+              ? role
+              : "student") as UserRole,
             phone: phone || undefined,
             document_number: document_number || undefined,
           };
@@ -281,7 +289,6 @@ const CSVUploadDialog = ({
   );
 };
 
-// --- Componente UserTable (Vista de Escritorio) ---
 const UserTable = ({
   users,
   getRoleAvatar,
@@ -293,168 +300,85 @@ const UserTable = ({
   handleSelectAll,
   handleSelectUser,
 }: any) => {
-    const isAllSelected = users.length > 0 && users.every((user: UserWithStatus) => selectedUsers.includes(user.id));
-    
-    return (
-        <Table className="hidden md:table">
-          <TableHeader>
-            <TableRow>
-              {/* Checkbox para seleccionar todos */}
-              <TableHead className="w-[50px] pr-0">
+  const isAllSelected =
+    users.length > 0 &&
+    users.every((user: UserWithStatus) => selectedUsers.includes(user.id));
+
+  return (
+    <Table className="hidden md:table">
+      <TableHeader>
+        <TableRow>
+          {/* Checkbox para seleccionar todos */}
+          <TableHead className="w-[50px] pr-0">
+            <Checkbox
+              checked={isAllSelected}
+              onCheckedChange={(checked) => handleSelectAll(checked, users)}
+              aria-label="Seleccionar todos"
+              className="rounded-sm"
+            />
+          </TableHead>
+          <TableHead>Nombre</TableHead>
+          <TableHead>Email</TableHead>
+          <TableHead>Teléfono</TableHead>
+          <TableHead>Documento</TableHead>
+          <TableHead>Rol</TableHead>
+          <TableHead>Acciones</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {users.length === 0 ? (
+          <TableRow>
+            <TableCell
+              colSpan={7}
+              className="text-center text-muted-foreground"
+            >
+              No hay usuarios que coincidan con la búsqueda.
+            </TableCell>
+          </TableRow>
+        ) : (
+          users.map((user: UserWithStatus) => (
+            <TableRow key={user.id}>
+              {/* Checkbox individual */}
+              <TableCell className="pr-0 py-2">
                 <Checkbox
-                  checked={isAllSelected}
-                  onCheckedChange={(checked) => handleSelectAll(checked, users)}
-                  aria-label="Seleccionar todos"
+                  checked={selectedUsers.includes(user.id)}
+                  onCheckedChange={(checked) =>
+                    handleSelectUser(user.id, checked)
+                  }
+                  aria-label={`Seleccionar ${user.name}`}
                   className="rounded-sm"
                 />
-              </TableHead>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Teléfono</TableHead>
-              <TableHead>Documento</TableHead>
-              <TableHead>Rol</TableHead>
-              <TableHead>Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={7}
-                  className="text-center text-muted-foreground"
-                >
-                  No hay usuarios que coincidan con la búsqueda.
-                </TableCell>
-              </TableRow>
-            ) : (
-              users.map((user: UserWithStatus) => (
-                <TableRow key={user.id}>
-                  {/* Checkbox individual */}
-                  <TableCell className="pr-0 py-2">
-                    <Checkbox
-                      checked={selectedUsers.includes(user.id)}
-                      onCheckedChange={(checked) => handleSelectUser(user.id, checked)}
-                      aria-label={`Seleccionar ${user.name}`}
-                      className="rounded-sm"
-                    />
-                  </TableCell>
-                  {/* Celda de Nombre más compacta */}
-                  <TableCell className="font-medium flex items-center gap-2 py-2">
-                    <Avatar className="h-7 w-7"> {/* Avatar más pequeño */}
-                      {user.image_url ? (
-                        <AvatarImage src={user.image_url} alt={user.name} />
-                      ) : (
-                        <AvatarFallback>{getRoleAvatar(user.role)}</AvatarFallback>
-                      )}
-                    </Avatar>
-                    <span className="text-sm">{user.name}</span>
-                  </TableCell>
-                  <TableCell className="py-2 text-sm">{user.email}</TableCell>
-                  <TableCell className="py-2 text-sm">{user.phone || "N/A"}</TableCell>
-                  <TableCell className="py-2 text-sm">{user.document_number || "N/A"}</TableCell>
-                  <TableCell className="py-2">{getRoleBadge(user.role)}</TableCell>
-                  {/* Botones de acción más pequeños */}
-                  <TableCell className="py-2">
-                    <div className="flex gap-1"> {/* Gap reducido */}
-                      <Button
-                        variant="outline"
-                        size="icon" // Usar size icon para botones de 1x1
-                        className="h-7 w-7" // Tamaño físico reducido
-                        onClick={() => handleView(user)}
-                      >
-                        <Eye className="h-4 w-4 text-blue-500" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleEdit(user)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-7 w-7 text-red-600 hover:text-red-700"
-                        onClick={() => handleDelete(user)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      );
-};
-
-// --- Componente UserCardList (Vista Móvil) ---
-const UserCardList = ({
-    users,
-    getRoleAvatar,
-    getRoleBadge,
-    handleEdit,
-    handleDelete,
-    handleView,
-    selectedUsers,
-    handleSelectUser,
-}: any) => {
-    if (users.length === 0) {
-        return (
-          <p className="text-center text-muted-foreground p-4">
-            No hay usuarios que coincidan con la búsqueda.
-          </p>
-        );
-      }
-
-      return (
-        <div className="grid gap-2 md:hidden"> {/* Gap reducido */}
-          {users.map((user: UserWithStatus) => (
-            <Card key={user.id} className="shadow-sm">
-              {/* Encabezado más compacto */}
-              <CardHeader className="flex flex-row items-center justify-between p-3 pb-2">
-                <div className="flex items-center space-x-2"> {/* Espacio reducido */}
-                  <Avatar className="h-8 w-8"> {/* Avatar más pequeño */}
-                    {user.image_url ? (
-                      <AvatarImage src={user.image_url} alt={user.name} />
-                    ) : (
-                      <AvatarFallback>{getRoleAvatar(user.role)}</AvatarFallback>
-                    )}
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-sm">{user.name}</CardTitle> {/* Título más pequeño */}
-                    <CardDescription className="text-xs">
-                      {user.email}
-                    </CardDescription>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    {getRoleBadge(user.role)}
-                     <Checkbox // Checkbox móvil a la derecha
-                        checked={selectedUsers.includes(user.id)}
-                        onCheckedChange={(checked) => handleSelectUser(user.id, checked)}
-                        aria-label={`Seleccionar ${user.name}`}
-                        className="rounded-sm"
-                     />
-                </div>
-              </CardHeader>
-              {/* Contenido más compacto */}
-              <CardContent className="space-y-1 p-3 pt-0"> {/* Padding y espacio reducido */}
-                <p className="text-xs"> {/* Texto más pequeño */}
-                  <span className="font-semibold">Teléfono:</span>{" "}
-                  {user.phone || "N/A"}
-                </p>
-                <p className="text-xs"> {/* Texto más pequeño */}
-                  <span className="font-semibold">Documento:</span>{" "}
-                  {user.document_number || "N/A"}
-                </p>
-                <div className="flex justify-end gap-1 pt-1"> {/* Botones y gap reducido */}
+              </TableCell>
+              {/* Celda de Nombre más compacta */}
+              <TableCell className="font-medium flex items-center gap-2 py-2">
+                <Avatar className="h-7 w-7">
+                  {" "}
+                  {/* Avatar más pequeño */}
+                  {user.image_url ? (
+                    <AvatarImage src={user.image_url} alt={user.name} />
+                  ) : (
+                    <AvatarFallback>{getRoleAvatar(user.role)}</AvatarFallback>
+                  )}
+                </Avatar>
+                <span className="text-sm">{user.name}</span>
+              </TableCell>
+              <TableCell className="py-2 text-sm">{user.email}</TableCell>
+              <TableCell className="py-2 text-sm">
+                {user.phone || "N/A"}
+              </TableCell>
+              <TableCell className="py-2 text-sm">
+                {user.document_number || "N/A"}
+              </TableCell>
+              <TableCell className="py-2">{getRoleBadge(user.role)}</TableCell>
+              {/* Botones de acción más pequeños */}
+              <TableCell className="py-2">
+                <div className="flex gap-1">
+                  {" "}
+                  {/* Gap reducido */}
                   <Button
                     variant="outline"
-                    size="icon"
-                    className="h-7 w-7"
+                    size="icon" // Usar size icon para botones de 1x1
+                    className="h-7 w-7" // Tamaño físico reducido
                     onClick={() => handleView(user)}
                   >
                     <Eye className="h-4 w-4 text-blue-500" />
@@ -476,13 +400,123 @@ const UserCardList = ({
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      );
+              </TableCell>
+            </TableRow>
+          ))
+        )}
+      </TableBody>
+    </Table>
+  );
 };
 
+const UserCardList = ({
+  users,
+  getRoleAvatar,
+  getRoleBadge,
+  handleEdit,
+  handleDelete,
+  handleView,
+  selectedUsers,
+  handleSelectUser,
+}: any) => {
+  if (users.length === 0) {
+    return (
+      <p className="text-center text-muted-foreground p-4">
+        No hay usuarios que coincidan con la búsqueda.
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid gap-2 md:hidden">
+      {" "}
+      {/* Gap reducido */}
+      {users.map((user: UserWithStatus) => (
+        <Card key={user.id} className="shadow-sm">
+          {/* Encabezado más compacto */}
+          <CardHeader className="flex flex-row items-center justify-between p-3 pb-2">
+            <div className="flex items-center space-x-2">
+              {" "}
+              {/* Espacio reducido */}
+              <Avatar className="h-8 w-8">
+                {" "}
+                {/* Avatar más pequeño */}
+                {user.image_url ? (
+                  <AvatarImage src={user.image_url} alt={user.name} />
+                ) : (
+                  <AvatarFallback>{getRoleAvatar(user.role)}</AvatarFallback>
+                )}
+              </Avatar>
+              <div>
+                <CardTitle className="text-sm">{user.name}</CardTitle>{" "}
+                {/* Título más pequeño */}
+                <CardDescription className="text-xs">
+                  {user.email}
+                </CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {getRoleBadge(user.role)}
+              <Checkbox // Checkbox móvil a la derecha
+                checked={selectedUsers.includes(user.id)}
+                onCheckedChange={(checked) =>
+                  handleSelectUser(user.id, checked)
+                }
+                aria-label={`Seleccionar ${user.name}`}
+                className="rounded-sm"
+              />
+            </div>
+          </CardHeader>
+          {/* Contenido más compacto */}
+          <CardContent className="space-y-1 p-3 pt-0">
+            {" "}
+            {/* Padding y espacio reducido */}
+            <p className="text-xs">
+              {" "}
+              {/* Texto más pequeño */}
+              <span className="font-semibold">Teléfono:</span>{" "}
+              {user.phone || "N/A"}
+            </p>
+            <p className="text-xs">
+              {" "}
+              {/* Texto más pequeño */}
+              <span className="font-semibold">Documento:</span>{" "}
+              {user.document_number || "N/A"}
+            </p>
+            <div className="flex justify-end gap-1 pt-1">
+              {" "}
+              {/* Botones y gap reducido */}
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => handleView(user)}
+              >
+                <Eye className="h-4 w-4 text-blue-500" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => handleEdit(user)}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7 text-red-600 hover:text-red-700"
+                onClick={() => handleDelete(user)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+};
 
 // ------------------------------------------------------------------------
 
@@ -516,17 +550,12 @@ export default function UserManagement() {
   });
   const [tempImageFile, setTempImageFile] = useState<File | null>(null);
   const [tempImagePreview, setTempImagePreview] = useState<string | null>(null);
-  
-  // --- Nuevo estado para la eliminación masiva ---
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
-
-  // --- Lógica de Carga y Refresco ---
-
   const loadUsers = useCallback(async () => {
     setLoading(true);
     setCurrentPage(1);
-    setSelectedUsers([]); // Limpiar selección al recargar
+    setSelectedUsers([]);
     try {
       const userData = await getAllUsers();
       const usersWithImages = await Promise.all(
@@ -566,9 +595,6 @@ export default function UserManagement() {
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);
-
-  // --- Lógica de Selección Masiva ---
-
   const handleSelectUser = (userId: string, isChecked: boolean) => {
     setSelectedUsers((prevSelected) => {
       if (isChecked) {
@@ -579,18 +605,22 @@ export default function UserManagement() {
     });
   };
 
-  const handleSelectAll = (isChecked: boolean | "indeterminate", currentUsers: UserWithStatus[]) => {
+  const handleSelectAll = (
+    isChecked: boolean | "indeterminate",
+    currentUsers: UserWithStatus[]
+  ) => {
     if (isChecked === true) {
       // Selecciona todos los usuarios que están actualmente visibles
-      const allIds = currentUsers.map(user => user.id);
+      const allIds = currentUsers.map((user) => user.id);
       setSelectedUsers(allIds);
     } else {
       // Deselecciona todos los usuarios actualmente visibles
-      const currentIds = currentUsers.map(user => user.id);
-      setSelectedUsers(prevSelected => prevSelected.filter(id => !currentIds.includes(id)));
+      const currentIds = currentUsers.map((user) => user.id);
+      setSelectedUsers((prevSelected) =>
+        prevSelected.filter((id) => !currentIds.includes(id))
+      );
     }
   };
-
 
   const handleDeleteSelected = async () => {
     setShowBulkDeleteConfirm(false); // Cierra la confirmación de inmediato
@@ -628,12 +658,8 @@ export default function UserManagement() {
         text: `Eliminación finalizada: ${successCount} eliminados, ${errorCount} errores.`,
       });
     }
-    loadUsers(); // Recargar la lista de usuarios
+    loadUsers();
   };
-
-
-  // --- Manejo de Formularios y Estados (Resto de funciones) ---
-
   const resetForm = () => {
     setFormData({
       name: "",
@@ -687,7 +713,7 @@ export default function UserManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCreating(true); // Activa la precarga
+    setCreating(true);
     let success = false;
     let newOrUpdatedUser: UserWithStatus | null | undefined = null;
 
@@ -700,24 +726,22 @@ export default function UserManagement() {
         password: formData.password ? sanitize(formData.password) : "",
         role: sanitize(formData.role),
         phone: formData.phone ? sanitize(formData.phone) : "",
-        document_number: formData.document_number ? sanitize(formData.document_number) : "",
+        document_number: formData.document_number
+          ? sanitize(formData.document_number)
+          : "",
       };
 
       if (editingUser) {
-        // --- Lógica para Edición ---
         if (!dataToSend.password) {
           (dataToSend as Partial<typeof dataToSend>).password = undefined;
         }
-
-        newOrUpdatedUser = (await updateUser(editingUser.id, dataToSend)) ?? null;
+        newOrUpdatedUser =
+          (await updateUser(editingUser.id, dataToSend)) ?? null;
         newOrUpdatedUser = newOrUpdatedUser || null;
         success = newOrUpdatedUser !== null && newOrUpdatedUser !== undefined;
       } else {
-        // --- Lógica para Creación ---
         newOrUpdatedUser = await createUser(formData);
         success = newOrUpdatedUser !== null && newOrUpdatedUser !== undefined;
-
-        // Si la creación fue exitosa y hay una imagen temporal, se sube
         if (success && tempImageFile && newOrUpdatedUser?.id) {
           await uploadImage(tempImageFile, newOrUpdatedUser.id, "avatar");
         }
@@ -785,14 +809,14 @@ export default function UserManagement() {
     setFormData({
       name: user.name,
       email: user.email,
-      password: "", // Contraseña vacía por defecto en edición
+      password: "",
       role: user.role as UserRole,
       phone: user.phone || "",
       document_number: user.document_number || "",
     });
     setTempImageFile(null);
     setTempImagePreview(null);
-    setDialogOpen(true); // Abrir el diálogo
+    setDialogOpen(true);
   }, []);
 
   const handleDelete = useCallback((user: UserWithStatus) => {
@@ -810,7 +834,6 @@ export default function UserManagement() {
     }
   }, []);
 
-  // --- Funciones de Presentación ---
   const getRoleBadge = useCallback((role: string) => {
     const variants = {
       coordinator: "default",
@@ -854,9 +877,6 @@ export default function UserManagement() {
       </span>
     );
   }, []);
-  // ---------------------------------
-
-  // --- Lógica de Búsqueda y Paginación ---
 
   const filteredUsers = useMemo(() => {
     const lowerCaseQuery = searchQuery.toLowerCase();
@@ -899,8 +919,6 @@ export default function UserManagement() {
     setCurrentPage(page);
   };
 
-  // --- Renderizado Principal ---
-
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -916,14 +934,22 @@ export default function UserManagement() {
     "students",
   ];
 
-  const currentTabUsers = usersByRole[
-    (document.querySelector('.tabs-list button[aria-selected="true"]') as HTMLButtonElement)?.value as keyof typeof usersByRole || 'all'
-  ] || usersByRole.all;
-  
-  const currentPaginatedUsers = paginatedUsers(
-    (document.querySelector('.tabs-list button[aria-selected="true"]') as HTMLButtonElement)?.value as keyof typeof usersByRole || 'all'
-  );
+  const currentTabUsers =
+    usersByRole[
+      ((
+        document.querySelector(
+          '.tabs-list button[aria-selected="true"]'
+        ) as HTMLButtonElement
+      )?.value as keyof typeof usersByRole) || "all"
+    ] || usersByRole.all;
 
+  const currentPaginatedUsers = paginatedUsers(
+    ((
+      document.querySelector(
+        '.tabs-list button[aria-selected="true"]'
+      ) as HTMLButtonElement
+    )?.value as keyof typeof usersByRole) || "all"
+  );
 
   return (
     <div className="space-y-4 p-4 md:p-6 lg:p-8">
@@ -950,16 +976,16 @@ export default function UserManagement() {
           <div className="flex w-full sm:w-auto space-x-2">
             {/* 🗑️ Botón de Eliminación Masiva (condicional) */}
             {selectedUsers.length > 0 && (
-                <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setShowBulkDeleteConfirm(true)}
-                    disabled={creating}
-                    className="w-1/2 sm:w-auto text-xs sm:text-sm"
-                >
-                    <Trash2 className="mr-1 h-4 w-4" />
-                    Eliminar ({selectedUsers.length})
-                </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowBulkDeleteConfirm(true)}
+                disabled={creating}
+                className="w-1/2 sm:w-auto text-xs sm:text-sm"
+              >
+                <Trash2 className="mr-1 h-4 w-4" />
+                Eliminar ({selectedUsers.length})
+              </Button>
             )}
 
             {/* 💾 Botón de Carga Masiva COMPACTO con Texto "Archivo Excel" */}
@@ -983,7 +1009,12 @@ export default function UserManagement() {
               }}
             >
               <DialogTrigger asChild>
-                <Button size="sm" className="w-1/2 sm:w-auto text-xs sm:text-sm"> {/* Tamaño pequeño */}
+                <Button
+                  size="sm"
+                  className="w-1/2 sm:w-auto text-xs sm:text-sm"
+                >
+                  {" "}
+                  {/* Tamaño pequeño */}
                   <Plus className="mr-1 h-4 w-4" />
                   <span className="hidden sm:inline">Agregar Usuario</span>
                   <span className="inline sm:hidden">Agregar</span>
@@ -1007,16 +1038,26 @@ export default function UserManagement() {
                       // Sección de información estática del avatar para edición.
                       <div className="flex items-center gap-4 p-2 border rounded-md">
                         <Avatar className="h-14 w-14">
-                          <AvatarImage src={editingUser.image_url} alt={editingUser.name} />
-                          <AvatarFallback>{getRoleAvatar(editingUser.role)}</AvatarFallback>
+                          <AvatarImage
+                            src={editingUser.image_url}
+                            alt={editingUser.name}
+                          />
+                          <AvatarFallback>
+                            {getRoleAvatar(editingUser.role)}
+                          </AvatarFallback>
                         </Avatar>
                         <div>
-                           <h3 className="text-base font-medium">Foto de Perfil</h3>
-                           <p className="text-xs text-muted-foreground">La foto de perfil solo se puede actualizar desde la vista de perfil del usuario. Aquí solo editas sus datos.</p>
+                          <h3 className="text-base font-medium">
+                            Foto de Perfil
+                          </h3>
+                          <p className="text-xs text-muted-foreground">
+                            La foto de perfil solo se puede actualizar desde la
+                            vista de perfil del usuario. Aquí solo editas sus
+                            datos.
+                          </p>
                         </div>
                       </div>
                     ) : (
-                      // Lógica de carga temporal para nuevo usuario
                       <div className="space-y-3">
                         <div>
                           <h3 className="text-base font-medium">
@@ -1103,7 +1144,11 @@ export default function UserManagement() {
                           setFormData({ ...formData, role: value })
                         }
                       >
-                        <SelectTrigger id="role" aria-labelledby="role-label" className="h-9 text-sm">
+                        <SelectTrigger
+                          id="role"
+                          aria-labelledby="role-label"
+                          className="h-9 text-sm"
+                        >
                           <SelectValue placeholder="Selecciona un rol" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1238,7 +1283,7 @@ export default function UserManagement() {
         </Alert>
       )}
 
-      {/* Tarjetas de Resumen RESPONSIVAS por Rol */}
+      {/* Tarjetas de Resmen RESPONSIVAS por Rol */}
       <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <Card className="transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-lg">
           {/* CardHeader: Compacto en móvil (p-3), Grande en escritorio (md:p-6 pb-2) */}
@@ -1257,7 +1302,7 @@ export default function UserManagement() {
           </CardContent>
         </Card>
         <Card className="transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-lg">
-           <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 pb-1 md:p-6 md:pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 pb-1 md:p-6 md:pb-2">
             <CardTitle className="text-sm font-medium">
               Total Profesores
             </CardTitle>
@@ -1288,7 +1333,9 @@ export default function UserManagement() {
       <Tabs defaultValue="all" className="space-y-3">
         {/* Pestañas más compactas */}
         <TabsList className="w-full sm:w-auto flex-wrap h-auto text-sm tabs-list">
-          <TabsTrigger value="all" className="py-1 px-3">Todos ({filteredUsers.length})</TabsTrigger>
+          <TabsTrigger value="all" className="py-1 px-3">
+            Todos ({filteredUsers.length})
+          </TabsTrigger>
           <TabsTrigger value="coordinators" className="py-1 px-3">
             Coordinadores ({usersByRole.coordinators.length})
           </TabsTrigger>
@@ -1305,32 +1352,39 @@ export default function UserManagement() {
               {/* Checkbox "Seleccionar todos" visible solo en escritorio para evitar redundancia con el checkbox de la tabla */}
               <CardHeader className="p-4 flex flex-row items-center justify-between">
                 <div>
-                    <CardTitle className="text-lg">
-                      {role === "all"
-                        ? "Todos los Usuarios"
-                        : role.charAt(0).toUpperCase() + role.slice(1)}
-                    </CardTitle>
-                    <CardDescription className="text-sm">
-                      {role === "all"
-                        ? "Lista completa de usuarios del sistema"
-                        : `Usuarios con rol de ${
-                            role === "coordinators"
-                              ? "coordinador"
-                              : role === "teachers"
-                              ? "profesor"
-                              : "estudiante"
-                          }`}
-                    </CardDescription>
+                  <CardTitle className="text-lg">
+                    {role === "all"
+                      ? "Todos los Usuarios"
+                      : role.charAt(0).toUpperCase() + role.slice(1)}
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    {role === "all"
+                      ? "Lista completa de usuarios del sistema"
+                      : `Usuarios con rol de ${
+                          role === "coordinators"
+                            ? "coordinador"
+                            : role === "teachers"
+                            ? "profesor"
+                            : "estudiante"
+                        }`}
+                  </CardDescription>
                 </div>
                 {/* Checkbox "Seleccionar todos" para móvil/listado */}
                 <div className="flex items-center space-x-2 md:hidden">
-                    <Checkbox
-                        checked={currentPaginatedUsers.length > 0 && currentPaginatedUsers.every(user => selectedUsers.includes(user.id))}
-                        onCheckedChange={(checked) => handleSelectAll(checked, currentPaginatedUsers)}
-                        aria-label="Seleccionar todos"
-                        className="rounded-sm"
-                    />
-                    <Label className="text-sm">Seleccionar Todos</Label>
+                  <Checkbox
+                    checked={
+                      currentPaginatedUsers.length > 0 &&
+                      currentPaginatedUsers.every((user) =>
+                        selectedUsers.includes(user.id)
+                      )
+                    }
+                    onCheckedChange={(checked) =>
+                      handleSelectAll(checked, currentPaginatedUsers)
+                    }
+                    aria-label="Seleccionar todos"
+                    className="rounded-sm"
+                  />
+                  <Label className="text-sm">Seleccionar Todos</Label>
                 </div>
               </CardHeader>
               <CardContent className="p-0 md:p-6 md:pt-0">
@@ -1476,7 +1530,7 @@ export default function UserManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
+
       {/* Diálogo de Eliminación Masiva */}
       <AlertDialog
         open={showBulkDeleteConfirm}
@@ -1486,12 +1540,18 @@ export default function UserManagement() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Eliminación Masiva</AlertDialogTitle>
             <AlertDialogDescription>
-              Estás a punto de eliminar permanentemente a **{selectedUsers.length}** usuarios seleccionados. Esta acción no se puede deshacer. ¿Deseas continuar?
+              Estás a punto de eliminar permanentemente a **
+              {selectedUsers.length}** usuarios seleccionados. Esta acción no se
+              puede deshacer. ¿Deseas continuar?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={creating}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteSelected} disabled={creating} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={handleDeleteSelected}
+              disabled={creating}
+              className="bg-red-600 hover:bg-red-700"
+            >
               {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sí, Eliminar ({selectedUsers.length})
             </AlertDialogAction>
