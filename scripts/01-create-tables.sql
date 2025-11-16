@@ -222,6 +222,51 @@ CREATE TABLE IF NOT EXISTS questions (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Agregar las columnas faltantes a la tabla lessons
+ALTER TABLE lessons 
+ADD COLUMN IF NOT EXISTS pdf_url TEXT,
+ADD COLUMN IF NOT EXISTS audio_url TEXT,
+ADD COLUMN IF NOT EXISTS is_published BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS order_index INTEGER DEFAULT 0;
+
+-- Si prefieres usar attachments como array en lugar de pdf_url individual
+ALTER TABLE lessons 
+ADD COLUMN IF NOT EXISTS attachments TEXT[] DEFAULT '{}';
+
+-- Asegurar que las columnas críticas existan
+ALTER TABLE lessons 
+ALTER COLUMN order_index SET NOT NULL,
+ALTER COLUMN is_published SET NOT NULL;
+
+
+-- Crear bucket para materiales del curso si no existe
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('course_materials', 'course_materials', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Política para permitir lectura pública de materiales del curso
+CREATE POLICY "Materiales del curso accesibles públicamente" 
+ON storage.objects FOR SELECT 
+USING (bucket_id = 'course_materials');
+
+-- Política para permitir subida a usuarios autenticados
+CREATE POLICY "Usuarios autenticados pueden subir materiales del curso" 
+ON storage.objects FOR INSERT 
+TO authenticated 
+WITH CHECK (bucket_id = 'course_materials');
+
+-- Política para permitir actualización a usuarios autenticados
+CREATE POLICY "Usuarios autenticados pueden actualizar materiales" 
+ON storage.objects FOR UPDATE 
+TO authenticated 
+USING (bucket_id = 'course_materials');
+
+-- Política para permitir eliminación a usuarios autenticados
+CREATE POLICY "Usuarios autenticados pueden eliminar materiales" 
+ON storage.objects FOR DELETE 
+TO authenticated 
+USING (bucket_id = 'course_materials');
 -- Create index for better performance
 CREATE INDEX IF NOT EXISTS idx_questions_exam ON questions(exam_id);
 ----------

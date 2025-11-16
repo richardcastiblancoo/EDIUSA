@@ -4,7 +4,7 @@ import { motion } from "framer-motion"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { BookOpen, FileText, Award, Loader2, MessageSquare } from "lucide-react"
+import { BookOpen, FileText, Award, Loader2, MessageSquare, Sparkles } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { getStudentCourses } from "@/lib/courses"
 import { getStudentExams } from "@/lib/exams"
@@ -199,6 +199,50 @@ export default function StudentDashboard() {
                     <Link href="/dashboard/student/pqr">
                       <Button>
                         Crear nueva solicitud
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* New Exam Interface Demo */}
+            <motion.div variants={itemVariants} whileHover={cardHoverEffect}>
+              <Card className="border-2 border-blue-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-blue-600" />
+                    Nueva Interfaz de Examen
+                  </CardTitle>
+                  <CardDescription>Prueba la nueva experiencia de examen con diseño moderno</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4 text-center py-4">
+                    <div className="flex justify-center mb-4">
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center gap-1 text-blue-600">
+                          <BookOpen className="h-3 w-3" />
+                          Listening
+                        </div>
+                        <div className="flex items-center gap-1 text-green-600">
+                          <FileText className="h-3 w-3" />
+                          Reading
+                        </div>
+                        <div className="flex items-center gap-1 text-purple-600">
+                          <Award className="h-3 w-3" />
+                          Use of Language
+                        </div>
+                        <div className="flex items-center gap-1 text-orange-600">
+                          <MessageSquare className="h-3 w-3" />
+                          Writing
+                        </div>
+                      </div>
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Interfaz Mejorada</h3>
+                    <p className="text-gray-500 mb-4">Experimenta los cuatro tipos de secciones de examen con un diseño moderno e intuitivo.</p>
+                    <Link href="/dashboard/student/exam-demo">
+                      <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                        Probar Nueva Interfaz
                       </Button>
                     </Link>
                   </div>

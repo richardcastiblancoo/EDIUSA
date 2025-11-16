@@ -107,3 +107,16 @@ export interface PQR {
   students?: { name: string };
   teachers?: { name: string };
 }
+
+export interface Lesson {
+  id: string;
+  course_id: string;
+  title: string;
+  description: string;
+  pdf_url?: string; // This line should be present
+  audio_url?: string;
+  is_published: boolean;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}

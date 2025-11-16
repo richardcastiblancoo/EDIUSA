@@ -33,37 +33,19 @@ export async function createNewLesson(
   try {
     let pdfUrl = null;
     let audioUrl = null;
-    const bucketName = "course_materials";
-    if (pdfFile) {
-      const pdfPath = `${courseId}/lessons/${crypto.randomUUID()}-${
-        pdfFile.name
-      }`;
-      const { error: pdfError } = await supabase.storage
-        .from(bucketName)
-        .upload(pdfPath, pdfFile, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: "application/pdf",
-        });
-      if (pdfError) throw new Error(`Error al subir PDF: ${pdfError.message}`);
-      pdfUrl = supabase.storage.from(bucketName).getPublicUrl(pdfPath)
-        .data.publicUrl;
-    }
-    if (audioFile) {
-      const audioPath = `${courseId}/lessons/${crypto.randomUUID()}-${
-        audioFile.name
-      }`;
-      const { error: audioError } = await supabase.storage
-        .from(bucketName)
-        .upload(audioPath, audioFile, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: audioFile.type,
-        });
-      if (audioError)
-        throw new Error(`Error al subir Audio: ${audioError.message}`);
-      audioUrl = supabase.storage.from(bucketName).getPublicUrl(audioPath)
-        .data.publicUrl;
+    if (pdfFile || audioFile) {
+      const body = new FormData();
+      body.append("courseId", courseId);
+      if (pdfFile) body.append("pdf", pdfFile);
+      if (audioFile) body.append("audio", audioFile);
+      const res = await fetch("/api/storage/upload", { method: "POST", body });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(`Error al subir archivos: ${err?.error || res.statusText}`);
+      }
+      const uploaded = await res.json();
+      pdfUrl = uploaded.pdfUrl || null;
+      audioUrl = uploaded.audioUrl || null;
     }
     const { data: maxOrder, error: orderError } = await supabase
       .from("lessons")
@@ -82,7 +64,7 @@ export async function createNewLesson(
       description,
       pdf_url: pdfUrl,
       audio_url: audioUrl,
-      is_published: false,
+      is_published: true,
       order_index: newOrderIndex,
     };
     const { data, error: insertError } = await supabase

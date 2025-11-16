@@ -232,7 +232,7 @@ export default function DashboardLayout({
             items: [
               {
                 name: "Exámenes",
-                href: "/dashboard/student/exams",
+                href: "/dashboard/student/exam-demo",
                 icon: ClipboardList,
               },
               {
