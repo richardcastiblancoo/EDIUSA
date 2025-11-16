@@ -8,12 +8,12 @@ import type { Metadata, Viewport } from "next";
 const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Escuela de Idiomas Universidad Sergio Arboleda Caribe",
-  metadataBase: new URL("https://ciusa.vercel.app"),
+  metadataBase: new URL("https://ediusa.vercel.app/"),
   openGraph: {
     title: "Escuela de Idiomas Universidad Sergio Arboleda Caribe",
     description:
       "Sistema de gestión académica para el Centro de Idiomas de la Universidad Sergio Arboleda. Plataforma integral para la gestión académica y administrativa del Centro de Idiomas de la Universidad Sergio Arboleda. Gestión de estudiantes y profesores Administración de cursos y exámenes Seguimiento académico integral",
-    url: "https://ciusa.vercel.app/",
+    url: "https://ediusa.vercel.app/",
     siteName: "Escuela de Idiomas, Universidad Sergio Arboleda Caribe ",
     images: [
       {
