@@ -9,13 +9,13 @@
   "orientation": "portrait-primary",
   "icons": [
        {
-      "src": "/ciusa-2.webp",
+      "src": "/ciusa.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable any"
     },
     {
-      "src": "/ciusa-2.webp",
+      "src": "/ciusa.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable any"
