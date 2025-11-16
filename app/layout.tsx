@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     siteName: "Escuela de Idiomas, Universidad Sergio Arboleda Caribe ",
     images: [
       {
-        url: "/ciusa-2.webp",
+        url: "/ciusa.png",
         width: 1200,
         height: 630,
         alt: "Escuela de Idiomas, Universidad Sergio Arboleda Caribe ",
