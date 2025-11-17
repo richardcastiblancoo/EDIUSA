@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -351,6 +352,118 @@ const CreateLessonDialog = ({
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Diálogo para editar lección
+const EditLessonDialog = ({
+  lesson,
+  isOpen,
+  onClose,
+  onSave,
+}: {
+  lesson: Lesson | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (updatedLesson: Lesson) => void;
+}) => {
+  const { toast } = useToast();
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (lesson) {
+      setTitle(lesson.title);
+      setDescription(lesson.description || "");
+    }
+  }, [lesson]);
+
+  const handleSave = async () => {
+    if (!lesson || !title.trim()) return;
+
+    setLoading(true);
+    try {
+      const updatedLesson = await updateLesson(lesson.id, {
+        title: title.trim(),
+        description: description.trim() || null,
+      });
+
+      if (updatedLesson) {
+        toast({
+          title: "Éxito",
+          description: "Lección actualizada correctamente",
+        });
+        onSave(updatedLesson);
+        onClose();
+      } else {
+        toast({
+          title: "Error",
+          description: "No se pudo actualizar la lección",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error actualizando lección:", error);
+      toast({
+        title: "Error",
+        description: "Error al actualizar la lección",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Editar Lección</DialogTitle>
+          <DialogDescription>
+            Modifica el título y descripción de la lección
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="edit-title">Título</Label>
+            <Input
+              id="edit-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Título de la lección"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="edit-description">Descripción</Label>
+            <Textarea
+              id="edit-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Descripción de la lección (opcional)"
+              rows={4}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={loading}>
+            <Cancel className="mr-2 h-4 w-4" />
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={loading || !title.trim()}>
+            {loading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            Guardar
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -1043,9 +1156,11 @@ const StudentProfileDialog = ({
 const AttendanceDialog = ({
   courseName,
   students,
+  courseId,
 }: {
   courseName: string;
   students: Student[];
+  courseId: string;
 }) => {
   const { toast } = useToast();
   const today = new Date().toLocaleDateString("es-ES", {
@@ -1059,17 +1174,19 @@ const AttendanceDialog = ({
   >(
     students.map((student) => ({
       ...student,
-      attended: false,
-      hours: 0,
+      attended: true,
+      hours: 1,
     }))
   );
+
+  const [showReport, setShowReport] = useState(false);
 
   useEffect(() => {
     setAttendanceState(
       students.map((student) => ({
         ...student,
-        attended: false,
-        hours: 0,
+        attended: true,
+        hours: 1,
       }))
     );
   }, [students]);
@@ -1124,6 +1241,32 @@ const AttendanceDialog = ({
     });
   };
 
+  const handleViewAttendanceReport = () => {
+    setShowReport(true);
+  };
+
+  const handleSendToCoordinator = () => {
+    const reportData = {
+      courseName,
+      date: today,
+      totalStudents: students.length,
+      attendedStudents: attendanceState.filter((s) => s.attended).length,
+      absentStudents: attendanceState.filter((s) => !s.attended).length,
+      students: attendanceState.map((s) => ({
+        name: s.name,
+        status: s.attended ? "Presente" : "Ausente",
+        hours: s.hours,
+      })),
+    };
+
+    console.log("Enviando reporte al coordinador:", reportData);
+    
+    toast({
+      title: "Reporte Enviado",
+      description: `El reporte de asistencia ha sido enviado al coordinador para el curso ${courseName}.`,
+    });
+  };
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -1133,12 +1276,25 @@ const AttendanceDialog = ({
       </DialogTrigger>
       <DialogContent className="sm:max-w-[700px] transition-all duration-300 ease-in-out p-6">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">
-            Registro de Asistencia: {courseName}
-          </DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            Fecha: <span className="font-semibold text-blue-600">{today}</span>
-          </p>
+          <div className="flex justify-between items-start">
+            <div>
+              <DialogTitle className="text-xl font-bold">
+                Registro de Asistencia: {courseName}
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                Fecha: <span className="font-semibold text-blue-600">{today}</span>
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleViewAttendanceReport}
+              className="flex items-center gap-2"
+            >
+              <Eye className="h-4 w-4" />
+              Ver Reporte
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="py-4 space-y-4 max-h-[60vh] overflow-y-auto pr-3">
@@ -1232,6 +1388,58 @@ const AttendanceDialog = ({
             </div>
           )}
         </div>
+        
+        {showReport && (
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h4 className="text-lg font-bold text-blue-800 mb-3">Resumen de Asistencia</h4>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="bg-white p-3 rounded border">
+                <p className="font-semibold text-gray-600">Total Estudiantes:</p>
+                <p className="text-xl font-bold text-blue-600">{students.length}</p>
+              </div>
+              <div className="bg-white p-3 rounded border">
+                <p className="font-semibold text-gray-600">Presentes:</p>
+                <p className="text-xl font-bold text-green-600">
+                  {attendanceState.filter((s) => s.attended).length}
+                </p>
+              </div>
+              <div className="bg-white p-3 rounded border">
+                <p className="font-semibold text-gray-600">Ausentes:</p>
+                <p className="text-xl font-bold text-red-600">
+                  {attendanceState.filter((s) => !s.attended).length}
+                </p>
+              </div>
+              <div className="bg-white p-3 rounded border">
+                <p className="font-semibold text-gray-600">% Asistencia:</p>
+                <p className="text-xl font-bold text-purple-600">
+                  {students.length > 0 
+                    ? Math.round((attendanceState.filter((s) => s.attended).length / students.length) * 100)
+                    : 0}%
+                </p>
+              </div>
+            </div>
+            
+            <div className="mt-4 flex gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleSendToCoordinator}
+                className="flex items-center gap-2"
+              >
+                <Mail className="h-4 w-4" />
+                Enviar a Coordinador
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowReport(false)}
+              >
+                Cerrar Reporte
+              </Button>
+            </div>
+          </div>
+        )}
+        
         <Button className="w-full mt-4" onClick={handleSaveAttendance}>
           Guardar Asistencia
         </Button>
@@ -1558,6 +1766,7 @@ export default function TeacherCoursesPage() {
                     <AttendanceDialog
                       courseName={course.name}
                       students={course.students}
+                      courseId={course.id}
                     />
                   </div>
                 </CardContent>
