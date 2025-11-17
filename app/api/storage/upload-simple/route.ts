@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { createClient } from "@supabase/supabase-js";
-
-// Create admin client for server-side operations
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,14 +27,11 @@ export async function POST(request: NextRequest) {
     let pdfUrl = null;
     let audioUrl = null;
 
-    // Ensure buckets exist using admin client
-    await ensureBucketsExist();
-
     // Upload PDF if provided
     if (pdfFile) {
       try {
         const pdfFileName = `lessons/${courseId}/${Date.now()}_${pdfFile.name}`;
-        const { data: pdfData, error: pdfError } = await supabaseAdmin.storage
+        const { data: pdfData, error: pdfError } = await supabase.storage
           .from('attachments')
           .upload(pdfFileName, pdfFile);
         
@@ -51,7 +41,7 @@ export async function POST(request: NextRequest) {
         }
         
         if (pdfData) {
-          const { data: pdfUrlData } = supabaseAdmin.storage
+          const { data: pdfUrlData } = supabase.storage
             .from('attachments')
             .getPublicUrl(pdfFileName);
           pdfUrl = pdfUrlData.publicUrl;
@@ -66,7 +56,7 @@ export async function POST(request: NextRequest) {
     if (audioFile) {
       try {
         const audioFileName = `lessons/${courseId}/${Date.now()}_${audioFile.name}`;
-        const { data: audioData, error: audioError } = await supabaseAdmin.storage
+        const { data: audioData, error: audioError } = await supabase.storage
           .from('audio')
           .upload(audioFileName, audioFile);
         
@@ -76,7 +66,7 @@ export async function POST(request: NextRequest) {
         }
         
         if (audioData) {
-          const { data: audioUrlData } = supabaseAdmin.storage
+          const { data: audioUrlData } = supabase.storage
             .from('audio')
             .getPublicUrl(audioFileName);
           audioUrl = audioUrlData.publicUrl;
@@ -103,50 +93,5 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
-  }
-}
-
-async function ensureBucketsExist() {
-  try {
-    const { data: buckets, error: listError } = await supabaseAdmin.storage.listBuckets();
-    
-    if (listError) {
-      console.error("Error listing buckets:", listError);
-      throw listError;
-    }
-
-    const bucketNames = buckets?.map(b => b.name) || [];
-    
-    // Create attachments bucket if it doesn't exist
-    if (!bucketNames.includes('attachments')) {
-      const { error: createAttachmentsError } = await supabaseAdmin.storage.createBucket('attachments', {
-        public: true,
-        fileSizeLimit: 50 * 1024 * 1024, // 50MB
-        allowedMimeTypes: ['application/pdf', 'text/pdf']
-      });
-      
-      if (createAttachmentsError && !createAttachmentsError.message.includes('already exists')) {
-        console.error("Error creating attachments bucket:", createAttachmentsError);
-        throw createAttachmentsError;
-      }
-    }
-    
-    // Create audio bucket if it doesn't exist
-    if (!bucketNames.includes('audio')) {
-      const { error: createAudioError } = await supabaseAdmin.storage.createBucket('audio', {
-        public: true,
-        fileSizeLimit: 50 * 1024 * 1024, // 50MB
-        allowedMimeTypes: ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/aac']
-      });
-      
-      if (createAudioError && !createAudioError.message.includes('already exists')) {
-        console.error("Error creating audio bucket:", createAudioError);
-        throw createAudioError;
-      }
-    }
-    
-  } catch (error) {
-    console.error("Error ensuring buckets exist:", error);
-    throw error;
   }
 }

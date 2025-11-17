@@ -189,9 +189,9 @@ export default function StudentLessonsPage() {
                         {/* Información del curso */}
                         <div className="bg-gray-50 p-3 rounded-lg space-y-2">
                           <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">Idioma:</span>
+                            <span className="text-muted-foreground">Curso:</span>
                             <Badge variant="outline" className="text-xs">
-                              {lesson.courses?.language || "Español"}
+                              {lesson.courses?.language || "N/A"}
                             </Badge>
                           </div>
                           <div className="flex items-center justify-between text-xs">
