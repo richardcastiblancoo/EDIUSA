@@ -607,47 +607,13 @@ export default function LoginForm() {
           </div>
 
           {/* Elementos educativos animados */}
-          <div className="relative h-48 flex items-center justify-center">
-            <div className="flex space-x-8">
-              <div className="flex flex-col items-center">
-                <BookOpen
-                  className="h-12 w-12 text-white mb-2 animate-floating"
-                  style={{ animationDelay: "0s" }}
-                />
-                <span className="text-white font-semibold">Aprende</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <Languages
-                  className="h-12 w-12 text-white mb-2 animate-floating"
-                  style={{ animationDelay: "1s" }}
-                />
-                <span className="text-white font-semibold">Practica</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <Trophy
-                  className="h-12 w-12 text-white mb-2 animate-floating"
-                  style={{ animationDelay: "2s" }}
-                />
-                <span className="text-white font-semibold">Domina</span>
-              </div>
-            </div>
-          </div>
+          
         </div>
 
         {/* Lado derecho - Formulario de login mejorado */}
         <Card className="w-full lg:w-1/2 p-10 shadow-none border-0 rounded-l-none bg-white/95 backdrop-blur-sm">
           <CardHeader className="space-y-2 pb-6">
             <div className="flex items-center justify-center mb-4">
-              <div className="relative">
-                <Languages
-                  className="h-10 w-10 text-#044bab mr-3"
-                  style={{ color: "#044bab" }}
-                />
-                <Sparkles
-                  className="absolute -top-1 -right-1 h-4 w-4 text-#fce414 fill-current"
-                  style={{ color: "#fce414" }}
-                />
-              </div>
               <CardTitle
                 className="text-4xl font-black bg-gradient-to-r from-#044bab to-#92a74e bg-clip-text text-transparent"
                 style={{
