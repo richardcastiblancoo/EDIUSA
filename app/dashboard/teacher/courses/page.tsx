@@ -47,8 +47,9 @@ import {
   Music,
   Eye,
   EyeOff,
+  Edit,
 } from "lucide-react";
-import { Lesson, createNewLesson, getLessonsForCourse } from "@/lib/lessons";
+import { Lesson, createNewLesson, getLessonsForCourse, updateLesson, deleteLesson } from "@/lib/lessons";
 
 interface Course {
   id: string;
@@ -244,7 +245,7 @@ const CreateLessonDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="default" className="w-full bg-green-600 hover:bg-green-700">
+        <Button variant="default" className="w-full bg-blue-600 hover:bg-blue-700">
           <PlusCircle className="mr-2 h-4 w-4" /> Crear Nueva Lección
         </Button>
       </DialogTrigger>
@@ -341,7 +342,7 @@ const CreateLessonDialog = ({
             <Button
               type="submit"
               disabled={creating}
-              className="w-full"
+              className="w-full bg-blue-600 hover:bg-blue-700"
             >
               {creating ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -452,14 +453,18 @@ const EditLessonDialog = ({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={loading}>
-            <Cancel className="mr-2 h-4 w-4" />
+            <X className="mr-2 h-4 w-4" />
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={loading || !title.trim()}>
+          <Button 
+            onClick={handleSave} 
+            disabled={loading || !title.trim()}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
             {loading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <Save className="mr-2 h-4 w-4" />
+              <CheckCircle className="mr-2 h-4 w-4" />
             )}
             Guardar
           </Button>
@@ -481,6 +486,8 @@ const ViewLessonsDialog = ({
   const [isOpen, setIsOpen] = useState(false);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const loadLessons = async () => {
     setLoading(true);
@@ -505,22 +512,26 @@ const ViewLessonsDialog = ({
     }
   }, [isOpen, courseId]);
 
-  const togglePublishStatus = async (lessonId: string, currentStatus: boolean) => {
+  const handleTogglePublishStatus = async (lessonId: string, currentStatus: boolean) => {
     try {
-      // Aquí implementarías la función para cambiar el estado de publicación
-      // Por ahora solo actualizamos localmente
-      setLessons(prev => 
-        prev.map(lesson => 
-          lesson.id === lessonId 
-            ? { ...lesson, is_published: !currentStatus }
-            : lesson
-        )
-      );
+      const success = await toggleLessonPublishStatus(lessonId, currentStatus);
       
-      toast({
-        title: "Éxito",
-        description: `Lección ${!currentStatus ? 'publicada' : 'ocultada'} correctamente`,
-      });
+      if (success) {
+        setLessons(prev => 
+          prev.map(lesson => 
+            lesson.id === lessonId 
+              ? { ...lesson, is_published: !currentStatus }
+              : lesson
+          )
+        );
+        
+        toast({
+          title: "Éxito",
+          description: `Lección ${!currentStatus ? 'publicada' : 'ocultada'} correctamente`,
+        });
+      } else {
+        throw new Error("No se pudo cambiar el estado");
+      }
     } catch (error) {
       console.error("Error cambiando estado:", error);
       toast({
@@ -531,88 +542,159 @@ const ViewLessonsDialog = ({
     }
   };
 
-  return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="w-full">
-          <BookOpen className="mr-2 h-4 w-4" /> Ver Lecciones
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">
-            Lecciones del Curso
-          </DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            {courseName} - {lessons.length} lección{lessons.length !== 1 ? 'es' : ''}
-          </p>
-        </DialogHeader>
+  const handleEditLesson = (lesson: Lesson) => {
+    setEditingLesson(lesson);
+    setIsEditDialogOpen(true);
+  };
 
-        <div className="space-y-4">
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : lessons.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              No hay lecciones creadas para este curso.
+  const handleSaveEditedLesson = (updatedLesson: Lesson) => {
+    setLessons(prev =>
+      prev.map(lesson =>
+        lesson.id === updatedLesson.id ? updatedLesson : lesson
+      )
+    );
+  };
+
+  const handleDeleteLesson = async (lessonId: string, lessonTitle: string) => {
+    if (!confirm(`¿Estás seguro de que quieres eliminar la lección "${lessonTitle}"? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    try {
+      const success = await deleteLesson(lessonId);
+      
+      if (success) {
+        setLessons(prev => prev.filter(lesson => lesson.id !== lessonId));
+        toast({
+          title: "Éxito",
+          description: "Lección eliminada correctamente",
+        });
+      } else {
+        throw new Error("No se pudo eliminar la lección");
+      }
+    } catch (error) {
+      console.error("Error eliminando lección:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar la lección",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" className="w-full">
+            <BookOpen className="mr-2 h-4 w-4" /> Ver Lecciones
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">
+              Lecciones del Curso
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              {courseName} - {lessons.length} lección{lessons.length !== 1 ? 'es' : ''}
             </p>
-          ) : (
-            <div className="space-y-3">
-              {lessons.map((lesson) => (
-                <Card key={lesson.id} className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2 flex-1">
-                      <h4 className="font-semibold text-lg">{lesson.title}</h4>
-                      {lesson.description && (
-                        <p className="text-sm text-muted-foreground">
-                          {lesson.description}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        {lesson.pdf_url && (
-                          <span className="flex items-center gap-1">
-                            <FileText className="h-3 w-3" />
-                            PDF
-                          </span>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : lessons.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No hay lecciones creadas para este curso.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {lessons.map((lesson) => (
+                  <Card key={lesson.id} className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-2 flex-1">
+                        <h4 className="font-semibold text-lg">{lesson.title}</h4>
+                        {lesson.description && (
+                          <p className="text-sm text-muted-foreground">
+                            {lesson.description}
+                          </p>
                         )}
-                        {lesson.audio_url && (
-                          <span className="flex items-center gap-1">
-                            <Music className="h-3 w-3" />
-                            Audio
-                          </span>
-                        )}
-                        <span>Orden: {lesson.order_index}</span>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          {lesson.pdf_url && (
+                            <span className="flex items-center gap-1">
+                              <FileText className="h-3 w-3" />
+                              PDF
+                            </span>
+                          )}
+                          {lesson.audio_url && (
+                            <span className="flex items-center gap-1">
+                              <Music className="h-3 w-3" />
+                              Audio
+                            </span>
+                          )}
+                          <span>Orden: {lesson.order_index}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={lesson.is_published ? "default" : "secondary"}
+                          className="flex items-center gap-1"
+                        >
+                          {lesson.is_published ? (
+                            <Eye className="h-3 w-3" />
+                          ) : (
+                            <EyeOff className="h-3 w-3" />
+                          )}
+                          {lesson.is_published ? "Publicada" : "Oculta"}
+                        </Badge>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleTogglePublishStatus(lesson.id, lesson.is_published)}
+                            className="h-8"
+                          >
+                            {lesson.is_published ? "Ocultar" : "Publicar"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditLesson(lesson)}
+                            className="h-8"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteLesson(lesson.id, lesson.title)}
+                            className="h-8"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant={lesson.is_published ? "default" : "secondary"}
-                        className="flex items-center gap-1"
-                      >
-                        {lesson.is_published ? (
-                          <Eye className="h-3 w-3" />
-                        ) : (
-                          <EyeOff className="h-3 w-3" />
-                        )}
-                        {lesson.is_published ? "Publicada" : "Oculta"}
-                      </Badge>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => togglePublishStatus(lesson.id, lesson.is_published)}
-                      >
-                        {lesson.is_published ? "Ocultar" : "Publicar"}
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <EditLessonDialog
+        lesson={editingLesson}
+        isOpen={isEditDialogOpen}
+        onClose={() => {
+          setIsEditDialogOpen(false);
+          setEditingLesson(null);
+        }}
+        onSave={handleSaveEditedLesson}
+      />
+    </>
   );
 };
 
@@ -1617,7 +1699,7 @@ export default function TeacherCoursesPage() {
     <DashboardLayout userRole="teacher">
       <div className="space-y-6">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Mis Cursos 📚</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Mis cursos </h2>
           <p className="text-muted-foreground">
             Listado de cursos que estás enseñando. Utiliza los botones para
             gestionar cada curso.
