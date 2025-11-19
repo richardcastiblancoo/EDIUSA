@@ -1,8 +1,11 @@
 import { supabase } from "./supabase";
+import { getStudentsForCourse } from "./students";
 
 export interface Question {
   id: string;
   exam_id: string;
+  section_id: string; // New field to link to ExamSection
+  part_index: number; // New field to link to ExamPart within a section
   question_text: string;
   question_type: "multiple_choice" | "essay" | "true_false" | "fill_blank";
   options?: string[];
@@ -10,6 +13,20 @@ export interface Question {
   points: number;
   order_number: number;
   created_at: string;
+}
+
+export interface ExamPart {
+  instruction: string;
+  questions: number;
+  audio_file: File | null;
+  audio_filename: string | null;
+}
+
+export interface ExamSection {
+  section_id: string;
+  title: string;
+  max_score: number;
+  parts: ExamPart[];
 }
 
 export interface Exam {
@@ -27,6 +44,7 @@ export interface Exam {
   passing_score?: number;
   show_results?: boolean;
   randomize_questions?: boolean;
+  structure?: ExamSection[];
 }
 
 /**
@@ -52,6 +70,7 @@ export async function createExam(
       passing_score: examData.passing_score,
       show_results: examData.show_results,
       randomize_questions: examData.randomize_questions,
+      structure: examData.structure,
     };
     const { data, error } = await supabase
       .from("exams")
@@ -63,6 +82,35 @@ export async function createExam(
   } catch (error) {
     console.error("Create exam error:", error);
     return null;
+  }
+}
+
+/**
+ * Notifica a los estudiantes de un curso sobre un nuevo examen.
+ * @param examId El ID del examen recién creado.
+ * @param courseId El ID del curso al que pertenece el examen.
+ */
+export async function notifyStudentsOfNewExam(
+  examId: string,
+  courseId: string
+): Promise<void> {
+  try {
+    const students = await getStudentsForCourse(courseId);
+
+    if (students.length === 0) {
+      console.log(`No students found for course ${courseId}. No notifications sent.`);
+      return;
+    }
+
+    console.log(`Notifying ${students.length} students in course ${courseId} about new exam ${examId}.`);
+
+    for (const student of students) {
+      console.log(`Student ${student.id} (${student.name}) notified about exam ${examId}.`);
+      // Here you would typically integrate with a notification system (e.g., email, in-app notification, etc.)
+      // For now, we'll just log the notification.
+    }
+  } catch (error) {
+    console.error(`Error notifying students for exam ${examId} in course ${courseId}:`, error);
   }
 }
 
@@ -265,7 +313,19 @@ export async function createQuestion(
   try {
     const { data, error } = await supabase
       .from("questions")
-      .insert([questionData])
+      .insert([
+        {
+          exam_id: questionData.exam_id,
+          section_id: questionData.section_id,
+          part_index: questionData.part_index,
+          question_text: questionData.question_text,
+          question_type: questionData.question_type,
+          options: questionData.options,
+          correct_answer: questionData.correct_answer,
+          points: questionData.points,
+          order_number: questionData.order_number,
+        },
+      ])
       .select()
       .single();
 

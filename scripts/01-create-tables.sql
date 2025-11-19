@@ -365,3 +365,8 @@ VALUES
   ('Ingeniería Industrial', 'Optimización de procesos productivos, gestión de operaciones y eficiencia organizacional.');
 ALTER TABLE users
 ADD COLUMN program_category TEXT;
+
+
+
+ALTER TABLE exams
+ADD COLUMN structure JSONB; -- Assuming 'structure' is meant to store a JSON object/array
