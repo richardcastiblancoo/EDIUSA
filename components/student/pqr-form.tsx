@@ -97,11 +97,9 @@ export default function PQRForm({ studentId }: PQRFormProps) {
   } | null>(null);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [studentName, setStudentName] = useState("");
-
   const [currentPage, setCurrentPage] = useState(1);
   const pqrsPerPage = 6;
   const totalPages = Math.ceil(pqrs.length / pqrsPerPage);
-
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -182,7 +180,6 @@ export default function PQRForm({ studentId }: PQRFormProps) {
       }
 
       const isCoordinator = formData.recipient === "coordinator";
-
       await createPQR(
         studentId,
         formData.courseId,
@@ -202,7 +199,6 @@ export default function PQRForm({ studentId }: PQRFormProps) {
       const updatedPqrs = await getPQRsByStudent(studentId);
       setPqrs(updatedPqrs);
       setAlert({ message: "¡PQR enviado exitosamente!", type: "success" });
-
       if ("Notification" in window && Notification.permission === "granted") {
         new Notification("Nuevo PQR", {
           body: `Se ha enviado un nuevo PQR: ${formData.subject}`,
@@ -271,9 +267,7 @@ export default function PQRForm({ studentId }: PQRFormProps) {
         return "outline";
     }
   };
-
   const getRecipientName = (pqr: PQR) => {
-    // Si no hay teacher_id, el destinatario es el coordinador
     return pqr.teacher_id ? pqr.teachers?.name || "Profesor" : "Coordinador";
   };
 
@@ -588,7 +582,7 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                             whileHover={{
                               scale: 1.02,
                               backgroundColor: "rgba(0,0,0,0.05)",
-                            }} // Animación de hover para las filas
+                            }} 
                             transition={{ duration: 0.1 }}
                           >
                             <TableCell className="font-medium">
@@ -713,12 +707,10 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                       <MessageSquare className="h-4 w-4" />
                       <span>Destinatario: {getRecipientName(selectedPqr)}</span>
                     </div>
-
                     <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md text-sm">
                       {selectedPqr.message}
                     </div>
                   </div>
-
                   {selectedPqr.teacher_response && (
                     <div className="space-y-2">
                       <h4 className="font-semibold">Respuesta:</h4>
@@ -727,7 +719,6 @@ export default function PQRForm({ studentId }: PQRFormProps) {
                       </div>
                     </div>
                   )}
-
                   <div className="flex justify-end gap-2 mt-4">
                     {selectedPqr.status !== "closed" && (
                       <AlertDialog
