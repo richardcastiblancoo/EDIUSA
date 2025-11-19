@@ -133,9 +133,9 @@ export default function StudentGradesPage() {
       return data;
     } catch (error) {
       // FIX: Manejo seguro del error (unknown)
-      const errorToLog = error instanceof Error ? error.message : String(error);
-      console.error("Error al cargar perfil del estudiante:", errorToLog);
-      return null;
+     // const errorToLog = error instanceof Error ? error.message : String(error);
+     // console.error("Error al cargar perfil del estudiante:", errorToLog);
+     // return null;
     }
   };
 
@@ -146,7 +146,7 @@ export default function StudentGradesPage() {
       try {
         setLoading(true);
         const profile = await fetchStudentProfile(user.id);
-        setStudentProfile(profile);
+        setStudentProfile(profile ?? null);
 
         const { data: enrollments, error: enrollmentsError } = await supabase
           .from("enrollments")

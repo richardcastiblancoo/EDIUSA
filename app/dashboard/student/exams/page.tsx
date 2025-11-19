@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import DashboardLayout from "@/components/layout/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -10,7 +9,8 @@ import { ArrowLeft, FileText, Loader2, Calendar } from "lucide-react";
 import { getExamsByCourse, Exam } from "@/lib/exams";
 import { useToast } from "@/components/ui/use-toast";
 
-export default function StudentExamsPage() {
+// Este componente SOLO maneja el contenido interno
+export default function ExamsClientContent() {
   const searchParams = useSearchParams();
   const courseId = searchParams.get("courseId");
   const { toast } = useToast();
@@ -120,30 +120,29 @@ export default function StudentExamsPage() {
   };
 
   return (
-    <DashboardLayout userRole="student">
-      <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900">
-            Exámenes
-            {courseId && <span className="text-blue-600"> para el Curso: {courseId}</span>}
-          </h2>
-          <Link href="/dashboard/student/courses" passHref>
-            <Button variant="outline">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Volver a Cursos
-            </Button>
-          </Link>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Exámenes Disponibles</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {renderExamsContent()}
-          </CardContent>
-        </Card>
+    <>
+      {/* Encabezado y botón Volver, ahora parte del contenido cliente */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold tracking-tight text-gray-900">
+          Exámenes
+          {courseId && <span className="text-blue-600"> para el Curso: {courseId}</span>}
+        </h2>
+        <Link href="/dashboard/student/courses" passHref>
+          <Button variant="outline">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Volver a Cursos
+          </Button>
+        </Link>
       </div>
-    </DashboardLayout>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Exámenes Disponibles</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {renderExamsContent()}
+        </CardContent>
+      </Card>
+    </>
   );
 }
