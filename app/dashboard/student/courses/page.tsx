@@ -10,11 +10,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Calendar, Users, BookOpen, Loader2, User } from "lucide-react";
+import { Clock, Calendar, Users, BookOpen, User } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { getStudentCourses, Course } from "@/lib/courses";
 import { useAuth } from "@/lib/auth-context";
-import { ExamAccessButton } from "@/components/student/exam-access-button";
 
 type CourseWithTeacher = Course & {
   teachers: {
@@ -175,7 +174,16 @@ const CourseCard = ({
             </span>
           </div>
         </div>
-        <ExamAccessButton courseId={course.id} />
+        <button
+          onClick={() => {
+            // TODO: implement navigation to exams for this course
+            console.log("Navigate to exams for course:", course.id);
+          }}
+          className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+        >
+          <BookOpen className="mr-2 h-4 w-4" />
+          Acceder a exámenes
+        </button>
       </CardContent>
     </Card>
   );
