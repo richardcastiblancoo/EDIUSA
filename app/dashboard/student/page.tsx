@@ -1,15 +1,32 @@
-"use client"
-import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import DashboardLayout from "@/components/layout/dashboard-layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { BookOpen, FileText, Award, Loader2, MessageSquare, Sparkles } from "lucide-react"
-import { useAuth } from "@/lib/auth-context"
-import { getStudentCourses } from "@/lib/courses"
-import { getStudentExams } from "@/lib/exams"
-import { useToast } from "@/components/ui/use-toast"
-import Link from "next/link"
+"use client";
+
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import DashboardLayout from "@/components/layout/dashboard-layout";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  BookOpen,
+  FileText,
+  Award,
+  Loader2,
+  MessageSquare,
+}
+ from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { getStudentCourses } from "@/lib/courses";
+import { getStudentExams } from "@/lib/exams";
+import { useToast } from "@/components/ui/use-toast";
+import Link from "next/link";
+
+// --- Animación ---
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -18,7 +35,8 @@ const containerVariants = {
       staggerChildren: 0.1,
     },
   },
-}
+};
+
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
   visible: {
@@ -29,19 +47,30 @@ const itemVariants = {
       ease: "easeOut",
     },
   },
-}
+};
+
 const cardHoverEffect = {
   scale: 1.02,
   transition: { duration: 0.2 },
+};
+
+// --- Tipos ---
+
+interface Teacher {
+  name: string;
 }
+
 interface Course {
   id: string;
   name: string;
   schedule: string;
-  teachers?: {
-    name: string;
-  };
+  teachers?: Teacher;
 }
+
+interface ExamSubmission {
+  score: number | null;
+}
+
 interface Exam {
   id: string;
   title: string;
@@ -49,10 +78,9 @@ interface Exam {
   courses?: {
     name: string;
   };
-  exam_submissions?: Array<{
-    score: number | null;
-  }>;
+  exam_submissions?: ExamSubmission[];
 }
+
 /**
  * FUNCIÓN DE CONVERSIÓN
  * Convierte una puntuación de la escala 0-100 a la escala 0-5.
@@ -60,63 +88,98 @@ interface Exam {
  * @returns El puntaje en base 5.
  */
 const convertToScaleFive = (score_100: number): number => {
-    return (score_100 / 100) * 5;
-}
+  return Math.min(Math.max((score_100 / 100) * 5, 0), 5);
+};
+
 export default function StudentDashboard() {
-  const { user } = useAuth()
-  const { toast } = useToast()
-  const [courses, setCourses] = useState<Course[]>([])
-  const [exams, setExams] = useState<Exam[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [averageScore, setAverageScore] = useState<number | null>(null); 
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [averageScore, setAverageScore] = useState<number | null>(null);
+
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true)
+      setIsLoading(true);
       try {
         if (!user) {
           toast({
-            title: "Error",
+            title: "Error de Autenticación",
             description: "Debes iniciar sesión para ver tu información.",
             variant: "destructive",
-          })
-          setIsLoading(false)
-          return
+          });
+          setIsLoading(false);
+          return;
         }
-        const studentCourses = await getStudentCourses(user.id)
-        setCourses(studentCourses ?? [])
-        const studentExams = await getStudentExams(user.id)
-        setExams(studentExams ?? [])
-        const scores = studentExams
-          .filter((exam: Exam) => exam.exam_submissions?.[0]?.score !== null)
-          .map((exam: Exam) => exam.exam_submissions![0].score);
+
+        // 1. Obtener Cursos
+        const studentCourses = await getStudentCourses(user.id);
+        setCourses(
+          (studentCourses ?? []).map((c: any) => ({
+            ...c,
+            schedule: c.schedule ?? "",
+            teachers: c.teachers ?? undefined,
+          }))
+        );
+
+        // 2. Obtener Exámenes
+        const studentExams = await getStudentExams(user.id);
+        setExams(studentExams ?? []);
+
+        // 3. Cálculo del promedio en base 5
+        const scores: number[] = (studentExams ?? [])
+          .map((exam: Exam) => {
+            const submission = exam.exam_submissions?.[0];
+            return submission?.score ?? null;
+          })
+          .filter((score): score is number => score !== null)
+          .map((score) => score as number);
+
         if (scores.length > 0) {
-          const rawAverage = scores.reduce((a, b) => (a ?? 0) + (b ?? 0), 0) / scores.length;
-          const finalAverage = convertToScaleFive(rawAverage as number);
+          const sumOfScores = scores.reduce((a, b) => a + b, 0);
+          const rawAverage = sumOfScores / scores.length;
+
+          const finalAverage = convertToScaleFive(rawAverage);
           setAverageScore(Number(finalAverage.toFixed(1)));
         } else {
-            setAverageScore(null);
+          setAverageScore(null);
         }
       } catch (error) {
-        console.error("Error fetching student data:", error)
+        console.error("Error fetching student data:", error);
         toast({
-          title: "Error",
-          description: "No se pudo cargar tu información.",
+          title: "Error de Carga",
+          description: "No se pudo cargar tu información. Intenta de nuevo más tarde.",
           variant: "destructive",
-        })
+        });
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
-    fetchData()
-  }, [user, toast])
+    };
+    fetchData();
+  }, [user, toast]);
+
+  // --- Funciones de formato ---
+
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
-  }
+    const date = new Date(dateString);
+    return date.toLocaleDateString("es-ES", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  };
+
   const formatTime = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
-  }
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("es-ES", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  // --- Renderizado ---
+
   return (
     <DashboardLayout userRole="student">
       <motion.div
@@ -126,25 +189,30 @@ export default function StudentDashboard() {
         animate="visible"
       >
         <motion.div variants={itemVariants}>
-          <h2 className="text-3xl font-bold tracking-tight">Dashboard Estudiante</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Dashboard Estudiante 🎓
+          </h2>
           <p className="text-muted-foreground">Sigue tu progreso académico</p>
         </motion.div>
 
         {isLoading ? (
           <div className="flex justify-center items-center h-48">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
           </div>
         ) : (
           <>
-            {/* Quick Stats */}
+            {/* Quick Stats (Mantiene 3 columnas) */}
             <motion.div
               className="grid gap-4 md:grid-cols-3"
               variants={containerVariants}
             >
+              {/* Card 1: Cursos Activos */}
               <motion.div variants={itemVariants} whileHover={cardHoverEffect}>
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Cursos Activos</CardTitle>
+                    <CardTitle className="text-sm font-medium">
+                      Cursos Activos
+                    </CardTitle>
                     <BookOpen className="h-4 w-4 text-blue-600" />
                   </CardHeader>
                   <CardContent>
@@ -154,171 +222,151 @@ export default function StudentDashboard() {
                 </Card>
               </motion.div>
 
+              {/* Card 2: Exámenes */}
               <motion.div variants={itemVariants} whileHover={cardHoverEffect}>
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Exámenes</CardTitle>
+                    <CardTitle className="text-sm font-medium">
+                      Exámenes Pendientes
+                    </CardTitle>
                     <FileText className="h-4 w-4 text-purple-600" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{exams.length}</div>
-                    <p className="text-xs text-muted-foreground">Próximamente</p>
+                    <div className="text-2xl font-bold">
+                        {exams.length}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Programados / No calificados
+                    </p>
                   </CardContent>
                 </Card>
               </motion.div>
-              {/* ⭐️ TARJETA DE PROMEDIO MODIFICADA */}
+
+              {/* Card 3: Promedio */}
               <motion.div variants={itemVariants} whileHover={cardHoverEffect}>
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Promedio</CardTitle>
+                    <CardTitle className="text-sm font-medium">
+                      Promedio General
+                    </CardTitle>
                     <Award className="h-4 w-4 text-orange-600" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      {/* Formato 0.0 a 5.0, sin % */}
-                      {averageScore !== null ? averageScore.toFixed(1) : '--'}
+                      {averageScore !== null ? averageScore.toFixed(1) : "--"}
                     </div>
-                    {/* Descripción cambiada */}
-                    <p className="text-xs text-muted-foreground">Sobre 5.0</p>
+                    <p className="text-xs text-muted-foreground">
+                        {averageScore !== null ? `Basado en ${scores.length} notas` : "Sin notas aún"}
+                    </p>
                   </CardContent>
                 </Card>
               </motion.div>
             </motion.div>
-            {/* PQR Section */}
-            <motion.div variants={itemVariants} whileHover={cardHoverEffect}>
-              <Card>
-                <CardHeader>
-                  <CardTitle>PQR</CardTitle>
-                  <CardDescription>Peticiones, Quejas y Reclamos</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4 text-center py-4">
-                    <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Gestiona tus solicitudes</h3>
-                    <p className="text-gray-500 mb-4">Envía peticiones, quejas o reclamos relacionados con tus cursos.</p>
-                    <Link href="/dashboard/student/pqr">
-                      <Button>
-                        Crear nueva solicitud
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* New Exam Interface Demo */}
-            <motion.div variants={itemVariants} whileHover={cardHoverEffect}>
-              <Card className="border-2 border-blue-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-blue-600" />
-                    Nueva Interfaz de Examen
-                  </CardTitle>
-                  <CardDescription>Prueba la nueva experiencia de examen con diseño moderno</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4 text-center py-4">
-                    <div className="flex justify-center mb-4">
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="flex items-center gap-1 text-blue-600">
-                          <BookOpen className="h-3 w-3" />
-                          Listening
-                        </div>
-                        <div className="flex items-center gap-1 text-green-600">
-                          <FileText className="h-3 w-3" />
-                          Reading
-                        </div>
-                        <div className="flex items-center gap-1 text-purple-600">
-                          <Award className="h-3 w-3" />
-                          Use of Language
-                        </div>
-                        <div className="flex items-center gap-1 text-orange-600">
-                          <MessageSquare className="h-3 w-3" />
-                          Writing
-                        </div>
-                      </div>
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Interfaz Mejorada</h3>
-                    <p className="text-gray-500 mb-4">Experimenta los cuatro tipos de secciones de examen con un diseño moderno e intuitivo.</p>
-                    <Link href="/dashboard/student/exam-demo">
-                      <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                        Probar Nueva Interfaz
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-            <motion.div className="grid gap-4 md:grid-cols-2" variants={containerVariants}>
+            
+            {/* Cursos y Exámenes: Ahora en una sola columna vertical (POSICIÓN MOVIDA) */}
+            <motion.div
+              className="grid gap-4 md:grid-cols-1 space-y-4" 
+              variants={containerVariants}
+            >
               {/* Enrolled Courses */}
-              <motion.div variants={itemVariants} whileHover={cardHoverEffect}>
+              <motion.div variants={itemVariants}>
                 <Card>
                   <CardHeader>
-                    <CardTitle>Mis Cursos</CardTitle>
-                    <CardDescription>Cursos en los que estás inscrito</CardDescription>
+                    <CardTitle>Mis Cursos 📖</CardTitle>
+                    <CardDescription>
+                      Cursos en los que estás inscrito
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
                       {courses.length > 0 ? (
-                        courses.map((course, index) => (
-                          <motion.div key={index} className="border rounded-lg p-4" variants={itemVariants}>
+                        courses.map((course) => (
+                          <motion.div
+                            key={course.id}
+                            className="border rounded-lg p-4"
+                            whileHover={cardHoverEffect}
+                            variants={itemVariants}
+                          >
                             <div className="flex justify-between items-start mb-2">
                               <h4 className="font-semibold">{course.name}</h4>
-                              <span className="text-sm text-muted-foreground">En progreso</span>
+                              <span className="text-sm text-muted-foreground">
+                                En progreso
+                              </span>
                             </div>
-                            <p className="text-sm text-muted-foreground">{course.teachers?.name || 'Profesor no asignado'}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {course.teachers?.name || "Profesor no asignado"}
+                            </p>
                             {course.schedule && (
-                              <p className="text-sm font-medium text-blue-600">Horario: {course.schedule}</p>
+                              <p className="text-sm font-medium text-blue-600 mb-2">
+                                Horario: {course.schedule}
+                              </p>
                             )}
-                            <Link href="/dashboard/student/courses">
-                              <Button size="sm" className="mt-2">
-                                Ver Curso
-                              </Button>
+                            <Link href="/dashboard/student/courses" asChild>
+                                <Button size="sm">
+                                    Ver Curso
+                                </Button>
                             </Link>
                           </motion.div>
                         ))
                       ) : (
                         <div className="text-center py-8">
                           <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">No tienes cursos inscritos</h3>
-                          <p className="text-gray-500">Puedes inscribirte a nuevos cursos con un administrador.</p>
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">
+                            No tienes cursos inscritos
+                          </h3>
+                          <p className="text-gray-500">
+                            Puedes inscribirte a nuevos cursos con un
+                            administrador.
+                          </p>
                         </div>
                       )}
                     </div>
                   </CardContent>
                 </Card>
               </motion.div>
+
               {/* Upcoming Exams */}
-              <motion.div variants={itemVariants} whileHover={cardHoverEffect}>
+              <motion.div variants={itemVariants}>
                 <Card>
                   <CardHeader>
-                    <CardTitle>Próximos Exámenes</CardTitle>
+                    <CardTitle>Próximos Exámenes 🗓️</CardTitle>
                     <CardDescription>Exámenes programados</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
                       {exams.length > 0 ? (
-                        exams.map((exam, index) => (
-                          <motion.div key={index} className="border rounded-lg p-4" variants={itemVariants}>
-                            <h4 className="font-semibold">{exam.title}</h4>
+                        exams.map((exam) => (
+                          <motion.div
+                            key={exam.id}
+                            className="border rounded-lg p-4"
+                            whileHover={cardHoverEffect}
+                            variants={itemVariants}
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                              <h4 className="font-semibold">{exam.title}</h4>
+                              {/* Texto "Disponible" */}
+                              <span className="text-sm font-medium text-green-600">
+                                Disponible
+                              </span>
+                            </div>
                             <p className="text-sm text-muted-foreground">
-                              {formatDate(exam.due_date)} - {formatTime(exam.due_date)}
+                              Fecha Límite: {formatDate(exam.due_date)} -{" "}
+                              {formatTime(exam.due_date)}
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              Curso: {exam.courses?.name || 'No especificado'}
+                              Curso: {exam.courses?.name || "No especificado"}
                             </p>
-                            <Link href="/dashboard/student/exams">
-                              <Button size="sm" className="mt-2">
-                                Iniciar Examen
-                              </Button>
-                            </Link>
                           </motion.div>
                         ))
                       ) : (
                         <div className="text-center py-8">
                           <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">No hay exámenes programados</h3>
-                          <p className="text-gray-500">No tienes exámenes próximos en este momento.</p>
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">
+                            No hay exámenes programados
+                          </h3>
+                          <p className="text-gray-500">
+                            No tienes exámenes próximos en este momento.
+                          </p>
                         </div>
                       )}
                     </div>
@@ -326,9 +374,36 @@ export default function StudentDashboard() {
                 </Card>
               </motion.div>
             </motion.div>
+
+            {/* PQR Section (AHORA DE ÚLTIMO) */}
+            <motion.div variants={itemVariants}>
+              <Card>
+                <CardHeader>
+                  <CardTitle>PQR 💬</CardTitle>
+                  <CardDescription>
+                    Peticiones, Quejas y Reclamos
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4 text-center py-4">
+                    <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      Gestiona tus solicitudes
+                    </h3>
+                    <p className="text-gray-500 mb-4">
+                      Envía peticiones, quejas o reclamos relacionados con tus
+                      cursos.
+                    </p>
+                    <Link href="/dashboard/student/pqr">
+                      <Button>Crear nueva solicitud</Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           </>
         )}
       </motion.div>
     </DashboardLayout>
-  )
+  );
 }

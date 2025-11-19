@@ -29,6 +29,15 @@ export interface ExamSection {
   parts: ExamPart[];
 }
 
+export enum ExamCategory {
+  Listening = "Listening",
+  Reading = "Reading",
+  UseOfLanguage = "Use of Language",
+  Writing = "Writing",
+  Speaking = "Speaking",
+  General = "General",
+}
+
 export interface Exam {
   id: string;
   course_id: string;
@@ -37,6 +46,7 @@ export interface Exam {
   duration_minutes: number;
   total_questions: number;
   exam_type: string;
+  category: ExamCategory; // Nuevo campo para la categoría del examen
   due_date: string;
   max_attempts: number;
   is_active: boolean;
@@ -200,6 +210,26 @@ export async function getExamsByCourse(courseId: string): Promise<Exam[]> {
   } catch (error) {
     console.error("Get exams by course error:", error);
     return [];
+  }
+}
+
+/**
+ * Obtiene un examen por su ID.
+ * @param examId El ID del examen.
+ * @returns El examen o null si no se encuentra.
+ */
+export async function getExamById(examId: string): Promise<Exam | null> {
+  try {
+    const { data, error } = await supabase
+      .from("exams")
+      .select("*")
+      .eq("id", examId)
+      .single();
+    if (error) throw error;
+    return data as Exam;
+  } catch (error) {
+    console.error("Get exam by ID error:", error);
+    return null;
   }
 }
 

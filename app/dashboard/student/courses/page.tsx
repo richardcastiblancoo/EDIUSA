@@ -14,6 +14,7 @@ import { Clock, Calendar, Users, BookOpen, Loader2, User } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { getStudentCourses, Course } from "@/lib/courses";
 import { useAuth } from "@/lib/auth-context";
+import { ExamAccessButton } from "@/components/student/exam-access-button";
 
 type CourseWithTeacher = Course & {
   teachers: {
@@ -174,6 +175,7 @@ const CourseCard = ({
             </span>
           </div>
         </div>
+        <ExamAccessButton courseId={course.id} />
       </CardContent>
     </Card>
   );

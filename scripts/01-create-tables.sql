@@ -370,3 +370,18 @@ ADD COLUMN program_category TEXT;
 
 ALTER TABLE exams
 ADD COLUMN structure JSONB; -- Assuming 'structure' is meant to store a JSON object/array
+
+
+----------------
+CREATE TYPE exam_category AS ENUM (
+  'Listening',
+  'Reading',
+  'Use of Language',
+  'Writing',
+  'Speaking',
+  'General'
+);
+
+
+ALTER TABLE exams
+ADD COLUMN category exam_category DEFAULT 'General';

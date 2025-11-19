@@ -230,11 +230,11 @@ export default function DashboardLayout({
           {
             title: "Evaluación y Soporte",
             items: [
-              {
-                name: "Exámenes",
-                href: "/dashboard/student/exam-demo",
-                icon: ClipboardList,
-              },
+             // {
+              //  name: "Exámenes",
+              //  href: "/dashboard/student/exams",  
+             //   icon: ClipboardList,
+           //   },
               {
                 name: "PQR",
                 href: "/dashboard/student/pqr",
