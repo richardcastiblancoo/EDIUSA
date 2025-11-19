@@ -72,6 +72,7 @@ export default function StudentGradesPage() {
     null
   );
   const MIN_PASS_SCORE = 3.0;
+
   const getScoreBadge = (score: number, isBig: boolean = false) => {
     const baseClasses = isBig
       ? "text-base px-4 py-2 font-semibold border"
@@ -109,14 +110,17 @@ export default function StudentGradesPage() {
       </Badge>
     );
   };
+
   const getScoreColor = (score: number) => {
     if (score >= 4.5) return "text-gray-900 font-bold";
     if (score >= 4.0) return "text-gray-800 font-bold";
     if (score >= 3.0) return "text-gray-700 font-bold";
     return "text-gray-900 font-bold";
   };
+
   const getScoreDisplay = (score: number | null) =>
     score !== null ? score.toFixed(1) : "—";
+
   const fetchStudentProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -124,24 +128,31 @@ export default function StudentGradesPage() {
         .select("id, document_id, name, email")
         .eq("id", userId)
         .single();
+
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error("Error al cargar perfil del estudiante:", error);
+      // FIX: Manejo seguro del error (unknown)
+      const errorToLog = error instanceof Error ? error.message : String(error);
+      console.error("Error al cargar perfil del estudiante:", errorToLog);
       return null;
     }
   };
+
   useEffect(() => {
     const fetchGrades = async () => {
       if (!user?.id) return;
+
       try {
         setLoading(true);
         const profile = await fetchStudentProfile(user.id);
         setStudentProfile(profile);
+
         const { data: enrollments, error: enrollmentsError } = await supabase
           .from("enrollments")
           .select("id, course:courses(id, name)")
           .eq("student_id", user.id);
+
         if (enrollmentsError) throw enrollmentsError;
 
         if (!enrollments || enrollments.length === 0) {
@@ -149,34 +160,42 @@ export default function StudentGradesPage() {
           setLessonGrades([]);
           return;
         }
+
         const allRecords: LastGradeRecord[] = [];
         const allLessonGrades: GradeRecord[] = [];
+
         for (const enrollment of enrollments) {
+          // Asume que getStudentGrades es una función externa que devuelve calificaciones
           const grades = await getStudentGrades(enrollment.id);
+
           const formattedLessonGrades: GradeRecord[] = grades.map((grade) => ({
-            id: grade.id,
+            id: grade.id ?? crypto.randomUUID(),
             score: grade.score,
-            course_name: enrollment.course.name,
-            created_at: grade.created_at,
-            time: new Date(grade.created_at).toLocaleTimeString("es-CO", {
+            course_name: enrollment.course[0]?.name || "Curso sin nombre",
+            created_at: grade.created_at ?? new Date().toISOString(),
+            time: new Date(grade.created_at ?? Date.now()).toLocaleTimeString("es-CO", {
               hour: "2-digit",
               minute: "2-digit",
             }),
             title: "Calificación de Lección",
             type: "Lección" as const,
           }));
+           
           allLessonGrades.push(...formattedLessonGrades);
         }
+
         const uniqueLessonGrades: GradeRecord[] = allLessonGrades.filter(
           (grade, index, self) =>
             index === self.findIndex((g) => g.id === grade.id)
         );
+
         setLessonGrades(uniqueLessonGrades);
         allRecords.push(
           ...uniqueLessonGrades.map(
             (g) => ({ ...g, score: g.score } as LastGradeRecord)
           )
         );
+
         const { data: examSubmissions, error: submissionsError } =
           await supabase
             .from("exam_submissions")
@@ -190,32 +209,36 @@ export default function StudentGradesPage() {
             )
             .eq("student_id", user.id)
             .order("submitted_at", { ascending: false });
+
         if (submissionsError) throw submissionsError;
+
         const formattedExamGrades: GradeRecord[] = examSubmissions.map(
           (submission) => {
             const course = enrollments.find(
-              (e) => e.course.id === submission.exam.course_id
+              (e) => e.course[0].id === submission.exam?.[0]?.course_id
             );
             return {
               id: submission.id,
               score: submission.score,
-              course_name: course?.course?.name || "Curso sin nombre",
+              course_name: course?.course?.[0]?.name || "Curso sin nombre",
               created_at: submission.submitted_at,
               time: new Date(submission.submitted_at).toLocaleTimeString(
                 "es-CO",
                 { hour: "2-digit", minute: "2-digit" }
               ),
-              title: submission.exam.title,
+              title: submission.exam?.[0]?.title ?? "Examen",
               type: "Examen" as const,
             };
           }
         );
+
         setExamGrades(formattedExamGrades);
         allRecords.push(
           ...formattedExamGrades.map(
             (g) => ({ ...g, score: g.score } as LastGradeRecord)
           )
         );
+
         if (allRecords.length > 0) {
           const sortedRecords = allRecords.sort(
             (a, b) =>
@@ -226,7 +249,10 @@ export default function StudentGradesPage() {
           setLastGrade(latest);
         }
       } catch (error) {
-        console.error("Error al cargar calificaciones:", error);
+        // FIX: Manejo seguro del error (unknown)
+        const errorToLog = error instanceof Error ? error.message : String(error);
+        console.error("Error al cargar calificaciones:", errorToLog);
+        
         toast({
           title: "Error",
           description: "No se pudieron cargar tus calificaciones",
@@ -238,6 +264,7 @@ export default function StudentGradesPage() {
     };
     fetchGrades();
   }, [user?.id, toast]);
+
   const FINAL_COMPONENTS = [
     "Oral",
     "Listening",
@@ -245,6 +272,7 @@ export default function StudentGradesPage() {
     "Reading",
     "Writing",
   ];
+
   const finalComponentRecords = FINAL_COMPONENTS.map((label) => {
     const record = examGrades.find((g) =>
       String(g.title || "")
@@ -259,13 +287,16 @@ export default function StudentGradesPage() {
       time: record?.time || "",
     };
   });
+
   const availableScores = finalComponentRecords
     .map((r) => r.score)
     .filter((s): s is number => typeof s === "number");
+
   const finalExamAverage =
     availableScores.length > 0
       ? availableScores.reduce((sum, s) => sum + s, 0) / availableScores.length
       : null;
+
   const latestExam =
     examGrades.length > 0
       ? [...examGrades].sort(
@@ -273,11 +304,13 @@ export default function StudentGradesPage() {
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )[0]
       : null;
+
   const examGroupName = (() => {
     const labels = FINAL_COMPONENTS;
     const titles = finalComponentRecords
       .map((r) => r.title)
       .filter((t) => t && t.length > 0);
+
     const cleaned = titles
       .map((t) => {
         let s = t;
@@ -287,6 +320,7 @@ export default function StudentGradesPage() {
         return s;
       })
       .filter((s) => s.length > 0);
+
     if (cleaned.length > 0) {
       const freq = new Map<string, number>();
       cleaned.forEach((s) => freq.set(s, (freq.get(s) || 0) + 1));
@@ -295,6 +329,7 @@ export default function StudentGradesPage() {
     }
     return latestExam?.title || "";
   })();
+
   const MobileExamComponentCard = ({
     label,
     score,
@@ -331,6 +366,7 @@ export default function StudentGradesPage() {
       </div>
     </div>
   );
+
   const MobileLessonCard = ({ grade }: { grade: GradeRecord }) => (
     <div className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors p-4">
       <div className="flex items-center justify-between">
@@ -361,6 +397,7 @@ export default function StudentGradesPage() {
       </div>
     </div>
   );
+
   return (
     <DashboardLayout userRole="student">
       <div className="space-y-6 max-w-6xl mx-auto px-4 md:px-6">

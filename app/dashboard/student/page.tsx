@@ -17,8 +17,7 @@ import {
   Award,
   Loader2,
   MessageSquare,
-}
- from "lucide-react";
+} from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { getStudentCourses } from "@/lib/courses";
 import { getStudentExams } from "@/lib/exams";
@@ -149,7 +148,8 @@ export default function StudentDashboard() {
         console.error("Error fetching student data:", error);
         toast({
           title: "Error de Carga",
-          description: "No se pudo cargar tu información. Intenta de nuevo más tarde.",
+          description:
+            "No se pudo cargar tu información. Intenta de nuevo más tarde.",
           variant: "destructive",
         });
       } finally {
@@ -188,7 +188,7 @@ export default function StudentDashboard() {
         initial="hidden"
         animate="visible"
       >
-        <motion.div variants={itemVariants}>
+        <motion.div variants={itemVariants} initial="hidden" animate="visible" custom={0}>
           <h2 className="text-3xl font-bold tracking-tight">
             Dashboard Estudiante 🎓
           </h2>
@@ -207,7 +207,10 @@ export default function StudentDashboard() {
               variants={containerVariants}
             >
               {/* Card 1: Cursos Activos */}
-              <motion.div variants={itemVariants} whileHover={cardHoverEffect}>
+              <motion.div
+                variants={itemVariants}
+                whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+              >
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">
@@ -232,9 +235,7 @@ export default function StudentDashboard() {
                     <FileText className="h-4 w-4 text-purple-600" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">
-                        {exams.length}
-                    </div>
+                    <div className="text-2xl font-bold">{exams.length}</div>
                     <p className="text-xs text-muted-foreground">
                       Programados / No calificados
                     </p>
@@ -256,16 +257,18 @@ export default function StudentDashboard() {
                       {averageScore !== null ? averageScore.toFixed(1) : "--"}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                        {averageScore !== null ? `Basado en ${scores.length} notas` : "Sin notas aún"}
+                      {averageScore !== null
+                        ? `Basado en ${scores.length} notas`
+                        : "Sin notas aún"}
                     </p>
                   </CardContent>
                 </Card>
               </motion.div>
             </motion.div>
-            
+
             {/* Cursos y Exámenes: Ahora en una sola columna vertical (POSICIÓN MOVIDA) */}
             <motion.div
-              className="grid gap-4 md:grid-cols-1 space-y-4" 
+              className="grid gap-4 md:grid-cols-1 space-y-4"
               variants={containerVariants}
             >
               {/* Enrolled Courses */}
@@ -301,10 +304,8 @@ export default function StudentDashboard() {
                                 Horario: {course.schedule}
                               </p>
                             )}
-                            <Link href="/dashboard/student/courses" asChild>
-                                <Button size="sm">
-                                    Ver Curso
-                                </Button>
+                            <Link href="/dashboard/student/courses">
+                              <Button size="sm">Ver Curso</Button>
                             </Link>
                           </motion.div>
                         ))
@@ -376,7 +377,11 @@ export default function StudentDashboard() {
             </motion.div>
 
             {/* PQR Section (AHORA DE ÚLTIMO) */}
-            <motion.div variants={itemVariants}>
+            <motion.div
+              variants={itemVariants}
+              initial="hidden"
+              animate="visible"
+            >
               <Card>
                 <CardHeader>
                   <CardTitle>PQR 💬</CardTitle>
