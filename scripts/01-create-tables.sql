@@ -385,3 +385,53 @@ CREATE TYPE exam_category AS ENUM (
 
 ALTER TABLE exams
 ADD COLUMN category exam_category DEFAULT 'General';
+
+
+
+
+---------------------
+CREATE TABLE public.exam_proctoring_data (
+    -- ID único para el registro de monitoreo
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    -- Clave foránea al envío del examen (exam_submissions)
+    submission_id uuid REFERENCES public.exam_submissions (id) ON DELETE CASCADE NOT NULL,
+
+    -- Clave foránea al examen (opcional si ya está en exam_submissions, pero útil para consultas)
+    exam_id uuid REFERENCES public.exams (id) ON DELETE CASCADE NOT NULL,
+
+    -- Clave foránea al usuario
+    user_id uuid NOT NULL,
+
+    -- URL o referencia al archivo de grabación de video de la cámara
+    video_url text,
+
+    -- URL o referencia al archivo de grabación de audio del micrófono
+    audio_url text,
+
+    -- URL o referencia al archivo/serie de capturas de pantalla
+    screen_capture_url text,
+
+    -- Metadatos adicionales (ej. alertas de comportamiento sospechoso)
+    metadata jsonb,
+
+    -- Marca de tiempo de la creación del registro
+    created_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+-- Índices recomendados para un mejor rendimiento de las consultas
+CREATE INDEX idx_proctoring_submission_id ON public.exam_proctoring_data (submission_id);
+CREATE INDEX idx_proctoring_exam_id ON public.exam_proctoring_data (exam_id);
+
+CREATE TABLE public.exam_submissions (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    exam_id uuid REFERENCES public.exams (id) ON DELETE CASCADE NOT NULL,
+    course_id uuid NOT NULL, -- Se asume que course_id es uuid
+    user_id uuid NOT NULL,
+    answers jsonb NOT NULL,
+    score numeric, -- Para almacenar la calificación final
+    submitted_at timestamp without time zone DEFAULT now() NOT NULL,
+    graded_at timestamp without time zone
+);
+
+CREATE INDEX idx_submission_exam_user ON public.exam_submissions (exam_id, user_id);

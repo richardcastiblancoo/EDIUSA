@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Clock, Calendar, Users, BookOpen, User } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useRouter } from "next/navigation";
 import { getStudentCourses, Course } from "@/lib/courses";
 import { useAuth } from "@/lib/auth-context";
 
@@ -73,6 +74,7 @@ const CourseCard = ({
   course: CourseWithTeacher;
   index: number;
 }) => {
+  const router = useRouter();
   const getLevelColor = (level: string) => {
     const colors: Record<string, string> = {
       A1: "bg-gray-100 text-gray-900 border border-gray-300",
@@ -176,8 +178,7 @@ const CourseCard = ({
         </div>
         <button
           onClick={() => {
-            // TODO: implement navigation to exams for this course
-            console.log("Navigate to exams for course:", course.id);
+            router.push(`/dashboard/student/courses/${course.id}/exams`);
           }}
           className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
         >

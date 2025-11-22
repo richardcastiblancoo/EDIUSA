@@ -2,6 +2,8 @@
 
 import type React from "react";
 import { useState, useEffect } from "react";
+// Importar motion para las animaciones
+import { motion } from "framer-motion"; 
 import {
   Card,
   CardHeader,
@@ -68,6 +70,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { getUserImage } from "@/lib/images";
+
+// Definir el componente Card animado con motion
+const MotionCard = motion(Card);
 
 type EnglishLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
 const ENGLISH_LEVELS: EnglishLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
@@ -540,8 +545,16 @@ export default function TeachersManagement() {
         </div>
       </div>
 
+      {/* Secciones de estadísticas con MotionCard */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        {/* Total de Profesores */}
+        <MotionCard
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0 }}
+          whileHover={{ scale: 1.02, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)" }}
+          className="shadow-sm transition-all duration-300"
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total de Profesores
@@ -554,8 +567,16 @@ export default function TeachersManagement() {
               Profesores registrados
             </p>
           </CardContent>
-        </Card>
-        <Card>
+        </MotionCard>
+        
+        {/* Activos */}
+        <MotionCard
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          whileHover={{ scale: 1.02, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)" }}
+          className="shadow-sm transition-all duration-300"
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Activos</CardTitle>
             <UserCheck className="h-4 w-4 text-gray-500" />
@@ -566,8 +587,16 @@ export default function TeachersManagement() {
               Profesores activos
             </p>
           </CardContent>
-        </Card>
-        <Card>
+        </MotionCard>
+
+        {/* Inactivos */}
+        <MotionCard
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+          whileHover={{ scale: 1.02, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)" }}
+          className="shadow-sm transition-all duration-300"
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Inactivos</CardTitle>
             <UserX className="h-4 w-4 text-gray-500" />
@@ -578,7 +607,7 @@ export default function TeachersManagement() {
               Profesores inactivos
             </p>
           </CardContent>
-        </Card>
+        </MotionCard>
       </div>
 
       <Card>

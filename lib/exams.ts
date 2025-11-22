@@ -1,18 +1,46 @@
 import { supabase } from "./supabase";
 import { getStudentsForCourse } from "./students";
 
+// Helper function to log audit actions
+export async function logAuditAction(
+  userId: string,
+  eventType: string,
+  entityType: string,
+  entityId: string | null,
+  payload: Record<string, any> | null
+): Promise<void> {
+  try {
+    const { error } = await supabase.from("audit_logs").insert([
+      {
+        user_id: userId,
+        event_type: eventType,
+        entity_type: entityType,
+        entity_id: entityId,
+        payload: payload,
+      },
+    ]);
+    if (error) {
+      console.error("Error logging audit action:", error);
+    }
+  } catch (error) {
+    console.error("Unexpected error in logAuditAction:", error);
+  }
+}
+
 export interface Question {
   id: string;
-  exam_id: string;
-  section_id: string; // New field to link to ExamSection
-  part_index: number; // New field to link to ExamPart within a section
+  question_type: string; // e.g., 'multiple-choice', 'fill-in-the-blank', 'essay'
   question_text: string;
-  question_type: "multiple_choice" | "essay" | "true_false" | "fill_blank";
-  options?: string[];
-  correct_answer: string;
+  options?: { id: string; text: string }[]; // For multiple-choice
+  correct_answer?: string | string[]; // For validation (teacher side)
   points: number;
-  order_number: number;
-  created_at: string;
+}
+
+export interface Section {
+  id: string;
+  title: string;
+  description?: string;
+  questions: Question[];
 }
 
 export interface ExamPart {
@@ -43,6 +71,7 @@ export interface Exam {
   course_id: string;
   title: string;
   description?: string;
+  instructions?: string; // Added instructions field
   duration_minutes: number;
   total_questions: number;
   exam_type: string;
@@ -54,7 +83,21 @@ export interface Exam {
   passing_score?: number;
   show_results?: boolean;
   randomize_questions?: boolean;
-  structure?: ExamSection[];
+  structure?: Section[]; // Changed to use the new Section interface
+}
+
+export interface ExamSubmission {
+  id: string;
+  user_id: string;
+  exam_id: string;
+  course_id: string;
+  answers: Record<string, string>;
+  submitted_at: string;
+  score?: number; // Puntuación opcional, si el examen ya fue calificado
+  time_spent?: number;
+  warnings?: string[];
+  recording_url?: string;
+  screen_captures?: string[];
 }
 
 /**
@@ -88,6 +131,19 @@ export async function createExam(
       .select()
       .single();
     if (error) throw error;
+
+    // Log audit action for exam creation
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      await logAuditAction(
+        session.user.id,
+        "EXAM_CREATED",
+        "Exam",
+        data.id,
+        { examTitle: data.title, courseId: data.course_id }
+      );
+    }
+
     return data as Exam;
   } catch (error) {
     console.error("Create exam error:", error);
@@ -181,7 +237,7 @@ export async function getExamsByTeacher(teacherId: string): Promise<Exam[]> {
     const courseIds = courses.map((course) => course.id);
     const { data, error } = await supabase
       .from("exams")
-      .select("*")
+      .select("*, structure")
       .in("course_id", courseIds)
       .eq("is_active", true)
       .order("created_at", { ascending: false });
@@ -453,6 +509,58 @@ export async function getStudentExams(studentId: string): Promise<Exam[]> {
 }
 
 /**
+ * Verifica si un estudiante ya ha intentado un examen.
+ * @param studentId El ID del estudiante.
+ * @param examId El ID del examen.
+ * @returns True si el estudiante ya ha intentado el examen, de lo contrario False.
+ */
+export async function hasStudentAttemptedExam(
+  studentId: string,
+  examId: string
+): Promise<boolean> {
+  try {
+    const { count, error } = await supabase
+      .from("exam_submissions")
+      .select("*", { count: "exact" })
+      .eq("student_id", studentId)
+      .eq("exam_id", examId);
+
+    if (error) throw error;
+
+    return (count || 0) > 0;
+  } catch (error) {
+    console.error("Error checking student exam attempts:", error);
+    return false;
+  }
+}
+
+/**
+ * Obtiene el número de intentos de un estudiante para un examen específico.
+ * @param studentId El ID del estudiante.
+ * @param examId El ID del examen.
+ * @returns El número de intentos realizados.
+ */
+export async function getStudentExamAttemptsCount(
+  studentId: string,
+  examId: string
+): Promise<number> {
+  try {
+    const { count, error } = await supabase
+      .from("exam_submissions")
+      .select("*", { count: "exact" })
+      .eq("student_id", studentId)
+      .eq("exam_id", examId);
+
+    if (error) throw error;
+
+    return count || 0;
+  } catch (error) {
+    console.error("Error getting student exam attempts count:", error);
+    return 0;
+  }
+}
+
+/**
  * Envía los datos del examen completado por el estudiante (con datos de monitoreo).
  * @param examSubmissionData Los datos del examen completado.
  * @returns True si el envío fue exitoso.
@@ -461,13 +569,58 @@ export async function getStudentExams(studentId: string): Promise<Exam[]> {
 export async function submitExamWithMonitoring(examSubmissionData: {
   exam_id: string;
   student_id: string;
-  answers: Record<number, string>; 
+  answers: Record<string, string>; // Changed key type to string for question IDs
   time_spent: number;
   warnings: string[];
   recording_url?: string;
   screen_captures?: string[];
-}): Promise<boolean> {
+}): Promise<{ success: boolean; message?: string }> {
   try {
+    // Fetch exam details for server-side validation
+    const exam = await getExamById(examSubmissionData.exam_id);
+    if (!exam) {
+      console.error("Exam not found for submission:", examSubmissionData.exam_id);
+      return { success: false, message: "Exam not found." };
+    }
+
+    const TIME_BUFFER_SECONDS = 60; // Allow 60 seconds buffer
+    const maxAllowedTime = (exam.duration_minutes * 60) + TIME_BUFFER_SECONDS;
+
+    if (examSubmissionData.time_spent > maxAllowedTime) {
+      console.warn(`Client-side time manipulation detected for exam ${exam.id}. Reported time: ${examSubmissionData.time_spent}s, Max allowed: ${maxAllowedTime}s`);
+      return { success: false, message: "Time spent exceeds allowed duration." };
+    }
+
+    // Server-side answer validation
+    if (!exam.structure || exam.structure.length === 0) {
+      console.warn(`Exam ${exam.id} has no defined structure for answer validation.`);
+      // Proceed without answer validation if structure is missing
+    } else {
+      for (const section of exam.structure) {
+        for (const question of section.questions) {
+          const submittedAnswer = examSubmissionData.answers[question.id];
+          if (question.correct_answer !== undefined) {
+            let isCorrect = false;
+            if (question.question_type === 'multiple-choice') {
+              isCorrect = submittedAnswer === question.correct_answer;
+            } else if (question.question_type === 'fill-in-the-blank') {
+              // Case-insensitive and trim whitespace for fill-in-the-blank
+              isCorrect = submittedAnswer?.trim().toLowerCase() === (question.correct_answer as string)?.trim().toLowerCase();
+            } else if (question.question_type === 'essay') {
+              // Essay questions are typically graded manually, so we might just check if an answer was provided
+              isCorrect = !!submittedAnswer; 
+            }
+            
+            if (!isCorrect) {
+              // Optionally, you could track incorrect answers or reject submission
+              console.warn(`Incorrect answer for question ${question.id} in exam ${exam.id}.`);
+              // For now, we'll allow submission but this could be a point of failure
+            }
+          }
+        }
+      }
+    }
+
     const { error } = await supabase.from("exam_submissions").insert([
       {
         exam_id: examSubmissionData.exam_id,
@@ -481,10 +634,20 @@ export async function submitExamWithMonitoring(examSubmissionData: {
       },
     ]);
     if (error) throw error;
-    return true;
+
+    // Log audit action for exam submission
+    await logAuditAction(
+      examSubmissionData.student_id,
+      "EXAM_SUBMITTED",
+      "ExamSubmission",
+      examSubmissionData.exam_id,
+      { studentId: examSubmissionData.student_id, timeSpent: examSubmissionData.time_spent }
+    );
+
+    return { success: true, message: "Exam submitted successfully." };
   } catch (error) {
     console.error("Error submitting exam:", error);
-    return false;
+    return { success: false, message: "Internal Server Error." };
   }
 }
 

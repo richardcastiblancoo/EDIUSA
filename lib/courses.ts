@@ -1,5 +1,3 @@
-import { createClient } from "@supabase/supabase-js";
-// Añadir la importación al inicio del archivo
 import { removeEnrollmentsForCourse } from "./students";
 import { removeExamsForCourse } from "./exams";
 import { removePQRsForCourse } from "./pqrs";

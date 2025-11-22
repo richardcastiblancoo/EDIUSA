@@ -72,6 +72,7 @@ export default function DashboardLayout({
   const role =
     userRole ??
     (user?.role as "coordinator" | "teacher" | "student" | undefined);
+  
   useEffect(() => {
     document.body.classList.remove("light", "dark");
     document.body.classList.add(theme);
@@ -114,7 +115,7 @@ export default function DashboardLayout({
       },
       { name: "Perfil", href: "/profile", icon: User },
       {
-        name: "Asistente IA",
+        name: "IA de Ediusa",
         href: "/dashboard/ai-assistant",
         icon: Bot,
         isBeta: true,
@@ -230,11 +231,11 @@ export default function DashboardLayout({
           {
             title: "Evaluación y Soporte",
             items: [
-             // {
-              //  name: "Exámenes",
-              //  href: "/dashboard/student/exams",  
-             //   icon: ClipboardList,
-           //   },
+              // {
+              //  name: "Exámenes",
+              //  href: "/dashboard/student/exams",  
+              //   icon: ClipboardList,
+              //   },
               {
                 name: "PQR",
                 href: "/dashboard/student/pqr",
@@ -264,6 +265,7 @@ export default function DashboardLayout({
       : role === "student"
       ? "Estudiante"
       : "Usuario";
+      
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex">
       {sidebarOpen && (
@@ -358,8 +360,8 @@ export default function DashboardLayout({
                       >
                         <item.icon
                           className={`h-5 w-5 shrink-0 transition-transform duration-200 
-                            ${!sidebarCollapsed ? "mr-3" : ""}`}
-                          style={item.isBeta ? { color: "#8b5cf6" } : {}} // Color morado para el icono IA
+                            ${!sidebarCollapsed ? "mr-3" : ""}
+                            ${item.isBeta ? "text-blue-600 dark:text-blue-400" : ""}`} // ⬅️ ICONO AZUL
                         />
                         {!sidebarCollapsed && (
                           <span
@@ -367,7 +369,7 @@ export default function DashboardLayout({
                           >
                             <span>{item.name}</span>
                             {item.isBeta && (
-                              <span className="ml-2 px-2 py-0.5 text-xs font-bold rounded-full bg-purple-500 text-white dark:bg-purple-700/70 dark:text-purple-300 border border-purple-600/50 shadow-sm animate-pulse-slow">
+                              <span className="ml-2 px-2 py-0.5 text-xs font-bold rounded-full bg-blue-600 text-white dark:bg-blue-800/70 dark:text-blue-200 border border-blue-700/50 shadow-sm animate-pulse-slow"> {/* ⬅️ BADGE AZUL */}
                                 BETA
                               </span>
                             )}
