@@ -148,7 +148,7 @@ const EXAM_SECTIONS_TEMPLATE: ExamSection[] = [
   {
     section_id: "S1",
     title: "Listening",
-    max_score: 5,
+    max_score: 1.25,
     parts: [
       {
         instruction: "Escucha el audio y selecciona la respuesta correcta.",
@@ -168,7 +168,7 @@ const EXAM_SECTIONS_TEMPLATE: ExamSection[] = [
   {
     section_id: "S2",
     title: "Reading",
-    max_score: 5,
+    max_score: 1.25,
     parts: [
       {
         instruction: "Lee el texto y responde las preguntas de opción múltiple.",
@@ -187,7 +187,7 @@ const EXAM_SECTIONS_TEMPLATE: ExamSection[] = [
   {
     section_id: "S3",
     title: "Use of Language",
-    max_score: 5,
+    max_score: 1.25,
     parts: [
       {
         instruction: "Completa los espacios en blanco con la palabra correcta.",
@@ -215,7 +215,7 @@ const EXAM_SECTIONS_TEMPLATE: ExamSection[] = [
   {
     section_id: "S4",
     title: "Writing",
-    max_score: 5,
+    max_score: 1.25,
     parts: [
       {
         instruction: "Escribe un ensayo de 250-300 palabras sobre el siguiente tema:",
@@ -239,14 +239,12 @@ const EXAM_SECTIONS_TEMPLATE: ExamSection[] = [
 
 const calculateTotals = (sections: ExamSection[]) => {
   let totalQuestions = 0;
-  let maxScoreBase = 0;
   sections.forEach((section) => {
     section.parts.forEach((part) => {
       totalQuestions += part.questions;
     });
-    maxScoreBase += section.max_score;
   });
-  return { totalQuestions, maxScoreBase };
+  return { totalQuestions };
 };
 
 // --- COMPONENTES MEJORADOS ---
@@ -375,7 +373,7 @@ const CreateExamWithStructureDialog = ({
   const [examStructureState, setExamStructureState] = useState<ExamSection[]>(
     EXAM_SECTIONS_TEMPLATE
   );
-  const { totalQuestions, maxScoreBase } = calculateTotals(examStructureState);
+  const { totalQuestions } = calculateTotals(examStructureState);
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -800,10 +798,10 @@ const CreateExamWithStructureDialog = ({
                       </div>
                       <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                         <p className="text-xs font-semibold text-gray-600">
-                          Puntuación Máx
+                          Calificación Máx
                         </p>
                         <p className="text-lg font-bold text-gray-900">
-                          20 puntos
+                          5 puntos
                         </p>
                       </div>
                       <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
@@ -871,7 +869,7 @@ const CreateExamWithStructureDialog = ({
                                 {sectionData.title}
                               </h3>
                               <p className="text-sm text-gray-600 font-semibold">
-                                Puntuación: {sectionData.max_score} puntos
+                                Calificación: {sectionData.max_score} puntos
                               </p>
                             </div>
                           </div>
@@ -901,8 +899,7 @@ const CreateExamWithStructureDialog = ({
                                     " Verdadero/Falso"}
                                 </Badge>
                                 <span className="text-sm font-semibold text-gray-600">
-                                  Parte {partIndex + 1} • {part.questions}{" "}
-                                  preguntas
+                                  Parte {partIndex + 1}
                                 </span>
                               </div>
 
@@ -1118,10 +1115,10 @@ const CreateExamWithStructureDialog = ({
                     </div>
                     <div className="text-center">
                       <p className="font-semibold text-gray-700">
-                        Puntuación Máxima
+                        Calificación Máxima
                       </p>
                       <p className="text-lg font-bold text-gray-900">
-                        20 puntos
+                        5 puntos
                       </p>
                     </div>
                     <div className="text-center">
@@ -1162,10 +1159,6 @@ const CreateExamWithStructureDialog = ({
                             {getQuestionTypeIcon(part.questionType)}
                             Parte {partIndex + 1}
                           </Badge>
-                          <span className="text-sm text-gray-600">
-                            {part.questions}{" "}
-                            {part.questions === 1 ? "pregunta" : "preguntas"}
-                          </span>
                         </div>
 
                         <p className="text-gray-700 mb-3">{part.instruction}</p>
@@ -1246,7 +1239,7 @@ const ExamGradingDialog = ({
 
   const handleScoreChange = (studentId: string, val: string) => {
     const score = parseFloat(val);
-    const maxScore = 20;
+    const maxScore = 5;
 
     if (isNaN(score)) {
       setSubmissions((prev) =>
@@ -1287,7 +1280,7 @@ const ExamGradingDialog = ({
     setIsOpen(false);
   };
 
-  const isPassing = (score: number) => score > 11;
+  const isPassing = (score: number) => score >= 2.96;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -1315,7 +1308,7 @@ const ExamGradingDialog = ({
               <div className="col-span-5 text-gray-700">Estudiante</div>
               <div className="col-span-2 text-center text-gray-700">Estado</div>
               <div className="col-span-3 text-center text-gray-700">
-                Calificación (0-20)
+                Calificación (0-5)
               </div>
               <div className="col-span-2 text-center text-gray-700">
                 Resultado
@@ -1366,8 +1359,8 @@ const ExamGradingDialog = ({
                       <Input
                         type="number"
                         min="0"
-                        max="20"
-                        step="0.1"
+                        max="5"
+                        step="0.01"
                         value={sub.score ?? ""}
                         onChange={(e) =>
                           handleScoreChange(sub.studentId, e.target.value)
@@ -1375,7 +1368,7 @@ const ExamGradingDialog = ({
                         className="w-20 text-center h-9 border-gray-300 focus:border-gray-500 text-gray-900 bg-white"
                         placeholder="0"
                       />
-                      <span className="text-sm text-gray-500">/ 20</span>
+                      <span className="text-sm text-gray-500">/ 5</span>
                     </div>
                   </div>
 
