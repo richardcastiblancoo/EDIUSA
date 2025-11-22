@@ -801,7 +801,7 @@ const CreateExamWithStructureDialog = ({
                           Calificación Máx
                         </p>
                         <p className="text-lg font-bold text-gray-900">
-                          5 puntos
+                          5 
                         </p>
                       </div>
                       <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
@@ -1118,7 +1118,7 @@ const CreateExamWithStructureDialog = ({
                         Calificación Máxima
                       </p>
                       <p className="text-lg font-bold text-gray-900">
-                        5 puntos
+                        5 
                       </p>
                     </div>
                     <div className="text-center">
