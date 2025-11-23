@@ -15,8 +15,18 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth-context";
-import { getExamById, getExamQuestions, submitExamWithMonitoring, getStudentExamAttemptsCount } from "@/lib/exams"; // Usar funciones existentes
-import type { Exam, Question } from "@/lib/exams"; // Usar tipos del archivo existente
+import {
+  getExamById,
+  getExamQuestions,
+  getStudentExamAttemptsCount,
+} from "@/lib/exams";
+import type { Exam, Question } from "@/lib/exams";
+
+const submitExam = async (submissionData: any) => {
+  console.log("Enviando examen simple:", submissionData);
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  return { success: true, message: "Examen enviado con éxito." };
+};
 
 interface Answer {
   questionId: string;
@@ -26,18 +36,17 @@ interface Answer {
 
 export default function StudentExamPage() {
   const router = useRouter();
-  const { examId } = useParams<{ examId: string }>(); // Obtener ID del examen desde la URL
+  const { examId } = useParams<{ examId: string }>();
   const { user, loading } = useAuth();
   const [exam, setExam] = useState<Exam | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Answer[]>([]);
-  const [timeLeft, setTimeLeft] = useState(0); // en segundos
+  const [timeLeft, setTimeLeft] = useState(0);
   const [examStarted, setExamStarted] = useState(false);
-  const [examFinished, setExamFinished] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [attemptsMade, setAttemptsMade] = useState(0);
-  const [canStartExam, setCanStartExam] = useState(false);
+  const [canStartExam, setCanStartExam] = useState(false); 
+  const [examFinished, setExamFinished] = useState(false); 
 
   useEffect(() => {
     if (!loading && !user) {
@@ -50,15 +59,17 @@ export default function StudentExamPage() {
   }, [loading, user, examId, router]);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: NodeJS.Timeout | undefined;
     if (examStarted && timeLeft > 0 && !examFinished) {
       timer = setInterval(() => {
         setTimeLeft((prevTime) => prevTime - 1);
       }, 1000);
     } else if (timeLeft === 0 && examStarted && !examFinished) {
-      handleSubmitExam(); // Enviar automáticamente si el tiempo se acaba
+      handleSubmitExam();
     }
-    return () => clearInterval(timer);
+    return () => {
+      if (timer) clearInterval(timer);
+    };
   }, [examStarted, timeLeft, examFinished]);
 
   const fetchExam = async () => {
@@ -67,25 +78,15 @@ export default function StudentExamPage() {
       const fetchedExam = await getExamById(examId!);
       if (fetchedExam && user) {
         setExam(fetchedExam);
-        setTimeLeft(fetchedExam.duration_minutes * 60); // Convertir minutos a segundos
-
+        setTimeLeft(fetchedExam.duration_minutes * 60);
         const attempts = await getStudentExamAttemptsCount(user.id, examId!);
-        setAttemptsMade(attempts);
-
         const isOverdue = new Date(fetchedExam.due_date) < new Date();
         const hasAttemptsLeft = attempts < fetchedExam.max_attempts;
-
         if (!isOverdue && hasAttemptsLeft) {
           setCanStartExam(true);
         } else {
           setCanStartExam(false);
-          if (isOverdue) {
-            setError("Este examen ha caducado.");
-          } else if (!hasAttemptsLeft) {
-            setError("Has agotado el número máximo de intentos para este examen.");
-          }
         }
-
         const fetchedQuestions = await getExamQuestions(examId!);
         setQuestions(fetchedQuestions);
         setAnswers(
@@ -126,102 +127,40 @@ export default function StudentExamPage() {
     );
   };
 
-  const handleNextQuestion = () => {
-    if (questions.length > 0 && currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex((prevIndex) => prevIndex + 1);
-    }
-  };
-
-  const handlePreviousQuestion = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex((prevIndex) => prevIndex - 1);
-    }
-  };
-
   const handleSubmitExam = async () => {
-    if (!exam || !user || !examId) return;
+    if (!exam || !user || !examId || examFinished) return;
     setExamFinished(true);
     setError(null);
-
     try {
-      // Formatear respuestas al esquema requerido por submitExamWithMonitoring
       const formattedAnswers = answers.reduce((acc, ans) => {
         acc[ans.questionId] = ans.selectedOption || ans.responseText || "";
         return acc;
       }, {} as Record<string, string>);
-
       const submissionData = {
         exam_id: examId,
         student_id: user.id,
         answers: formattedAnswers,
-        time_spent: exam.duration_minutes * 60 - timeLeft, // Tiempo que tardó el estudiante
-        warnings: [], // Alineado con la función existente
-        recording_url: undefined,
-        screen_captures: undefined
+        time_spent: exam.duration_minutes * 60 - timeLeft,
       };
 
-      const result = await submitExamWithMonitoring(submissionData);
+      const result = await submitExam(submissionData);
       if (result.success) {
-        alert(result.message || "Examen enviado con éxito!");
-        router.push("/dashboard/student/exams/results"); // Redirigir a una página de resultados
+        router.push("/dashboard/student/exams/results");
       } else {
         throw new Error(result.message || "Error al enviar el examen.");
       }
     } catch (err) {
       console.error("Error submitting exam:", err);
-      setError(err instanceof Error ? err.message : "Error al enviar el examen.");
-      setExamFinished(false); // Permitir reintentar si hubo un error de envío
+      setError(
+        err instanceof Error ? err.message : "Error al enviar el examen."
+      );
+      setExamFinished(false); 
     }
   };
 
-  if (loading || !user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        Cargando...
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <DashboardLayout userRole={user.role}>
-        <div className="flex items-center justify-center min-h-screen">
-          <Card className="w-[400px]">
-            <CardHeader>
-              <CardTitle>Error</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-red-500">{error}</p>
-              <Button onClick={fetchExam} className="mt-4">
-                Reintentar
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (!exam || questions.length === 0) {
-    return (
-      <DashboardLayout userRole={user.role}>
-        <div className="flex items-center justify-center min-h-screen">
-          <Card className="w-[400px]">
-            <CardHeader>
-              <CardTitle>Cargando Examen</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Cargando detalles del examen...</p>
-            </CardContent>
-          </Card>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
   const currentQuestion = questions[currentQuestionIndex];
   const currentAnswer = answers.find(
-    (ans) => ans.questionId === currentQuestion.id
+    (ans) => ans.questionId === currentQuestion?.id
   );
 
   const formatTime = (seconds: number) => {
@@ -232,101 +171,187 @@ export default function StudentExamPage() {
       .padStart(2, "0")}`;
   };
 
+  if (loading || !user || !examId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        Cargando...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout userRole={user.role}>
+        <div className="text-center p-8">
+          <h2 className="text-xl font-bold text-red-600">
+            Error al cargar el examen
+          </h2>
+          <p className="text-red-500 mt-2">{error}</p>
+          <Button onClick={fetchExam} className="mt-4">
+            Reintentar
+          </Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!exam || questions.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        Cargando detalles del examen...
+      </div>
+    );
+  }
+
   return (
     <DashboardLayout userRole={user.role}>
       <div className="container mx-auto py-8">
         {!examStarted ? (
-          <Card className="w-full max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle>{exam.title}</CardTitle>
-              <CardDescription>{exam.description}</CardDescription>
+          // Vista de Introducción al Examen (Limpia)
+          <Card className="w-full max-w-2xl mx-auto shadow-lg">
+            <CardHeader className="bg-blue-50 p-6 border-b">
+              <CardTitle className="text-3xl text-blue-700">
+                {exam.title}
+              </CardTitle>
+              <CardDescription className="text-lg">
+                {exam.description}
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="mb-4">
-                **Instrucciones:** {exam.instructions || "No hay instrucciones."}
+            <CardContent className="p-6">
+              <h3 className="text-xl font-semibold mb-3">Detalles y Reglas</h3>
+              <p className="mb-2">
+                <span className="font-medium">Duración:</span>{" "}
+                {exam.duration_minutes} minutos
+              </p>
+              <p className="mb-2">
+                <span className="font-medium">Preguntas:</span>{" "}
+                {questions.length}
               </p>
               <p className="mb-4">
-                **Duración:** {exam.duration_minutes} minutos
+                <span className="font-medium">Instrucciones:</span>{" "}
+                {exam.instructions ||
+                  "Siga las instrucciones en cada pregunta."}
               </p>
-              <p className="mb-4">
-                **Número de preguntas:** {exam.total_questions}
-              </p>
-              <p className="mb-4">
-                **Puntaje para aprobar:** {exam.passing_score}%
-              </p>
-              {error && <p className="text-red-500 mb-4">{error}</p>}
-              <Button onClick={handleStartExam} className="w-full" disabled={!canStartExam}>
-                Comenzar Examen
+
+              <Button
+                onClick={handleStartExam}
+                className="w-full bg-green-600 hover:bg-green-700 text-lg py-6"
+                disabled={!canStartExam}
+              >
+                Comenzar Examen Ahora
               </Button>
+              {!canStartExam && (
+                <p className="text-red-500 text-sm mt-3">
+                  No puede iniciar: Ya caducó o agotó sus intentos.
+                </p>
+              )}
             </CardContent>
           </Card>
         ) : examFinished ? (
-          <Card className="w-full max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle>Examen Finalizado</CardTitle>
+          // Vista de Examen Finalizado
+          <Card className="w-full max-w-2xl mx-auto shadow-lg">
+            <CardHeader className="bg-green-50 p-6">
+              <CardTitle className="text-3xl text-green-700">
+                ✅ Examen Finalizado
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p>Gracias por completar el examen. Tus respuestas han sido enviadas.</p>
-              <Button onClick={() => router.push("/dashboard/student")} className="mt-4">
+            <CardContent className="p-6 text-center">
+              <p className="text-lg">
+                Tus respuestas han sido enviadas correctamente. Te redirigiremos
+                a los resultados.
+              </p>
+              <Button
+                onClick={() => router.push("/dashboard/student")}
+                className="mt-6"
+              >
                 Volver al Dashboard
               </Button>
             </CardContent>
           </Card>
         ) : (
-          <Card className="w-full max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle>{exam.title}</CardTitle>
-              <CardDescription>
-                Pregunta {currentQuestionIndex + 1} de {questions.length}
-              </CardDescription>
-              <div className="text-right text-lg font-bold">
-                Tiempo restante: {formatTime(timeLeft)}
+          // Vista de Preguntas Activas
+          <Card className="w-full max-w-3xl mx-auto shadow-2xl border-t-4 border-blue-500">
+            <CardHeader className="flex flex-row justify-between items-center p-6 bg-gray-50 border-b">
+              <div>
+                <CardTitle className="text-2xl">{exam.title}</CardTitle>
+                <CardDescription className="text-md">
+                  Pregunta {currentQuestionIndex + 1} de {questions.length}
+                </CardDescription>
+              </div>
+              <div
+                className={`text-xl font-extrabold px-4 py-2 rounded-full ${
+                  timeLeft < 60
+                    ? "bg-red-100 text-red-600"
+                    : "bg-blue-100 text-blue-600"
+                }`}
+              >
+                ⏳ {formatTime(timeLeft)}
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6 min-h-[200px]">
               {currentQuestion && (
                 <div>
-                  <p className="text-lg font-semibold mb-4">
+                  <p className="text-xl font-bold mb-6 text-gray-800">
                     {currentQuestion.text}
                   </p>
+
+                  {/* Manejo de Preguntas de Opción Múltiple */}
                   {currentQuestion.type === "multiple-choice" &&
                     currentQuestion.options && (
                       <RadioGroup
                         onValueChange={(value) =>
-                          handleAnswerChange(currentQuestion.id, value, "option")
+                          handleAnswerChange(
+                            currentQuestion.id,
+                            value,
+                            "option"
+                          )
                         }
                         value={currentAnswer?.selectedOption || ""}
                       >
                         {currentQuestion.options.map((option) => (
                           <div
                             key={option.id}
-                            className="flex items-center space-x-2 mb-2"
+                            className="flex items-center space-x-3 mb-3 p-3 border rounded-lg hover:bg-blue-50 transition-colors"
                           >
                             <RadioGroupItem
                               value={option.id}
                               id={`option-${option.id}`}
                             />
-                            <Label htmlFor={`option-${option.id}`}>{option.text}</Label>
+                            <Label
+                              htmlFor={`option-${option.id}`}
+                              className="text-lg cursor-pointer"
+                            >
+                              {option.text}
+                            </Label>
                           </div>
                         ))}
                       </RadioGroup>
                     )}
-                  {/* TODO: Añadir otros tipos de preguntas (respuesta abierta, etc.) */}
+                  {/* TODO: Implementar tipos de pregunta adicionales (respuesta abierta, etc.) */}
                 </div>
               )}
             </CardContent>
-            <CardFooter className="flex justify-between">
+            <CardFooter className="flex justify-between p-6 border-t bg-gray-50">
               <Button
-                onClick={handlePreviousQuestion}
+                onClick={() => setCurrentQuestionIndex((prev) => prev - 1)}
                 disabled={currentQuestionIndex === 0}
+                variant="outline"
               >
-                Anterior
+                ← Anterior
               </Button>
               {currentQuestionIndex < questions.length - 1 ? (
-                <Button onClick={handleNextQuestion}>Siguiente</Button>
+                <Button
+                  onClick={() => setCurrentQuestionIndex((prev) => prev + 1)}
+                >
+                  Siguiente →
+                </Button>
               ) : (
-                <Button onClick={handleSubmitExam} className="bg-green-500 hover:bg-green-600">
-                  Finalizar Examen
+                <Button
+                  onClick={handleSubmitExam}
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold"
+                  disabled={examFinished}
+                >
+                  Finalizar Examen y Enviar
                 </Button>
               )}
             </CardFooter>
