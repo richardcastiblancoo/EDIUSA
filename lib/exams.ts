@@ -259,7 +259,7 @@ export async function getExamsByCourse(courseId: string): Promise<Exam[]> {
   try {
     const { data, error } = await supabase
       .from("exams")
-      .select("*")
+      .select("*, structure")
       .eq("course_id", courseId);
     if (error) throw error;
     return data as Exam[];

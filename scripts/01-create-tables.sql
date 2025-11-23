@@ -423,15 +423,3 @@ CREATE TABLE public.exam_proctoring_data (
 CREATE INDEX idx_proctoring_submission_id ON public.exam_proctoring_data (submission_id);
 CREATE INDEX idx_proctoring_exam_id ON public.exam_proctoring_data (exam_id);
 
-CREATE TABLE public.exam_submissions (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    exam_id uuid REFERENCES public.exams (id) ON DELETE CASCADE NOT NULL,
-    course_id uuid NOT NULL, -- Se asume que course_id es uuid
-    user_id uuid NOT NULL,
-    answers jsonb NOT NULL,
-    score numeric, -- Para almacenar la calificación final
-    submitted_at timestamp without time zone DEFAULT now() NOT NULL,
-    graded_at timestamp without time zone
-);
-
-CREATE INDEX idx_submission_exam_user ON public.exam_submissions (exam_id, user_id);

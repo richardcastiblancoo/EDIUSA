@@ -143,6 +143,20 @@ interface StudentSubmission {
   score: number | null;
 }
 
+// Interfaz para datos de pregunta que coincida con la base de datos
+interface QuestionData {
+  exam_id: string;
+  question_text: string;
+  question_type: string;
+  options: string[] | null;
+  correct_answers: string[];
+  points: number;
+  order_number: number;
+  section_id?: string;
+  part_index?: number;
+  audio_url?: string | null;
+}
+
 // **PLANTILLA MEJORADA** con todas las secciones
 const EXAM_SECTIONS_TEMPLATE: ExamSection[] = [
   {
@@ -171,7 +185,8 @@ const EXAM_SECTIONS_TEMPLATE: ExamSection[] = [
     max_score: 1.25,
     parts: [
       {
-        instruction: "Lee el texto y responde las preguntas de opción múltiple.",
+        instruction:
+          "Lee el texto y responde las preguntas de opción múltiple.",
         questions: 5,
         audio_file: null,
         audio_filename: null,
@@ -218,7 +233,8 @@ const EXAM_SECTIONS_TEMPLATE: ExamSection[] = [
     max_score: 1.25,
     parts: [
       {
-        instruction: "Escribe un ensayo de 250-300 palabras sobre el siguiente tema:",
+        instruction:
+          "Escribe un ensayo de 250-300 palabras sobre el siguiente tema:",
         questions: 1,
         audio_file: null,
         audio_filename: null,
@@ -226,7 +242,8 @@ const EXAM_SECTIONS_TEMPLATE: ExamSection[] = [
         options: [],
       },
       {
-        instruction: "Redacta un email formal respondiendo a la siguiente situación:",
+        instruction:
+          "Redacta un email formal respondiendo a la siguiente situación:",
         questions: 1,
         audio_file: null,
         audio_filename: null,
@@ -548,9 +565,11 @@ const CreateExamWithStructureDialog = ({
       duration_minutes: duration,
       total_questions: totalQuestions,
       exam_type: "structured",
-      due_date: examDate 
-        ? new Date(examDate).toISOString() 
-        : new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
+      due_date: examDate
+        ? new Date(examDate).toISOString()
+        : new Date(
+            new Date().setFullYear(new Date().getFullYear() + 1)
+          ).toISOString(),
       max_attempts: maxAttempts,
       is_active: true,
       structure: examStructureState,
@@ -560,7 +579,7 @@ const CreateExamWithStructureDialog = ({
       const newExam = await createExam(examData);
 
       if (newExam) {
-        // Creación de las preguntas con opciones
+        // Creación de las preguntas con opciones - VERSIÓN CORREGIDA
         for (const section of examStructureState) {
           let totalQuestionsInSection = section.parts.reduce(
             (sum, part) => sum + part.questions,
@@ -578,36 +597,47 @@ const CreateExamWithStructureDialog = ({
             for (let i = 0; i < part.questions; i++) {
               questionCounter++;
 
-              const questionData = {
+              // Preparar opciones y respuestas correctas según el tipo de pregunta
+              let options: string[] | null = null;
+              let correctAnswers: string[] = [];
+
+              if (part.questionType === "multiple_choice" || part.questionType === "true_false") {
+                options = part.options ? part.options.map(opt => opt.text) : [];
+                correctAnswers = part.options 
+                  ? part.options.filter(opt => opt.isCorrect).map(opt => opt.text)
+                  : [];
+              } else if (part.questionType === "fill_blank") {
+                // Para completar espacios
+                options = ["Respuesta esperada para completar espacios"];
+                correctAnswers = []; // El profesor deberá calificar manualmente
+              } else if (part.questionType === "essay") {
+                // Para ensayos, no hay respuestas correctas predefinidas
+                options = null;
+                correctAnswers = [];
+              }
+
+              const questionData: QuestionData = {
                 exam_id: newExam.id,
                 section_id: section.section_id,
                 part_index: partIndex,
-                question_text: `[${section.title} - Parte ${
-                  partIndex + 1
-                }] Pregunta ${questionCounter}`,
+                question_text: `[${section.title} - Parte ${partIndex + 1}] Pregunta ${questionCounter}: ${part.instruction}`,
                 question_type: part.questionType,
-                options: part.options
-                  ? part.options.map((opt) => opt.text)
-                  : [],
-                correct_answers: part.options
-                  ? part.options
-                      .filter((opt) => opt.isCorrect)
-                      .map((opt) => opt.text)
-                  : [],
+                options: options,
+                correct_answers: correctAnswers,
                 points: pointsPerQuestion,
                 order_number: questionCounter,
-                audio_url: part.audio_filename
-                  ? `/audio/${part.audio_filename}`
-                  : null,
+                audio_url: part.audio_filename ? `/audio/${part.audio_filename}` : null,
               };
-              await createQuestion(questionData as any);
+
+              // Llamar a la función createQuestion con los datos correctos
+              await createQuestion(questionData);
             }
           }
         }
 
         toast({
           title: "Éxito",
-          description: `El examen "${newExam.title}" ha sido creado exitosamente.`,
+          description: `El examen "${newExam.title}" ha sido creado exitosamente con ${totalQuestions} preguntas.`,
         });
 
         await notifyStudentsOfNewExam(newExam.id, newExam.course_id);
@@ -618,7 +648,7 @@ const CreateExamWithStructureDialog = ({
       console.error("Error creating exam:", error);
       toast({
         title: "Error",
-        description: `Hubo un error inesperado al crear el examen.`,
+        description: `Hubo un error inesperado al crear el examen: ${error instanceof Error ? error.message : 'Error desconocido'}`,
         variant: "destructive",
       });
     }
@@ -800,9 +830,7 @@ const CreateExamWithStructureDialog = ({
                         <p className="text-xs font-semibold text-gray-600">
                           Calificación Máx
                         </p>
-                        <p className="text-lg font-bold text-gray-900">
-                          5 
-                        </p>
+                        <p className="text-lg font-bold text-gray-900">5</p>
                       </div>
                       <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                         <p className="text-xs font-semibold text-gray-600">
@@ -1117,9 +1145,7 @@ const CreateExamWithStructureDialog = ({
                       <p className="font-semibold text-gray-700">
                         Calificación Máxima
                       </p>
-                      <p className="text-lg font-bold text-gray-900">
-                        5 
-                      </p>
+                      <p className="text-lg font-bold text-gray-900">5</p>
                     </div>
                     <div className="text-center">
                       <p className="font-semibold text-gray-700">
@@ -2539,7 +2565,6 @@ const EditLessonDialog = ({
               className="border-gray-300 focus:border-gray-500"
             />
           </div>
-
           <div>
             <Label
               htmlFor="edit-description"
@@ -2558,7 +2583,6 @@ const EditLessonDialog = ({
             />
           </div>
         </div>
-
         <DialogFooter>
           <Button
             variant="outline"
@@ -2587,20 +2611,18 @@ const EditLessonDialog = ({
   );
 };
 
-// --- Main Teacher Page ---
 export default function TeacherCoursesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
-
+  
   useEffect(() => {
     const loadCourses = async () => {
       if (!user?.id) return;
       setLoading(true);
       try {
         const courseAssignments = await getCourseAssignmentsByTeacher(user.id);
-
         const coursesWithStudents = await Promise.all(
           courseAssignments.map(async (course: any) => {
             const students = await getStudentsForCourse(course.id);
@@ -2637,7 +2659,7 @@ export default function TeacherCoursesPage() {
             gestionar cada curso.
           </p>
         </div>
-
+        
         {loading ? (
           <Card className="border border-gray-200">
             <CardContent className="pt-6">
@@ -2681,7 +2703,6 @@ export default function TeacherCoursesPage() {
                     </Badge>
                   </div>
                 </CardHeader>
-
                 <CardContent className="flex-grow space-y-4">
                   <div className="border-b border-gray-200 pb-4">
                     {course.description && (
@@ -2705,9 +2726,7 @@ export default function TeacherCoursesPage() {
                       </div>
                     )}
                   </div>
-
                   <div className="pt-2 space-y-4">
-                    {/* GRUPO 1: Contenido y Creación */}
                     <div className="grid grid-cols-2 gap-3 pb-3 border-b border-gray-200">
                       <CreateLessonDialog
                         courseId={course.id}
@@ -2718,8 +2737,6 @@ export default function TeacherCoursesPage() {
                         courseName={course.name}
                       />
                     </div>
-
-                    {/* GRUPO 2: Consulta y Calificación */}
                     <div className="grid grid-cols-2 gap-3 pb-3 border-b border-gray-200">
                       <ViewLessonsDialog
                         courseId={course.id}
@@ -2731,8 +2748,6 @@ export default function TeacherCoursesPage() {
                         students={course.students}
                       />
                     </div>
-
-                    {/* GRUPO 3: Gestión Administrativa */}
                     <div className="grid grid-cols-2 gap-3">
                       <AttendanceDialog
                         courseName={course.name}
