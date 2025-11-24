@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 // Asegúrate de que estas importaciones existan en tu proyecto
 import { getExamsByCourse, Exam, Question, Section } from "@/lib/exams";
 import { supabase } from "@/lib/supabase";
@@ -13,16 +13,18 @@ import {
   AlertTriangle,
   CheckCircle,
   X,
+  Video,
+  VideoOff,
+  Mic,
+  MicOff,
+  Monitor,
+  MonitorOff,
 } from "lucide-react";
 
-// --- Types ---
 interface ExamType extends Exam {
   structure: Section[];
 }
 
-// --- Components ---
-
-// 1. Modal Component
 const Modal = ({
   isOpen,
   onClose,
@@ -111,7 +113,6 @@ const Modal = ({
   );
 };
 
-// 2. Metric Card
 const MetricCard = ({
   icon,
   label,
@@ -132,7 +133,6 @@ const MetricCard = ({
   </div>
 );
 
-// 3. Question Display
 const QuestionDisplay = ({
   question,
   userAnswer,
@@ -153,7 +153,6 @@ const QuestionDisplay = ({
         </span>
         <span className="pt-0.5 leading-relaxed">{question.question_text}</span>
       </div>
-
       {isMultipleChoice && question.options && (
         <div className="space-y-3 mt-4 ml-9">
           {question.options.map((option) => (
@@ -193,7 +192,6 @@ const QuestionDisplay = ({
   );
 };
 
-// 4. Loading Screen
 const LoadingScreen = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
     <div className="text-center p-8 bg-white rounded-xl shadow-xl border border-gray-100">
@@ -206,7 +204,6 @@ const LoadingScreen = () => (
   </div>
 );
 
-// 5. Error Screen
 const ErrorScreen = ({ message }: { message: string | null }) => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
     <div className="text-center p-8 bg-white rounded-xl shadow-xl border-l-4 border-red-600 max-w-md">
@@ -229,7 +226,6 @@ const ErrorScreen = ({ message }: { message: string | null }) => (
   </div>
 );
 
-// 6. Proctoring Warning
 const ProcteringWarning = ({
   onAccept,
 }: {
@@ -245,13 +241,20 @@ const ProcteringWarning = ({
     try {
       // 1. Camera & Mic
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          frameRate: { ideal: 15 },
+        },
         audio: true,
       });
 
       // 2. Screen Share
       const displayStream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
+        video: {
+          cursor: "always",
+          displaySurface: "monitor",
+        },
         audio: false,
       });
 
@@ -343,7 +346,6 @@ const ProcteringWarning = ({
               2. Comenzar Examen
             </button>
           </div>
-
           <p className="text-xs text-gray-400 mt-4 px-4">
             Al continuar, acepta ser grabado durante la sesión del examen.
           </p>
@@ -353,13 +355,125 @@ const ProcteringWarning = ({
   );
 };
 
-// --- Main Page Component ---
+// Componente para el cronómetro
+const CountdownTimer = ({
+  duration,
+  onTimeUp,
+}: {
+  duration: number;
+  onTimeUp: () => void;
+}) => {
+  const [timeLeft, setTimeLeft] = useState(duration * 60); // Convertir a segundos
+  const [isWarning, setIsWarning] = useState(false);
+  const [isCritical, setIsCritical] = useState(false);
+
+  useEffect(() => {
+    if (timeLeft <= 0) {
+      onTimeUp();
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          onTimeUp();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft, onTimeUp]);
+
+  useEffect(() => {
+    // Cambiar a color de advertencia cuando queden 10 minutos
+    if (timeLeft <= 600 && timeLeft > 300) {
+      // 10-5 minutos
+      setIsWarning(true);
+      setIsCritical(false);
+    }
+    // Cambiar a color crítico cuando queden 5 minutos
+    else if (timeLeft <= 300) {
+      // 5 minutos o menos
+      setIsWarning(false);
+      setIsCritical(true);
+    } else {
+      setIsWarning(false);
+      setIsCritical(false);
+    }
+  }, [timeLeft]);
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, "0")}:${secs
+        .toString()
+        .padStart(2, "0")}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  return (
+    <div
+      className={`fixed top-4 left-4 z-40 bg-white rounded-lg shadow-2xl border-2 ${
+        isCritical
+          ? "border-red-500 bg-red-50"
+          : isWarning
+          ? "border-amber-500 bg-amber-50"
+          : "border-gray-900"
+      } p-4 transition-all duration-300`}
+    >
+      <div className="flex items-center gap-2">
+        <Clock
+          className={`w-5 h-5 ${
+            isCritical
+              ? "text-red-600"
+              : isWarning
+              ? "text-amber-600"
+              : "text-gray-900"
+          }`}
+        />
+        <span
+          className={`text-lg font-bold ${
+            isCritical
+              ? "text-red-700"
+              : isWarning
+              ? "text-amber-700"
+              : "text-gray-900"
+          }`}
+        >
+          {formatTime(timeLeft)}
+        </span>
+      </div>
+      <div
+        className={`text-xs mt-1 ${
+          isCritical
+            ? "text-red-600"
+            : isWarning
+            ? "text-amber-600"
+            : "text-gray-500"
+        }`}
+      >
+        {isCritical
+          ? "¡Tiempo crítico!"
+          : isWarning
+          ? "Queda poco tiempo"
+          : "Tiempo restante"}
+      </div>
+    </div>
+  );
+};
+
 export default function TakeExamPage() {
   const params = useParams();
   const courseId = params?.courseId as string | undefined;
   const examId = params?.examId as string | undefined;
   const router = useRouter();
-
   const [exam, setExam] = useState<ExamType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -367,8 +481,6 @@ export default function TakeExamPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [monitoringAccepted, setMonitoringAccepted] = useState(false);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
-
-  // Modal States
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
     title: string;
@@ -383,6 +495,345 @@ export default function TakeExamPage() {
     type: "info",
   });
 
+  // Nuevos estados para el monitoreo activo
+  const [streams, setStreams] = useState<{
+    camera: MediaStream | null;
+    screen: MediaStream | null;
+  }>({
+    camera: null,
+    screen: null,
+  });
+  const [permissions, setPermissions] = useState<{
+    camera: boolean;
+    microphone: boolean;
+    screen: boolean;
+  }>({
+    camera: false,
+    microphone: false,
+    screen: false,
+  });
+  const [showMonitor, setShowMonitor] = useState(true);
+
+  // Refs para los elementos de video
+  const cameraVideoRef = useRef<HTMLVideoElement>(null);
+  const screenVideoRef = useRef<HTMLVideoElement>(null);
+
+  // Inicializar streams de medios
+  const initializeMediaStreams = async () => {
+    try {
+      // 1. Inicializar cámara y micrófono
+      const cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          frameRate: { ideal: 15 },
+        },
+        audio: true,
+      });
+
+      // 2. Inicializar captura de pantalla
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          cursor: "always",
+          displaySurface: "monitor",
+        },
+        audio: false,
+      });
+
+      setStreams({
+        camera: cameraStream,
+        screen: screenStream,
+      });
+
+      setPermissions({
+        camera: true,
+        microphone: true,
+        screen: true,
+      });
+
+      // Configurar event listeners para detectar cuando se detiene la captura
+      screenStream.getTracks().forEach((track) => {
+        track.onended = () => {
+          setModalState({
+            isOpen: true,
+            title: "Captura de Pantalla Interrumpida",
+            message:
+              "La captura de pantalla se ha detenido. Debe reactivarla para continuar con el examen.",
+            type: "danger",
+          });
+          setPermissions((prev) => ({ ...prev, screen: false }));
+        };
+      });
+    } catch (err: any) {
+      console.error("Error inicializando medios:", err);
+      setModalState({
+        isOpen: true,
+        title: "Error de Permisos",
+        message:
+          "No se pudieron inicializar todos los dispositivos requeridos. Por favor, recargue la página e intente nuevamente.",
+        type: "danger",
+      });
+    }
+  };
+
+  // Actualizar elementos de video cuando los streams cambien
+  useEffect(() => {
+    if (cameraVideoRef.current && streams.camera) {
+      cameraVideoRef.current.srcObject = streams.camera;
+    }
+    if (screenVideoRef.current && streams.screen) {
+      screenVideoRef.current.srcObject = streams.screen;
+    }
+  }, [streams]);
+
+  // Detener todos los streams al desmontar el componente
+  useEffect(() => {
+    return () => {
+      if (streams.camera) {
+        streams.camera.getTracks().forEach((track) => track.stop());
+      }
+      if (streams.screen) {
+        streams.screen.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
+
+  // Componente para el panel de monitoreo
+  const MonitoringPanel = () => (
+    <div
+      className={`fixed top-4 right-4 z-40 bg-white rounded-lg shadow-2xl border border-gray-200 transition-all duration-300 ${
+        showMonitor ? "w-80" : "w-12"
+      }`}
+    >
+      {/* Header del panel */}
+      <div className="flex items-center justify-between p-3 border-b border-gray-200">
+        {showMonitor && (
+          <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+            <Video className="w-4 h-4" />
+            Monitoreo Activo
+          </h3>
+        )}
+        <button
+          onClick={() => setShowMonitor(!showMonitor)}
+          className="p-1 hover:bg-gray-100 rounded transition"
+          title={showMonitor ? "Ocultar monitor" : "Mostrar monitor"}
+        >
+          {showMonitor ? <X size={16} /> : <Video size={16} />}
+        </button>
+      </div>
+
+      {/* Contenido del panel */}
+      {showMonitor && (
+        <div className="p-3 space-y-3">
+          {/* Indicadores de estado */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-600">Cámara:</span>
+              <div className="flex items-center gap-1">
+                {permissions.camera ? (
+                  <Video className="w-3 h-3 text-green-500" />
+                ) : (
+                  <VideoOff className="w-3 h-3 text-red-500" />
+                )}
+                <span
+                  className={
+                    permissions.camera ? "text-green-600" : "text-red-600"
+                  }
+                >
+                  {permissions.camera ? "Activa" : "Inactiva"}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-600">Micrófono:</span>
+              <div className="flex items-center gap-1">
+                {permissions.microphone ? (
+                  <Mic className="w-3 h-3 text-green-500" />
+                ) : (
+                  <MicOff className="w-3 h-3 text-red-500" />
+                )}
+                <span
+                  className={
+                    permissions.microphone ? "text-green-600" : "text-red-600"
+                  }
+                >
+                  {permissions.microphone ? "Activo" : "Inactivo"}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-600">Pantalla:</span>
+              <div className="flex items-center gap-1">
+                {permissions.screen ? (
+                  <Monitor className="w-3 h-3 text-green-500" />
+                ) : (
+                  <MonitorOff className="w-3 h-3 text-red-500" />
+                )}
+                <span
+                  className={
+                    permissions.screen ? "text-green-600" : "text-red-600"
+                  }
+                >
+                  {permissions.screen ? "Compartida" : "No compartida"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Vista previa de cámara */}
+          {permissions.camera && (
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-500">
+                Vista de cámara:
+              </label>
+              <video
+                ref={cameraVideoRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-24 bg-gray-900 rounded border border-gray-300 object-cover"
+              />
+            </div>
+          )}
+
+          {/* Vista previa de pantalla */}
+          {permissions.screen && (
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-500">
+                Pantalla compartida:
+              </label>
+              <video
+                ref={screenVideoRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-32 bg-gray-900 rounded border border-gray-300 object-contain"
+              />
+            </div>
+          )}
+
+          {/* Mensaje de advertencia */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded p-2">
+            <p className="text-xs text-yellow-700 text-center">
+              ⚠️ El monitoreo está activo
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // Modificar el ProcteringWarning para usar la nueva función de inicialización
+  const ModifiedProcteringWarning = ({
+    onAccept,
+  }: {
+    onAccept: (hasAccepted: boolean) => void;
+  }) => {
+    const [isRequesting, setIsRequesting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const requestPermissions = async () => {
+      setIsRequesting(true);
+      setError(null);
+      try {
+        await initializeMediaStreams();
+      } catch (err: any) {
+        console.error("Error al obtener permisos:", err);
+        setError(
+          "Se requieren permisos de Cámara, Micrófono y Captura de Pantalla para continuar. Asegúrese de permitirlos en su navegador."
+        );
+      } finally {
+        setIsRequesting(false);
+      }
+    };
+
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-gray-200 overflow-hidden">
+          <div className="bg-gray-900 p-6 text-center">
+            <h1 className="text-2xl font-bold text-white flex items-center justify-center gap-2">
+              <AlertTriangle className="text-yellow-400" />
+              Monitoreo de Examen
+            </h1>
+          </div>
+          <div className="p-8 text-center">
+            <p className="text-gray-600 mb-6 text-base leading-relaxed">
+              Para garantizar la integridad académica, este examen requiere
+              acceso temporal a sus dispositivos.
+            </p>
+
+            <div className="bg-gray-50 rounded-lg p-4 text-left mb-6 border border-gray-100">
+              <p className="text-xs font-bold text-gray-500 uppercase mb-2 tracking-wider">
+                Permisos Requeridos:
+              </p>
+              <ul className="space-y-2 text-sm text-gray-700">
+                <li className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-gray-900"></div>{" "}
+                  Cámara Web (Identidad)
+                </li>
+                <li className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-gray-900"></div>{" "}
+                  Micrófono (Audio ambiental)
+                </li>
+                <li className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-gray-900"></div>{" "}
+                  Pantalla (Actividad de escritorio)
+                </li>
+              </ul>
+            </div>
+
+            {error && (
+              <div className="mb-6 p-3 bg-red-50 text-red-700 text-sm rounded-lg flex items-start gap-2 text-left border border-red-100">
+                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <button
+                onClick={requestPermissions}
+                disabled={
+                  isRequesting || (permissions.camera && permissions.screen)
+                }
+                className={`w-full py-3 px-4 rounded-lg font-bold text-sm transition flex items-center justify-center gap-2 ${
+                  permissions.camera && permissions.screen
+                    ? "bg-green-100 text-green-700 cursor-default"
+                    : "bg-gray-900 text-white hover:bg-gray-800 shadow-lg hover:shadow-xl"
+                }`}
+              >
+                {isRequesting && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white"></div>
+                )}
+                {permissions.camera && permissions.screen ? (
+                  <>
+                    <CheckCircle size={18} /> Permisos Verificados
+                  </>
+                ) : (
+                  "1. Habilitar Permisos"
+                )}
+              </button>
+
+              <button
+                onClick={() => onAccept(true)}
+                disabled={
+                  !permissions.camera || !permissions.screen || isRequesting
+                }
+                className="w-full py-3 px-4 rounded-lg font-bold text-sm text-gray-900 border-2 border-gray-900 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                2. Comenzar Examen
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-4 px-4">
+              Al continuar, acepta ser grabado durante la sesión del examen.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Calculate Sections
   const filteredSections = useMemo(() => {
     const allPossibleSections = [
@@ -392,7 +843,6 @@ export default function TakeExamPage() {
       "Writing",
     ];
 
-    // Aseguramos que exam.structure sea un array antes de filtrar
     const existingSections =
       exam?.structure?.filter((section: Section) =>
         allPossibleSections.includes(section.title)
@@ -415,7 +865,8 @@ export default function TakeExamPage() {
     if (generalSection) {
       combinedSections.push({
         ...generalSection,
-        description: generalSection.description ?? `Preguntas de ${generalSection.title}`,
+        description:
+          generalSection.description ?? `Preguntas de ${generalSection.title}`,
       });
     }
 
@@ -444,19 +895,38 @@ export default function TakeExamPage() {
     []
   );
 
-  // Close Modal Helper
   const closeModal = () =>
     setModalState((prev) => ({ ...prev, isOpen: false }));
 
-  // Main Submit Logic
+  // Función para cuando se acaba el tiempo
+  const handleTimeUp = () => {
+    setModalState({
+      isOpen: true,
+      title: "Tiempo Agotado",
+      message:
+        "El tiempo del examen ha finalizado. Sus respuestas serán enviadas automáticamente.",
+      type: "danger",
+      onConfirm: executeSubmit,
+      confirmText: "Entendido",
+    });
+  };
+
   const executeSubmit = async () => {
     if (!exam || !courseId || !examId) return;
 
     setIsSubmitting(true);
-    closeModal(); // Close confirm modal
+    closeModal();
 
     try {
-      const userId = "placeholder-user-id"; // TODO: Use real user ID
+      // Detener todos los streams de medios
+      if (streams.camera) {
+        streams.camera.getTracks().forEach((track) => track.stop());
+      }
+      if (streams.screen) {
+        streams.screen.getTracks().forEach((track) => track.stop());
+      }
+
+      const userId = "placeholder-user-id";
 
       const submissionData = {
         user_id: userId,
@@ -472,9 +942,7 @@ export default function TakeExamPage() {
 
       if (submitError) throw submitError;
 
-      router.push(
-        `/dashboard/student/courses/${courseId}/exams/${examId}/results`
-      );
+      router.push(`/dashboard/student`);
     } catch (err: any) {
       console.error("Error al enviar:", err);
       setModalState({
@@ -495,7 +963,6 @@ export default function TakeExamPage() {
 
     // Validate Multiple Choice
     const allQuestions = filteredSections.flatMap(
-      // Utilizamos '|| []' como protección
       (section) => section.questions || []
     );
     const unansweredRequiredQuestions = allQuestions.filter(
@@ -539,13 +1006,12 @@ export default function TakeExamPage() {
         const currentExam = fetchedExams.find((e) => e.id === examId);
         if (currentExam) {
           // Reconstruir la estructura con las preguntas ordenadas
-          // CORRECCIÓN: Usamos '|| []' para asegurar que structure y questions son arrays.
           const structureWithOrder = (currentExam.structure || []).map(
             (section) => ({
               ...section,
               questions: (section.questions || []).map((q, index) => ({
                 ...q,
-                order_number: index + 1, // Asume orden secuencial dentro de la sección
+                order_number: index + 1,
               })),
             })
           );
@@ -572,7 +1038,7 @@ export default function TakeExamPage() {
   if (error) return <ErrorScreen message={error} />;
   if (!exam) return <ErrorScreen message="Examen no disponible." />;
   if (!monitoringAccepted)
-    return <ProcteringWarning onAccept={setMonitoringAccepted} />;
+    return <ModifiedProcteringWarning onAccept={setMonitoringAccepted} />;
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 relative">
@@ -586,6 +1052,17 @@ export default function TakeExamPage() {
         confirmText={modalState.confirmText}
         isConfirming={isSubmitting}
       />
+
+      {/* Cronómetro */}
+      {exam && monitoringAccepted && (
+        <CountdownTimer
+          duration={exam.duration_minutes}
+          onTimeUp={handleTimeUp}
+        />
+      )}
+
+      {/* Panel de monitoreo */}
+      <MonitoringPanel />
 
       <div className="container mx-auto px-4 max-w-5xl">
         {/* Header */}
@@ -646,14 +1123,8 @@ export default function TakeExamPage() {
             {/* Tabs */}
             <div className="flex flex-wrap gap-2 mb-8 pb-2">
               {filteredSections.map((section) => {
-                // 1. Lógica de estado
                 const isActive = section.id === activeSectionId;
-
-                // Protección de array de preguntas
                 const questions = section.questions || [];
-
-                // 2. Cálculos
-                // Las respuestas de tipo ensayo también se consideran para el conteo de respondidas si tienen texto.
                 const answeredCount = questions.filter(
                   (q) => userAnswers[q.id] && userAnswers[q.id].trim() !== ""
                 ).length;
@@ -661,7 +1132,6 @@ export default function TakeExamPage() {
                 const isComplete =
                   totalCount > 0 && answeredCount === totalCount;
 
-                // 3. Clases CSS
                 const buttonBaseClasses =
                   "px-4 py-3 text-sm font-semibold rounded-lg transition-all duration-200 border flex items-center gap-2";
                 const buttonStateClasses = isActive
